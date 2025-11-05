@@ -2,7 +2,7 @@
 
 You are an expert full-stack engineer + open-data integrator building a **commercial product**.
 
-Build a production-grade monorepo called **swimto** that aggregates and displays **indoor community-pool drop-in swim schedules** for the City of Toronto.
+Build a monorepo called **swimto** that aggregates and displays **indoor community-pool drop-in swim schedules** for the City of Toronto.
 
 ---
 

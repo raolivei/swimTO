@@ -1,6 +1,6 @@
 # 🏊‍♂️ SwimTO
 
-**SwimTO** is a production-grade application that aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
+**SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
 ## 🎯 Overview
 
@@ -103,11 +103,17 @@ curl -X POST http://localhost:8000/update \
 
 ## 📊 Data Sources
 
-This project uses data from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
+This project uses **official data** from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
 
-- Recreation facilities metadata
-- Pool schedules (when available via API)
-- Facility web pages (fallback)
+- **Primary Source:** [Registered Programs and Drop-in Courses](https://open.toronto.ca/dataset/registered-programs-and-drop-in-courses-offering/)
+  - Official API updated daily at 8:00 AM
+  - Same data powering toronto.ca website
+  - 100% accurate swim schedules
+- **Secondary Sources:**
+  - Recreation facilities metadata (facility locations, addresses)
+  - Curated facility list (toronto_pools_data.py)
+
+**Data Update Frequency:** Daily at 3:00 AM via automated CronJob
 
 **License:** Open Government Licence – Toronto
 

@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-Seed database with realistic demo swim schedule data.
-This generates varied schedules for testing until proper web scraping is implemented.
+DEPRECATED: Seed database with realistic demo swim schedule data.
+
+⚠️  WARNING: This script generates FAKE demo data for testing only.
+⚠️  DO NOT USE IN PRODUCTION!
+
+The official Toronto Open Data API integration (toronto_drop_in_api.py) 
+should be used instead via the daily_refresh.py job.
+
+This script is kept for local development and testing purposes only.
 """
 import sys
 from pathlib import Path
@@ -162,11 +169,21 @@ def main():
     setup_logging()
     
     logger.info("=" * 70)
-    logger.info("Demo Swim Schedule Generator")
+    logger.error("⚠️  DEPRECATED: Demo Swim Schedule Generator ⚠️")
     logger.info("=" * 70)
-    logger.warning("This generates DEMO DATA for testing purposes only")
-    logger.warning("Real schedule data requires proper web scraping implementation")
+    logger.error("This script generates FAKE demo data for testing only!")
+    logger.error("DO NOT USE IN PRODUCTION!")
+    logger.info("")
+    logger.info("Use the official Toronto Open Data API integration instead:")
+    logger.info("  python data-pipeline/jobs/daily_refresh.py")
     logger.info("=" * 70)
+    logger.info("")
+    
+    # Require explicit confirmation
+    response = input("Are you sure you want to generate FAKE demo data? (yes/no): ")
+    if response.lower() != 'yes':
+        logger.info("Aborted.")
+        sys.exit(0)
     
     engine, db_session = setup_database()
     
