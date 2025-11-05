@@ -34,9 +34,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Schedule Page Rendering**: Fixed critical bug where `filteredSessions` was used before being defined, causing blank schedule page
+- **Date Timezone Issues**: Fixed off-by-one day error in schedule display
+  - Dates now parse as local time instead of UTC, preventing timezone shift bugs
+  - Tuesday data now correctly appears on Tuesday (not Wednesday)
+  - Updated `ScheduleView.tsx` and `utils.ts` to handle YYYY-MM-DD format correctly
+- **Mobile Network Connectivity**: Fixed mobile devices unable to connect to API
+  - Updated `docker-compose.yml` to use network IP (192.168.2.48) instead of localhost
+  - Web container now properly exposes API for devices on local network
+  - Added CORS configuration for network IP access
+
 ### Added
 
-- **Mobile Testing Framework**: Comprehensive mobile testing setup with Playwright
+- **Mobile Testing Framework**: Comprehensive automated testing to catch mobile-specific issues
+
+  - `playwright.config.mobile.ts`: Mobile-specific Playwright configuration
+  - `mobile-network.spec.ts`: Tests for API connectivity, CORS, network IP vs localhost
+  - `mobile-schedule.spec.ts`: Tests for schedule dates, timezone handling, week navigation
+  - `mobile-map.spec.ts`: Tests for facility markers, map interaction, geolocation
+  - Support for testing on real network IP to simulate actual mobile devices
+  - Automated tests for 5 device types (iPhone 14 Pro, iPhone SE, Samsung, iPad, Landscape)
+
+- **Mobile Testing Documentation**
+
+  - Environment variable support (TEST_BASE_URL, API_BASE_URL) for network testing
+  - Comprehensive test coverage for issues that would have caught today's bugs
+  - Network request monitoring and logging in tests
+  - Screenshot and video capture on test failures
+
+- **Mobile Testing Framework**: Comprehensive mobile testing setup with Playwright (existing)
 
   - Mobile test suite for iPhone, Android, and tablet devices
   - Automated tests for responsive design and touch interactions
@@ -75,6 +103,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Improved
 
+- **Data Quality**: Removed 1,904 demo sessions, leaving 2,325 real sessions with diverse times
+  - Verified swim times now show proper variety (7:00 AM, 12:00 PM, 8:00 PM, etc.)
+  - Data pipeline confirmed fetching 5,218 swim programs from Toronto Open Data
 - Enhanced accessibility with proper ARIA labels on mobile controls
 - Better error handling display on mobile devices
 - Responsive navigation with better touch targets
