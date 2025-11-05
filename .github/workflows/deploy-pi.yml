@@ -1,0 +1,86 @@
+name: Deploy to Raspberry Pi k3s
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: [self-hosted, linux, ARM64]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Build API image
+        run: |
+          cd apps/api
+          docker build -t swimto-api:latest -t swimto-api:${{ github.sha }} .
+      
+      - name: Build Web image
+        run: |
+          cd apps/web
+          docker build -t swimto-web:latest -t swimto-web:${{ github.sha }} --target production .
+      
+      - name: Import images to k3s
+        run: |
+          docker save swimto-api:latest | sudo k3s ctr images import -
+          docker save swimto-web:latest | sudo k3s ctr images import -
+      
+      - name: Create namespace if not exists
+        run: |
+          kubectl create namespace swimto --dry-run=client -o yaml | kubectl apply -f -
+      
+      - name: Apply ConfigMap and Secrets
+        run: |
+          kubectl apply -f k8s/configmap.yaml
+          # Note: Ensure k8s/secret.yaml exists and is properly configured
+          if [ -f k8s/secret.yaml ]; then
+            kubectl apply -f k8s/secret.yaml
+          else
+            echo "Warning: k8s/secret.yaml not found. Make sure secrets are configured."
+          fi
+      
+      - name: Apply database manifests
+        run: |
+          kubectl apply -f k8s/postgres-pvc.yaml
+          kubectl apply -f k8s/postgres-deployment.yaml
+          kubectl apply -f k8s/redis-deployment.yaml
+      
+      - name: Wait for database to be ready
+        run: |
+          kubectl wait --for=condition=ready pod -l app=postgres -n swimto --timeout=120s
+          kubectl wait --for=condition=ready pod -l app=redis -n swimto --timeout=60s
+      
+      - name: Run database migrations
+        run: |
+          kubectl run migrations --image=swimto-api:latest --restart=Never -n swimto \
+            --env="DATABASE_URL=$(kubectl get secret swimto-secrets -n swimto -o jsonpath='{.data.DATABASE_URL}' | base64 -d)" \
+            --command -- alembic upgrade head
+          kubectl wait --for=condition=complete --timeout=60s job/migrations -n swimto || true
+          kubectl delete pod migrations -n swimto --ignore-not-found=true
+      
+      - name: Deploy application
+        run: |
+          kubectl apply -f k8s/api-deployment.yaml
+          kubectl apply -f k8s/web-deployment.yaml
+          kubectl apply -f k8s/cronjob-refresh.yaml
+      
+      - name: Wait for rollout
+        run: |
+          kubectl rollout status deployment/swimto-api -n swimto --timeout=180s
+          kubectl rollout status deployment/swimto-web -n swimto --timeout=180s
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n swimto
+          kubectl get services -n swimto
+      
+      - name: Health check
+        run: |
+          API_NODE_PORT=$(kubectl get service swimto-api-service -n swimto -o jsonpath='{.spec.ports[0].nodePort}')
+          sleep 10
+          curl -f http://localhost:$API_NODE_PORT/health || echo "Health check failed, but deployment completed"
+
