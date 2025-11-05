@@ -1,4 +1,4 @@
-.PHONY: help setup dev test clean docker-up docker-down deploy-local
+.PHONY: help setup dev test clean docker-up docker-down reseed-db deploy-local
 
 help:
 	@echo "SwimTO - Available commands:"
@@ -8,6 +8,7 @@ help:
 	@echo "  make test         - Run all tests"
 	@echo "  make docker-up    - Start Docker services"
 	@echo "  make docker-down  - Stop Docker services"
+	@echo "  make reseed-db    - Reseed database with fresh demo data"
 	@echo "  make clean        - Clean build artifacts"
 	@echo ""
 
@@ -30,6 +31,10 @@ docker-up:
 docker-down:
 	@echo "🐳 Stopping Docker services..."
 	docker-compose down
+
+reseed-db:
+	@echo "🏊 Reseeding database with fresh data..."
+	./scripts/reseed-database.sh
 
 clean:
 	@echo "🧹 Cleaning build artifacts..."
