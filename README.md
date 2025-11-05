@@ -57,22 +57,17 @@ curl -X POST http://localhost:8000/update \
 
 ## 📚 Documentation
 
-### Getting Started
-- [Quickstart Guide](docs/QUICKSTART.md) - Get running in 5 minutes
-- [Local Development](docs/LOCAL_DEVELOPMENT.md) - Complete dev setup guide
-- [Contributing](docs/CONTRIBUTING.md) - Git workflow and best practices
-
-### Technical Documentation
-- [Architecture](docs/ARCHITECTURE.md) - System design and components
-- [API Reference](docs/API.md) - Backend endpoints and usage
-- [Data Ingestion](docs/INGESTION.md) - Data sources and ETL process
-
-### Deployment
-- [Raspberry Pi Deployment](docs/DEPLOYMENT_PI.md) - k3s deployment guide
+- [Quickstart](docs/QUICKSTART.md) - Get running in 5 minutes
+- [Local Development](docs/LOCAL_DEVELOPMENT.md) - Development setup
+- [Deployment](docs/DEPLOYMENT_PI.md) - Raspberry Pi k3s guide
+- [API Reference](docs/API.md) - Endpoints and usage
+- [Architecture](docs/ARCHITECTURE.md) - System design
+- [Contributing](docs/CONTRIBUTING.md) - Development workflow
 
 ## 🛠️ Tech Stack
 
 **Backend:**
+
 - FastAPI
 - PostgreSQL
 - SQLAlchemy + Alembic
@@ -80,6 +75,7 @@ curl -X POST http://localhost:8000/update \
 - BeautifulSoup4
 
 **Frontend:**
+
 - React 18
 - TypeScript
 - Vite
@@ -88,6 +84,7 @@ curl -X POST http://localhost:8000/update \
 - Tailwind CSS
 
 **Infrastructure:**
+
 - Docker
 - Kubernetes (k3s)
 - GitHub Actions
@@ -96,6 +93,7 @@ curl -X POST http://localhost:8000/update \
 ## 📊 Data Sources
 
 This project uses data from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
+
 - Recreation facilities metadata
 - Pool schedules (when available via API)
 - Facility web pages (fallback)

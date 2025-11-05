@@ -1,33 +1,49 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
-import { Icon } from 'leaflet'
-import { facilityApi } from '@/lib/api'
-import { formatTimeRange, formatDate } from '@/lib/utils'
-import { MapPin, ExternalLink, Phone, AlertCircle, RefreshCw } from 'lucide-react'
-import type { Facility } from '@/types'
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { Icon } from "leaflet";
+import { facilityApi } from "@/lib/api";
+import { formatTimeRange, formatDate } from "@/lib/utils";
+import {
+  MapPin,
+  ExternalLink,
+  Phone,
+  AlertCircle,
+  RefreshCw,
+} from "lucide-react";
+import type { Facility } from "@/types";
 
 // Toronto coordinates
-const TORONTO_CENTER: [number, number] = [43.6532, -79.3832]
+const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
 
 const poolIcon = new Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-})
+  shadowSize: [41, 41],
+});
 
 export default function MapView() {
-  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
+  const [selectedFacility, setSelectedFacility] = useState<Facility | null>(
+    null
+  );
 
-  const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ['facilities', 'lane-swim'],
+  const {
+    data: facilities,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useQuery({
+    queryKey: ["facilities", "lane-swim"],
     queryFn: () => facilityApi.getAll(true),
     retry: 2,
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-  })
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+  });
 
   if (error) {
     return (
@@ -55,8 +71,10 @@ export default function MapView() {
                   disabled={isRefetching}
                   className="flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
-                  {isRefetching ? 'Retrying...' : 'Try Again'}
+                  <RefreshCw
+                    className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`}
+                  />
+                  {isRefetching ? "Retrying..." : "Try Again"}
                 </button>
                 {error instanceof Error && (
                   <details className="mt-4">
@@ -73,12 +91,11 @@ export default function MapView() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
-  const validFacilities = facilities?.filter(
-    f => f.latitude && f.longitude
-  ) || []
+  const validFacilities =
+    facilities?.filter((f) => f.latitude && f.longitude) || [];
 
   return (
     <div className="h-[calc(100vh-8rem)] relative">
@@ -112,7 +129,9 @@ export default function MapView() {
               >
                 <Popup>
                   <div className="min-w-[250px]">
-                    <h3 className="font-semibold text-lg mb-2">{facility.name}</h3>
+                    <h3 className="font-semibold text-lg mb-2">
+                      {facility.name}
+                    </h3>
                     {facility.address && (
                       <p className="text-sm text-gray-600 mb-2 flex gap-1">
                         <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -121,7 +140,9 @@ export default function MapView() {
                     )}
                     {facility.next_session && (
                       <div className="bg-blue-50 p-2 rounded mb-2">
-                        <p className="text-xs font-semibold text-blue-900">Next Session</p>
+                        <p className="text-xs font-semibold text-blue-900">
+                          Next Session
+                        </p>
                         <p className="text-sm">
                           {formatDate(facility.next_session.date)}
                         </p>
@@ -153,9 +174,9 @@ export default function MapView() {
           >
             ✕
           </button>
-          
+
           <h2 className="text-xl font-bold mb-3">{selectedFacility.name}</h2>
-          
+
           {selectedFacility.address && (
             <div className="flex gap-2 mb-2 text-sm">
               <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
@@ -172,19 +193,24 @@ export default function MapView() {
               </a>
             </div>
           )}
-          
+
           {selectedFacility.phone && (
             <div className="flex gap-2 mb-3 text-sm">
               <Phone className="w-4 h-4 text-gray-400" />
-              <a href={`tel:${selectedFacility.phone}`} className="text-primary-500 hover:underline">
+              <a
+                href={`tel:${selectedFacility.phone}`}
+                className="text-primary-500 hover:underline"
+              >
                 {selectedFacility.phone}
               </a>
             </div>
           )}
-          
+
           {selectedFacility.next_session && (
             <div className="bg-blue-50 p-3 rounded-lg mb-3">
-              <p className="text-xs font-semibold text-blue-900 mb-1">NEXT SESSION</p>
+              <p className="text-xs font-semibold text-blue-900 mb-1">
+                NEXT SESSION
+              </p>
               <p className="font-semibold">
                 {formatDate(selectedFacility.next_session.date)}
               </p>
@@ -196,7 +222,7 @@ export default function MapView() {
               </p>
             </div>
           )}
-          
+
           <div className="text-sm text-gray-600">
             <p>{selectedFacility.session_count || 0} upcoming sessions</p>
             {selectedFacility.district && (
@@ -209,10 +235,13 @@ export default function MapView() {
       {/* Stats overlay */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4">
         <p className="text-sm text-gray-600">
-          Showing <span className="font-semibold text-gray-900">{validFacilities.length}</span> pools with lane swim
+          Showing{" "}
+          <span className="font-semibold text-gray-900">
+            {validFacilities.length}
+          </span>{" "}
+          pools with lane swim
         </p>
       </div>
     </div>
-  )
+  );
 }
-
