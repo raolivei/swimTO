@@ -3,13 +3,13 @@ import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import { Icon } from "leaflet";
 import { facilityApi } from "@/lib/api";
-import { 
-  formatTimeRange, 
-  formatDate, 
-  getUserLocation, 
+import {
+  formatTimeRange,
+  formatDate,
+  getUserLocation,
   calculateDistance,
   formatDistance,
-  type UserLocation 
+  type UserLocation,
 } from "@/lib/utils";
 import {
   MapPin,
@@ -41,9 +41,8 @@ interface FacilityWithDistance extends Facility {
 }
 
 export default function MapView() {
-  const [selectedFacility, setSelectedFacility] = useState<FacilityWithDistance | null>(
-    null
-  );
+  const [selectedFacility, setSelectedFacility] =
+    useState<FacilityWithDistance | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
@@ -71,7 +70,9 @@ export default function MapView() {
       setUserLocation(location);
       setSortByDistance(true);
     } catch (err) {
-      setLocationError(err instanceof Error ? err.message : "Failed to get location");
+      setLocationError(
+        err instanceof Error ? err.message : "Failed to get location"
+      );
       setSortByDistance(false);
     } finally {
       setIsLoadingLocation(false);
@@ -79,26 +80,28 @@ export default function MapView() {
   };
 
   // Calculate distances and sort facilities if user location is available
-  const facilitiesWithDistance: FacilityWithDistance[] = facilities?.map(f => {
-    if (userLocation && f.latitude && f.longitude) {
-      const distance = calculateDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        f.latitude,
-        f.longitude
-      );
-      return { ...f, distance };
-    }
-    return f;
-  }) || [];
+  const facilitiesWithDistance: FacilityWithDistance[] =
+    facilities?.map((f) => {
+      if (userLocation && f.latitude && f.longitude) {
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          f.latitude,
+          f.longitude
+        );
+        return { ...f, distance };
+      }
+      return f;
+    }) || [];
 
-  const sortedFacilities = sortByDistance && userLocation
-    ? [...facilitiesWithDistance].sort((a, b) => {
-        if (a.distance === undefined) return 1;
-        if (b.distance === undefined) return -1;
-        return a.distance - b.distance;
-      })
-    : facilitiesWithDistance;
+  const sortedFacilities =
+    sortByDistance && userLocation
+      ? [...facilitiesWithDistance].sort((a, b) => {
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        })
+      : facilitiesWithDistance;
 
   if (error) {
     return (
@@ -149,7 +152,9 @@ export default function MapView() {
     );
   }
 
-  const validFacilities = sortedFacilities.filter((f) => f.latitude && f.longitude);
+  const validFacilities = sortedFacilities.filter(
+    (f) => f.latitude && f.longitude
+  );
 
   return (
     <div className="h-[calc(100vh-8rem)] relative">
@@ -322,11 +327,19 @@ export default function MapView() {
                   disabled={isLoadingLocation}
                   className="flex items-center justify-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <Navigation className={`w-4 h-4 ${isLoadingLocation ? "animate-pulse" : ""}`} />
-                  {isLoadingLocation ? "Getting location..." : "Show nearest pools"}
+                  <Navigation
+                    className={`w-4 h-4 ${
+                      isLoadingLocation ? "animate-pulse" : ""
+                    }`}
+                  />
+                  {isLoadingLocation
+                    ? "Getting location..."
+                    : "Show nearest pools"}
                 </button>
                 {locationError && (
-                  <p className="text-xs text-red-600 text-center">{locationError}</p>
+                  <p className="text-xs text-red-600 text-center">
+                    {locationError}
+                  </p>
                 )}
               </div>
             ) : (
@@ -358,7 +371,7 @@ export default function MapView() {
               </div>
             )}
           </div>
-          
+
           {/* Stats */}
           <div className="bg-white rounded-lg shadow-lg p-4">
             <p className="text-sm text-gray-600 text-center md:text-left">
