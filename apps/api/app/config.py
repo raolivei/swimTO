@@ -22,7 +22,11 @@ class Settings(BaseSettings):
     admin_token: str = "change-me-in-production"
     
     # CORS
-    cors_origins: list = ["http://localhost:5173", "http://localhost:3000"]
+    cors_origins: list = [
+        "http://localhost:5173", 
+        "http://localhost:3000",
+        "http://192.168.2.48:5173"  # Network access for mobile devices
+    ]
     
     # External APIs
     city_base_url: str = "https://www.toronto.ca"

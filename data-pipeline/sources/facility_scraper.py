@@ -1,8 +1,8 @@
 """Scraper for facility web pages."""
 import re
 import hashlib
-from datetime import datetime, timedelta
-from typing import List, Dict, Optional
+from datetime import datetime, timedelta, time as time_type, date as date_type
+from typing import List, Dict, Optional, Tuple
 from bs4 import BeautifulSoup
 import requests
 from loguru import logger
@@ -164,6 +164,95 @@ class FacilityScraper:
             return "SENIOR_SWIM"
         else:
             return "OTHER"
+    
+    @staticmethod
+    def parse_time_text(time_text: str) -> Optional[Tuple[time_type, time_type]]:
+        """
+        Parse time range text like '7:00 am - 8:30 am' into start and end time objects.
+        
+        Returns:
+            Tuple of (start_time, end_time) or None if parsing fails
+        """
+        try:
+            # Pattern for time ranges like "7:00 am - 8:30 am" or "7:00 - 8:30 am"
+            pattern = r'(\d{1,2}):(\d{2})\s*(am|pm)?\s*-\s*(\d{1,2}):(\d{2})\s*(am|pm)?'
+            match = re.search(pattern, time_text.lower())
+            
+            if not match:
+                return None
+            
+            start_hour = int(match.group(1))
+            start_min = int(match.group(2))
+            start_period = match.group(3) or match.group(6)  # If first time has no am/pm, use second
+            
+            end_hour = int(match.group(4))
+            end_min = int(match.group(5))
+            end_period = match.group(6) or match.group(3)  # If second time has no am/pm, use first
+            
+            # Convert to 24-hour format
+            if start_period and 'pm' in start_period and start_hour != 12:
+                start_hour += 12
+            elif start_period and 'am' in start_period and start_hour == 12:
+                start_hour = 0
+                
+            if end_period and 'pm' in end_period and end_hour != 12:
+                end_hour += 12
+            elif end_period and 'am' in end_period and end_hour == 12:
+                end_hour = 0
+            
+            start_time = time_type(start_hour, start_min)
+            end_time = time_type(end_hour, end_min)
+            
+            return start_time, end_time
+        except Exception as e:
+            logger.debug(f"Error parsing time text '{time_text}': {e}")
+            return None
+    
+    @staticmethod
+    def day_name_to_dates(day_name: str, weeks_ahead: int = 4) -> List[date_type]:
+        """
+        Convert a day name (e.g., 'Monday') to a list of upcoming dates.
+        
+        Args:
+            day_name: Name of the day (Monday, Tuesday, etc.)
+            weeks_ahead: How many weeks ahead to generate dates for
+            
+        Returns:
+            List of date objects for that day of the week
+        """
+        day_mapping = {
+            'monday': 0, 'mon': 0,
+            'tuesday': 1, 'tue': 1, 'tues': 1,
+            'wednesday': 2, 'wed': 2,
+            'thursday': 3, 'thu': 3, 'thur': 3, 'thurs': 3,
+            'friday': 4, 'fri': 4,
+            'saturday': 5, 'sat': 5,
+            'sunday': 6, 'sun': 6
+        }
+        
+        day_name_lower = day_name.lower().strip()
+        target_weekday = day_mapping.get(day_name_lower)
+        
+        if target_weekday is None:
+            logger.warning(f"Unknown day name: {day_name}")
+            return []
+        
+        dates = []
+        today = date_type.today()
+        current_weekday = today.weekday()
+        
+        # Calculate days until the target weekday
+        days_ahead = (target_weekday - current_weekday) % 7
+        if days_ahead == 0:
+            # If today is the target day, include it
+            days_ahead = 0
+        
+        # Generate dates for the next N weeks
+        for week in range(weeks_ahead):
+            target_date = today + timedelta(days=days_ahead + (week * 7))
+            dates.append(target_date)
+        
+        return dates
     
     @staticmethod
     def generate_session_hash(facility_id: str, date: str, start_time: str, swim_type: str) -> str:

@@ -13,6 +13,8 @@
 body {
   margin: 0;
   padding: 0;
+  /* Minimum font size for readability on mobile */
+  font-size: 16px;
 }
 
 code {
@@ -23,6 +25,8 @@ code {
 .leaflet-container {
   height: 100%;
   width: 100%;
+  /* Enable smooth touch scrolling and pinch zoom on mobile */
+  touch-action: pan-y pinch-zoom;
 }
 
 /* Custom scrollbar */
@@ -42,5 +46,41 @@ code {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Mobile-specific improvements */
+@media (max-width: 768px) {
+  /* Ensure touch targets are at least 44x44px */
+  button, a {
+    min-height: 44px;
+  }
+  
+  /* Prevent accidental zooming on input focus (iOS) */
+  input, select, textarea {
+    font-size: 16px;
+  }
+  
+  /* Better tap highlighting */
+  * {
+    -webkit-tap-highlight-color: rgba(14, 165, 233, 0.1);
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: env(safe-area-inset-left)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Prevent horizontal overflow */
+body {
+  overflow-x: hidden;
 }
 
