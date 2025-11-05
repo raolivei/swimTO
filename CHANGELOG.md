@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **Schedule Data Ingestion**: Fixed missing schedule data for facilities like Norseman by ensuring `ingest_json_api_schedules()` is properly integrated into the daily refresh pipeline
+- **Week Navigation**: Fixed "Next Week" showing no sessions by increasing API limit from 100 to 1000 sessions in the frontend
+- **Data Coverage**: Schedule view now properly displays sessions for multiple weeks ahead instead of just the first few days
+
+### Technical
+
+- Cleared Redis cache to serve fresh schedule data
+- Updated frontend `ScheduleView.tsx` to request 1000 sessions instead of default 100
+- Added `limit` and `offset` parameters to `ScheduleFilters` TypeScript interface
+
+---
+
 ## [2.0.0] - 2025-11-05
 
 ### Changed
