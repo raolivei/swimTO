@@ -18,6 +18,8 @@ from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
 from sources.toronto_pools_data import get_all_indoor_pools
 from sources.toronto_drop_in_api import TorontoDropInAPI
+from sources.toronto_parks_json_api import TorontoParksJSONAPI
+from sources.curated_json_facilities import get_json_api_facilities
 
 
 def setup_logging():
@@ -268,6 +270,113 @@ def ingest_official_schedules(db_session):
     logger.info("=" * 60)
 
 
+def ingest_json_api_schedules(db_session):
+    """
+    Ingest schedules from Toronto Parks JSON API.
+    
+    This handles facilities that are NOT in the Toronto Open Data API,
+    but have schedules available via the JSON API at:
+    https://www.toronto.ca/data/parks/live/locations/{location_id}/swim/
+    """
+    logger.info("=" * 60)
+    logger.info("Ingesting swim schedules from Toronto Parks JSON API")
+    logger.info("=" * 60)
+    
+    api = TorontoParksJSONAPI()
+    json_facilities = get_json_api_facilities()
+    
+    if not json_facilities:
+        logger.info("No facilities configured for JSON API scraping")
+        return
+    
+    logger.info(f"Found {len(json_facilities)} facilities to scrape via JSON API")
+    
+    total_sessions = 0
+    total_inserted = 0
+    total_skipped = 0
+    
+    for facility_id, facility_info in json_facilities.items():
+        location_id = facility_info.get('location_id')
+        facility_name = facility_info.get('name')
+        
+        if not location_id:
+            logger.warning(f"No location_id for facility: {facility_id}")
+            continue
+        
+        logger.info(f"Processing {facility_name} (location_id={location_id})")
+        
+        # Check if facility exists in database
+        existing_facility = db_session.query(Facility).filter_by(facility_id=facility_id).first()
+        if not existing_facility:
+            logger.warning(f"Facility not found in database: {facility_id}")
+            logger.warning(f"Please add it to toronto_pools_data.py first")
+            continue
+        
+        try:
+            # Fetch schedule data
+            sessions = api.fetch_facility_schedule(location_id, weeks_ahead=4)
+            
+            if not sessions:
+                logger.warning(f"No sessions found for {facility_name}")
+                continue
+            
+            # Insert sessions
+            for session_data in sessions:
+                try:
+                    # Generate hash for deduplication
+                    import hashlib
+                    hash_content = f"{facility_id}:{session_data['date']}:{session_data['start_time']}:{session_data['swim_type']}"
+                    session_hash = hashlib.sha256(hash_content.encode()).hexdigest()
+                    
+                    # Check if exists
+                    existing = db_session.query(Session).filter_by(hash=session_hash).first()
+                    
+                    if not existing:
+                        # Insert new session
+                        new_session = Session(
+                            facility_id=facility_id,
+                            swim_type=session_data['swim_type'],
+                            date=session_data['date'],
+                            start_time=session_data['start_time'],
+                            end_time=session_data['end_time'],
+                            notes=session_data.get('notes'),
+                            source='toronto_parks_json_api',
+                            hash=session_hash
+                        )
+                        db_session.add(new_session)
+                        total_inserted += 1
+                        
+                        logger.debug(
+                            f"Inserted: {facility_name} - {session_data['swim_type']} "
+                            f"on {session_data['date']} at {session_data['start_time']}"
+                        )
+                    
+                    total_sessions += 1
+                    
+                except Exception as e:
+                    logger.error(f"Error inserting session: {e}")
+                    db_session.rollback()
+                    continue
+            
+            # Commit after each facility
+            db_session.commit()
+            logger.success(f"✓ Processed {len(sessions)} sessions for {facility_name}")
+            
+        except Exception as e:
+            logger.error(f"Error processing {facility_name}: {e}")
+            db_session.rollback()
+            continue
+    
+    logger.info("=" * 60)
+    logger.success(f"✓ Processed {total_sessions} sessions from JSON API")
+    logger.success(f"✓ Inserted {total_inserted} new sessions")
+    
+    if total_skipped > 0:
+        logger.warning(f"⚠ Skipped {total_skipped} sessions")
+    
+    logger.info("=" * 60)
+
+
 def ingest_schedules_legacy(db_session):
     """
     Legacy web scraper (DEPRECATED - use ingest_official_schedules instead).
@@ -377,6 +486,9 @@ def main():
         
         # Step 3: Update schedules from official Toronto Open Data API
         ingest_official_schedules(db_session)
+        
+        # Step 4: Update schedules from Toronto Parks JSON API (for facilities not in Open Data)
+        ingest_json_api_schedules(db_session)
         
         logger.info("=" * 60)
         logger.success("✓ Daily refresh completed successfully!")

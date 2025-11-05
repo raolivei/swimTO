@@ -145,10 +145,158 @@ class FacilityScraper:
         return None
     
     def _parse_week_section(self, element) -> List[Dict]:
-        """Parse a 'For the week of...' section."""
-        # This would require more sophisticated parsing
-        # For now, return empty
-        return []
+        """
+        Parse a 'For the week of...' section with a weekly schedule table.
+        
+        This handles the new toronto.ca format where schedules are displayed
+        as a table with program names in rows and weekdays in columns.
+        """
+        sessions = []
+        
+        try:
+            # Find the parent container that has both the header and the table
+            container = element.find_parent()
+            if not container:
+                return []
+            
+            # Look for the schedule table in this section
+            # The table should be nearby the "For the week of..." text
+            table = None
+            
+            # Try to find table in siblings
+            for sibling in container.find_next_siblings(limit=5):
+                if sibling.name == 'table':
+                    table = sibling
+                    break
+                # Table might be nested in a div
+                potential_table = sibling.find('table') if sibling else None
+                if potential_table:
+                    table = potential_table
+                    break
+            
+            # Also try in the same container
+            if not table:
+                table = container.find('table')
+            
+            if not table:
+                logger.debug("No table found in week section")
+                return []
+            
+            # Parse the table structure
+            rows = table.find_all('tr')
+            if len(rows) < 2:
+                return []
+            
+            # Parse header row to get day-of-week to column mapping
+            header_row = rows[0]
+            header_cells = header_row.find_all(['th', 'td'])
+            
+            # Build column index to day mapping
+            # Expected format: "Mon Nov 03", "Tue Nov 04", etc.
+            day_columns = {}
+            day_names = {
+                'mon': 'Monday',
+                'tue': 'Tuesday', 
+                'wed': 'Wednesday',
+                'thu': 'Thursday',
+                'fri': 'Friday',
+                'sat': 'Saturday',
+                'sun': 'Sunday'
+            }
+            
+            for col_idx, cell in enumerate(header_cells):
+                cell_text = cell.get_text(strip=True).lower()
+                for day_abbr, day_full in day_names.items():
+                    if day_abbr in cell_text:
+                        day_columns[col_idx] = day_full
+                        break
+            
+            if not day_columns:
+                logger.debug("Could not parse day columns from header")
+                return []
+            
+            # Parse data rows
+            for row in rows[1:]:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) < 2:
+                    continue
+                
+                # First cell is the program name
+                program_cell = cells[0]
+                program_name = program_cell.get_text(strip=True)
+                
+                # Determine swim type from program name
+                swim_type = self._normalize_swim_type(program_name)
+                
+                # Skip if not a swim program
+                if swim_type == "OTHER" and 'swim' not in program_name.lower():
+                    continue
+                
+                # Parse each day column
+                for col_idx, day_name in day_columns.items():
+                    if col_idx >= len(cells):
+                        continue
+                    
+                    cell = cells[col_idx]
+                    cell_text = cell.get_text(strip=True)
+                    
+                    # Skip empty cells
+                    if not cell_text:
+                        continue
+                    
+                    # Parse time slots from cell
+                    # Cell can contain multiple time slots separated by newlines
+                    time_slots = self._parse_time_slots_from_cell(cell_text)
+                    
+                    for time_text in time_slots:
+                        session = {
+                            "day": day_name,
+                            "time_text": time_text,
+                            "swim_type": swim_type,
+                            "program_name": program_name,
+                            "raw": {
+                                "day": day_name,
+                                "time": time_text,
+                                "type": program_name,
+                                "cell_text": cell_text
+                            }
+                        }
+                        sessions.append(session)
+                        logger.debug(f"Parsed session: {day_name} {time_text} - {program_name}")
+            
+        except Exception as e:
+            logger.error(f"Error parsing week section: {e}")
+        
+        return sessions
+    
+    def _parse_time_slots_from_cell(self, cell_text: str) -> List[str]:
+        """
+        Parse time slots from a table cell.
+        
+        A cell can contain multiple time slots like:
+        "07:15 AM - 08:10 AM\n11:45 AM - 01:10 PM"
+        
+        Returns list of time slot strings.
+        """
+        if not cell_text:
+            return []
+        
+        time_slots = []
+        
+        # Split by newlines first
+        lines = cell_text.split('\n')
+        
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            
+            # Check if this line contains a time range
+            time_pattern = r'\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?(?:\s*-\s*\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)?'
+            if re.search(time_pattern, line):
+                time_slots.append(line)
+        
+        return time_slots
     
     def _normalize_swim_type(self, text: str) -> str:
         """Normalize swim type."""
