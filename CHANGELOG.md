@@ -7,12 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+No unreleased changes yet.
+
+## [0.2.1] - 2025-11-05
+
 ### Fixed
 - Enhanced error handling UI in MapView with styled alert component
-- Added retry functionality for failed API calls with exponential backoff
+- Enhanced error handling UI in ScheduleView with consistent styling
+- Added retry functionality for failed API calls with exponential backoff (2 retries with exponential backoff)
 - Improved loading states with better visual feedback
-- Fixed navigation highlighting using proper active state detection
+- Fixed navigation highlighting using React Router's NavLink with proper active state detection
+- Added `end` prop to Home link to prevent matching all routes
+- Added aria-label for main navigation for accessibility
 - Added detailed error messages with technical details in expandable section
+
+### Added
+- Comprehensive CHANGELOG.md following Keep a Changelog format
+- Structured logging with loguru in backend facilities endpoints
+- Better error handling in backend with SQLAlchemy-specific error handling
+- Loading spinner with "Retrying..." state during refetch
+
+### Improved
+- Error UI design with border accent, icons, and better typography
+- Navigation hover states with opacity transition on logo
+- Backend error messages for better debugging
 
 ## [0.2.0] - 2025-11-05
 
@@ -204,7 +222,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **v0.1.0** - Initial project setup and documentation
 - **v0.2.0** - Complete full-stack implementation (frontend, backend, pipeline, infrastructure)
-- **v0.2.1** - Bug fixes and UX improvements (unreleased)
+- **v0.2.1** - Bug fixes and UX improvements
 
 ---
 
