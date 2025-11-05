@@ -1,16 +1,35 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { scheduleApi } from '@/lib/api'
-import { formatDate, formatTimeRange, getSwimTypeLabel, getSwimTypeColor, getDayOfWeek } from '@/lib/utils'
-import { Filter, MapPin, AlertCircle, RefreshCw, List, Table2 } from 'lucide-react'
+import { 
+  formatDate, 
+  formatTimeRange, 
+  getSwimTypeLabel, 
+  getSwimTypeColor, 
+  getDayOfWeek,
+  getUserLocation,
+  calculateDistance,
+  formatDistance,
+  type UserLocation 
+} from '@/lib/utils'
+import { Filter, MapPin, AlertCircle, RefreshCw, List, Table2, Navigation } from 'lucide-react'
 import type { SwimType, Session } from '@/types'
 
 type ViewMode = 'list' | 'table'
+
+// Extended Session type with distance
+interface SessionWithDistance extends Session {
+  distance?: number;
+}
 
 export default function ScheduleView() {
   const [swimType, setSwimType] = useState<SwimType | 'ALL'>('LANE_SWIM')
   const [showFilters, setShowFilters] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('table')
+  const [userLocation, setUserLocation] = useState<UserLocation | null>(null)
+  const [locationError, setLocationError] = useState<string | null>(null)
+  const [sortByDistance, setSortByDistance] = useState(false)
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false)
 
   const { data: sessions, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['schedule', swimType],
@@ -21,15 +40,54 @@ export default function ScheduleView() {
     retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
+  // Handle getting user location
+  const handleGetLocation = async () => {
+    setIsLoadingLocation(true)
+    setLocationError(null)
+    try {
+      const location = await getUserLocation()
+      setUserLocation(location)
+      setSortByDistance(true)
+    } catch (err) {
+      setLocationError(err instanceof Error ? err.message : 'Failed to get location')
+      setSortByDistance(false)
+    } finally {
+      setIsLoadingLocation(false)
+    }
+  }
+
+  // Calculate distances for sessions
+  const sessionsWithDistance: SessionWithDistance[] = sessions?.map(session => {
+    if (userLocation && session.facility?.latitude && session.facility?.longitude) {
+      const distance = calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        session.facility.latitude,
+        session.facility.longitude
+      )
+      return { ...session, distance }
+    }
+    return session
+  }) || []
+
+  // Sort sessions by distance if enabled
+  const sortedSessions = sortByDistance && userLocation
+    ? [...sessionsWithDistance].sort((a, b) => {
+        if (a.distance === undefined) return 1
+        if (b.distance === undefined) return -1
+        return a.distance - b.distance
+      })
+    : sessionsWithDistance
+
   // Group sessions by date
-  const sessionsByDate = sessions?.reduce((acc, session) => {
+  const sessionsByDate = sortedSessions.reduce((acc, session) => {
     const date = session.date
     if (!acc[date]) {
       acc[date] = []
     }
     acc[date].push(session)
     return acc
-  }, {} as Record<string, typeof sessions>)
+  }, {} as Record<string, typeof sortedSessions>)
 
   const sortedDates = Object.keys(sessionsByDate || {}).sort()
 
@@ -81,14 +139,15 @@ export default function ScheduleView() {
   }
 
   // Group sessions by facility and weekday for table view
-  const sessionsByFacilityAndDay = sessions?.reduce((acc, session) => {
+  const sessionsByFacilityAndDay = sortedSessions.reduce((acc, session) => {
     const facilityName = session.facility?.name || 'Unknown'
     const dayOfWeek = new Date(session.date).getDay()
     
     if (!acc[facilityName]) {
       acc[facilityName] = {
         facility: session.facility,
-        sessions: {}
+        sessions: {},
+        distance: session.distance
       }
     }
     
@@ -98,7 +157,19 @@ export default function ScheduleView() {
     
     acc[facilityName].sessions[dayOfWeek].push(session)
     return acc
-  }, {} as Record<string, { facility: any; sessions: Record<number, Session[]> }>)
+  }, {} as Record<string, { facility: any; sessions: Record<number, SessionWithDistance[]>; distance?: number }>)
+
+  // Sort facilities by distance if enabled
+  const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {})
+  if (sortByDistance && userLocation) {
+    sortedFacilityEntries.sort((a, b) => {
+      const distA = a[1].distance
+      const distB = b[1].distance
+      if (distA === undefined) return 1
+      if (distB === undefined) return -1
+      return distA - distB
+    })
+  }
 
   const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -124,32 +195,77 @@ export default function ScheduleView() {
               Filters
             </button>
 
-            {/* View Mode Toggle */}
-            <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  viewMode === 'list'
-                    ? 'bg-white text-primary-600 shadow-md'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <List className="w-5 h-5" />
-                <span className="hidden sm:inline">List View</span>
-              </button>
-              <button
-                onClick={() => setViewMode('table')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  viewMode === 'table'
-                    ? 'bg-white text-primary-600 shadow-md'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Table2 className="w-5 h-5" />
-                <span className="hidden sm:inline">Table View</span>
-              </button>
+            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+              {/* Location controls */}
+              <div className="flex-shrink-0">
+                {!userLocation ? (
+                  <button
+                    onClick={handleGetLocation}
+                    disabled={isLoadingLocation}
+                    className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                  >
+                    <Navigation className={`w-4 h-4 ${isLoadingLocation ? 'animate-pulse' : ''}`} />
+                    {isLoadingLocation ? 'Getting location...' : 'Sort by distance'}
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-green-600 font-semibold flex items-center gap-1">
+                      <Navigation className="w-4 h-4" />
+                      {sortByDistance ? 'Sorted by distance' : 'Location enabled'}
+                    </span>
+                    <button
+                      onClick={() => setSortByDistance(!sortByDistance)}
+                      className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+                    >
+                      {sortByDistance ? 'Default order' : 'Sort'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setUserLocation(null)
+                        setSortByDistance(false)
+                        setLocationError(null)
+                      }}
+                      className="text-xs px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* View Mode Toggle */}
+              <div className="flex gap-2 bg-gray-100 rounded-xl p-1 ml-auto">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                    viewMode === 'list'
+                      ? 'bg-white text-primary-600 shadow-md'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <List className="w-5 h-5" />
+                  <span className="hidden sm:inline">List View</span>
+                </button>
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                    viewMode === 'table'
+                      ? 'bg-white text-primary-600 shadow-md'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Table2 className="w-5 h-5" />
+                  <span className="hidden sm:inline">Table View</span>
+                </button>
+              </div>
             </div>
           </div>
+
+          {locationError && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-600">{locationError}</p>
+            </div>
+          )}
 
           <div className={`${showFilters ? 'block' : 'hidden'} md:block`}>
             <div className="flex flex-wrap gap-2">
@@ -215,6 +331,11 @@ export default function ScheduleView() {
                           <div className="flex-1">
                             <h3 className="font-bold text-gray-900 mb-1 text-lg">
                               {session.facility?.name}
+                              {session.distance !== undefined && (
+                                <span className="ml-2 text-sm font-semibold text-green-600">
+                                  ({formatDistance(session.distance)})
+                                </span>
+                              )}
                             </h3>
                             {session.facility?.address && (
                               <p className="text-sm text-gray-600 flex items-start gap-1">
@@ -272,10 +393,17 @@ export default function ScheduleView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {Object.entries(sessionsByFacilityAndDay || {}).map(([facilityName, data]) => (
+                  {sortedFacilityEntries.map(([facilityName, data]) => (
                     <tr key={facilityName} className="hover:bg-primary-50/50 transition-colors">
                       <td className="px-6 py-4 sticky left-0 bg-white/95 backdrop-blur-sm z-10 border-r border-gray-200">
-                        <div className="font-bold text-gray-900">{facilityName}</div>
+                        <div className="font-bold text-gray-900">
+                          {facilityName}
+                          {data.distance !== undefined && (
+                            <span className="ml-2 text-xs font-semibold text-green-600">
+                              ({formatDistance(data.distance)})
+                            </span>
+                          )}
+                        </div>
                         {data.facility?.address && (
                           <div className="text-xs text-gray-500 mt-1 flex items-start gap-1">
                             <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
@@ -316,7 +444,7 @@ export default function ScheduleView() {
                 </tbody>
               </table>
             </div>
-            {Object.keys(sessionsByFacilityAndDay || {}).length === 0 && (
+            {sortedFacilityEntries.length === 0 && (
               <div className="text-center py-12 text-gray-500">
                 No facilities found with the selected filters
               </div>
