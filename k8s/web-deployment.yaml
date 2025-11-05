@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swimto-web
+  namespace: swimto
+  labels:
+    app: swimto-web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swimto-web
+  template:
+    metadata:
+      labels:
+        app: swimto-web
+    spec:
+      containers:
+      - name: web
+        image: swimto-web:latest
+        imagePullPolicy: Never  # For local k3s
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swimto-web-service
+  namespace: swimto
+spec:
+  selector:
+    app: swimto-web
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30080  # Accessible at <node-ip>:30080
+  type: NodePort
+
