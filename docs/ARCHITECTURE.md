@@ -464,3 +464,13 @@ resources:
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [k3s Documentation](https://docs.k3s.io/)
+
+---
+
+## 🚀 Next Steps
+
+**Start building?** → [Local Development Guide](LOCAL_DEVELOPMENT.md)  
+**API details?** → [API Reference](API.md)  
+**Deploy?** → [Deployment Guide](DEPLOYMENT_PI.md)  
+**Contributing?** → [Contributing Guidelines](CONTRIBUTING.md)  
+**Overview?** → [README](../README.md)

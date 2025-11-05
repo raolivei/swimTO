@@ -140,11 +140,10 @@ This software is commercial and may not be copied, modified, or distributed with
 
 ---
 
-## 📖 Related Documentation
+## 🚀 Next Steps
 
-- [Local Development Guide](docs/LOCAL_DEVELOPMENT.md) - Set up your development environment
-- [API Reference](docs/API.md) - Complete API documentation
-- [Architecture Overview](docs/ARCHITECTURE.md) - System design and components
-- [Deployment Guide](docs/DEPLOYMENT_PI.md) - Deploy to Raspberry Pi with k3s
-- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Mobile testing strategies and tools
-- [Contributing Guidelines](docs/CONTRIBUTING.md) - How to contribute to the project
+**New here?** → [Local Development Guide](docs/LOCAL_DEVELOPMENT.md) to get started  
+**Building features?** → [API Reference](docs/API.md) | [Architecture](docs/ARCHITECTURE.md)  
+**Ready to deploy?** → [Deployment Guide](docs/DEPLOYMENT_PI.md)  
+**Contributing?** → [Contributing Guidelines](docs/CONTRIBUTING.md)  
+**Testing mobile?** → [Mobile Testing Guide](docs/MOBILE_TESTING.md)

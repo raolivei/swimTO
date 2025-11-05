@@ -91,6 +91,7 @@ git commit -m "refactor(pipeline): extract scraper utils"
 ```
 
 **Commit Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -141,21 +142,23 @@ make lint
 ```
 
 **Guidelines:**
+
 - Use type hints
 - Write docstrings for functions/classes
 - Keep functions small and focused
 - Use meaningful variable names
 
 **Example:**
+
 ```python
 def get_facility_by_id(db: Session, facility_id: str) -> Optional[Facility]:
     """
     Get a facility by its ID.
-    
+
     Args:
         db: Database session
         facility_id: Unique facility identifier
-        
+
     Returns:
         Facility object if found, None otherwise
     """
@@ -178,38 +181,41 @@ npm run lint
 ```
 
 **Guidelines:**
+
 - Use TypeScript strictly (avoid `any`)
 - Prefer functional components with hooks
 - Use meaningful component/variable names
 - Extract reusable logic into hooks
 
 **Example:**
+
 ```typescript
 interface FacilityCardProps {
-  facility: Facility
-  onSelect?: (facility: Facility) => void
+  facility: Facility;
+  onSelect?: (facility: Facility) => void;
 }
 
-export const FacilityCard: React.FC<FacilityCardProps> = ({ 
-  facility, 
-  onSelect 
+export const FacilityCard: React.FC<FacilityCardProps> = ({
+  facility,
+  onSelect,
 }) => {
   const handleClick = () => {
-    onSelect?.(facility)
-  }
-  
+    onSelect?.(facility);
+  };
+
   return (
     <div onClick={handleClick}>
       <h3>{facility.name}</h3>
       <p>{facility.address}</p>
     </div>
-  )
-}
+  );
+};
 ```
 
 ### YAML (Infrastructure)
 
 **Guidelines:**
+
 - Use 2 spaces for indentation
 - Group related resources
 - Add comments for complex configurations
@@ -259,9 +265,11 @@ docs: update deployment guide
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
@@ -269,17 +277,20 @@ Brief description of changes
 - [ ] Infrastructure change
 
 ## Testing
+
 - [ ] Tests added/updated
 - [ ] All tests passing
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
 - [ ] No new warnings
 
 ## Related Issues
+
 Fixes #123
 ```
 
@@ -320,6 +331,7 @@ Keep them in separate PRs unless tightly coupled.
 ## Documentation
 
 Update documentation for:
+
 - New features → Update relevant docs
 - API changes → Update API.md
 - New endpoints → Update API.md
@@ -368,9 +380,20 @@ Update documentation for:
 ## Confidentiality
 
 This is proprietary software. By contributing, you agree to:
+
 - Keep all code and discussions confidential
 - Not share or distribute code without permission
 - Follow the terms outlined in the LICENSE file
 
 Thank you for contributing to SwimTO! 🏊‍♂️
 
+---
+
+## 🚀 Next Steps
+
+**Start developing?** → [Local Development Guide](LOCAL_DEVELOPMENT.md)  
+**Understand codebase?** → [Architecture Overview](ARCHITECTURE.md)  
+**API work?** → [API Reference](API.md)  
+**Mobile testing?** → [Mobile Testing Guide](MOBILE_TESTING.md)  
+**Deploy?** → [Deployment Guide](DEPLOYMENT_PI.md)  
+**Project overview?** → [README](../README.md)

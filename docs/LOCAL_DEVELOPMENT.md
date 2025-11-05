@@ -20,6 +20,7 @@ Run the automated setup script:
 ```
 
 This script will:
+
 - Check prerequisites
 - Create environment files
 - Set up necessary directories
@@ -81,6 +82,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
+
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
@@ -143,6 +145,7 @@ npm run dev
 ```
 
 The frontend will be available at:
+
 - **Frontend**: http://localhost:5173
 
 #### Running Tests
@@ -212,6 +215,7 @@ Run the convenience script:
 ```
 
 This starts:
+
 - PostgreSQL (Docker)
 - Redis (Docker)
 - API (local Python)
@@ -228,6 +232,7 @@ Press `Ctrl+C` to stop all services.
 ```
 
 This runs:
+
 - API tests with coverage
 - Frontend tests with coverage
 
@@ -278,6 +283,7 @@ cd apps/api && make migrate
 If ports 5432, 6379, 8000, or 5173 are already in use:
 
 **Option 1**: Stop conflicting services
+
 ```bash
 # Find process using port
 lsof -i :8000
@@ -347,6 +353,7 @@ docker-compose exec redis redis-cli KEYS '*'
 #### VS Code
 
 Recommended extensions:
+
 - Python
 - Pylance
 - ESLint
@@ -392,16 +399,18 @@ git commit -m "docs: update deployment guide"
 git commit -m "test(api): add schedule endpoint tests"
 ```
 
-## Next Steps
-
-- Read [API.md](./API.md) for API documentation
-- Read [FRONTEND.md](./FRONTEND.md) for frontend architecture
-- Read [DEPLOYMENT_PI.md](./DEPLOYMENT_PI.md) for deployment guide
-- Read [INGESTION.md](./INGESTION.md) for data pipeline details
-
 ## Getting Help
 
 - Check existing issues on GitHub
 - Review logs: `docker-compose logs -f`
 - Run tests to verify setup: `./scripts/test-all.sh`
 
+---
+
+## 🚀 Next Steps
+
+**Build features?** → [API Reference](API.md) | [Architecture](ARCHITECTURE.md)  
+**Contributing?** → [Contributing Guidelines](CONTRIBUTING.md)  
+**Mobile testing?** → [Mobile Testing Guide](MOBILE_TESTING.md)  
+**Deploy?** → [Deployment Guide](DEPLOYMENT_PI.md)  
+**Overview?** → [README](../README.md)

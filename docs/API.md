@@ -359,3 +359,13 @@ For issues or questions:
 - GitHub Issues: https://github.com/raolivei/swimTO/issues
 - Check logs: `docker-compose logs api` or `kubectl logs -l app=swimto-api -n swimto`
 
+---
+
+## 🚀 Next Steps
+
+**Try locally?** → [Local Development Guide](LOCAL_DEVELOPMENT.md)  
+**Understand the system?** → [Architecture Overview](ARCHITECTURE.md)  
+**Deploy?** → [Deployment Guide](DEPLOYMENT_PI.md)  
+**Contributing?** → [Contributing Guidelines](CONTRIBUTING.md)  
+**Back to overview?** → [README](../README.md)
+

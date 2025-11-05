@@ -5,12 +5,14 @@ This guide walks you through deploying SwimTO on a Raspberry Pi cluster running 
 ## Prerequisites
 
 ### Hardware
+
 - Raspberry Pi 4 (4GB+ RAM recommended)
 - MicroSD card (32GB+ recommended) or USB SSD for better performance
 - Stable network connection
 - Power supply
 
 ### Software
+
 - Raspberry Pi OS (64-bit)
 - k3s (lightweight Kubernetes)
 - Docker
@@ -106,6 +108,7 @@ nano k8s/secret.yaml
 ```
 
 Generate strong passwords:
+
 ```bash
 # For POSTGRES_PASSWORD
 openssl rand -base64 32
@@ -121,6 +124,7 @@ git push origin main
 ```
 
 GitHub Actions will automatically:
+
 - Build Docker images
 - Import them to k3s
 - Deploy to cluster
@@ -382,6 +386,7 @@ resources:
 ### Enable Memory Cgroup
 
 Edit `/boot/cmdline.txt`:
+
 ```
 cgroup_enable=cpuset cgroup_memory=1 cgroup_enable=memory
 ```
@@ -419,6 +424,7 @@ sudo ufw enable
 ### SSL/TLS (Optional)
 
 Consider using:
+
 - Cloudflare Tunnel (no port forwarding needed)
 - Let's Encrypt with cert-manager
 - Traefik Ingress Controller
@@ -442,6 +448,7 @@ kubectl logs -l app=swimto-api -n swimto -f --tail=100
 ### Advanced Monitoring (Optional)
 
 Consider installing:
+
 - Prometheus + Grafana
 - K9s (terminal UI for Kubernetes)
 
@@ -455,5 +462,15 @@ curl -sS https://webi.sh/k9s | sh
 - Set up automated backups
 - Configure external access (port forwarding or Cloudflare Tunnel)
 - Set up monitoring and alerts
-- Review [OPERATIONS.md](./OPERATIONS.md) for ongoing maintenance
+- Review operations documentation for ongoing maintenance
 
+---
+
+## 🚀 Next Steps
+
+**Understand architecture?** → [Architecture Overview](ARCHITECTURE.md)  
+**Test locally first?** → [Local Development Guide](LOCAL_DEVELOPMENT.md)  
+**API details?** → [API Reference](API.md)  
+**Mobile testing?** → [Mobile Testing Guide](MOBILE_TESTING.md)  
+**Contributing?** → [Contributing Guidelines](CONTRIBUTING.md)  
+**Overview?** → [README](../README.md)
