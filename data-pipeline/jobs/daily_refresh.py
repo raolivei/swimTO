@@ -6,7 +6,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -416,13 +416,28 @@ def ingest_schedules_legacy(db_session):
                     
                     start_time, end_time = times
                     
-                    # Convert day name to dates for the next 4 weeks
-                    day_name = session_data.get('day', '')
-                    dates = FacilityScraper.day_name_to_dates(day_name, weeks_ahead=4)
+                    # Get the session date
+                    # New format: session_data has 'date' field with actual date object
+                    # Old format: session_data has 'day' field with day name that needs conversion
+                    session_date = session_data.get('date')
                     
-                    if not dates:
-                        logger.debug(f"Could not parse day name: {day_name}")
-                        continue
+                    if session_date:
+                        # New format: we have the exact date
+                        # Project this schedule forward for the next week only
+                        # This ensures "Next Week" navigation works even if the source
+                        # page only shows the current week
+                        dates = []
+                        for week_offset in range(2):  # Current week + next week
+                            future_date = session_date + timedelta(weeks=week_offset)
+                            dates.append(future_date)
+                    else:
+                        # Old format: convert day name to dates for the next 2 weeks
+                        day_name = session_data.get('day', '')
+                        dates = FacilityScraper.day_name_to_dates(day_name, weeks_ahead=2)
+                        
+                        if not dates:
+                            logger.debug(f"Could not parse day name: {day_name}")
+                            continue
                     
                     swim_type = session_data.get('swim_type', 'OTHER')
                     

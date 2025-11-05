@@ -38,6 +38,7 @@ export default function ScheduleView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
 
   const {
     data: sessions,
@@ -103,14 +104,14 @@ export default function ScheduleView() {
       : sessionsWithDistance;
 
   // Group sessions by date
-  const sessionsByDate = sortedSessions.reduce((acc, session) => {
+  const sessionsByDate = filteredSessions.reduce((acc, session) => {
     const date = session.date;
     if (!acc[date]) {
       acc[date] = [];
     }
     acc[date].push(session);
     return acc;
-  }, {} as Record<string, typeof sortedSessions>);
+  }, {} as Record<string, typeof filteredSessions>);
 
   const sortedDates = Object.keys(sessionsByDate || {}).sort();
 
@@ -164,7 +165,7 @@ export default function ScheduleView() {
   }
 
   // Group sessions by facility and weekday for table view
-  const sessionsByFacilityAndDay = sortedSessions.reduce((acc, session) => {
+  const sessionsByFacilityAndDay = filteredSessions.reduce((acc, session) => {
     const facilityName = session.facility?.name || "Unknown";
     const dayOfWeek = new Date(session.date).getDay();
 
@@ -206,23 +207,35 @@ export default function ScheduleView() {
     "Saturday",
   ];
 
-  // Get dates for the current week (Sunday to Saturday)
-  const getWeekDates = () => {
+  // Get dates for the selected week (Sunday to Saturday)
+  const getWeekDates = (offset: number = 0) => {
     const today = new Date();
     const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const weekDates: Date[] = [];
     
+    // Calculate the start of the week (Sunday) with offset
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - currentDay + (offset * 7));
+    
     // Calculate dates for each day of the week
     for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - currentDay + i);
+      const date = new Date(weekStart);
+      date.setDate(weekStart.getDate() + i);
       weekDates.push(date);
     }
     
     return weekDates;
   };
 
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
+  
+  // Filter sessions to only show those in the selected week
+  const filteredSessions = sortedSessions.filter((session) => {
+    const sessionDate = new Date(session.date);
+    const weekStart = weekDates[0];
+    const weekEnd = weekDates[6];
+    return sessionDate >= weekStart && sessionDate <= weekEnd;
+  });
 
   // Format date as "Mon 11/5"
   const formatWeekdayHeader = (date: Date) => {
@@ -243,9 +256,35 @@ export default function ScheduleView() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-3">
             Swim Schedule
           </h1>
-          <p className="text-gray-600 text-lg">
+          <p className="text-gray-600 text-lg mb-4">
             Browse upcoming swim sessions across Toronto
           </p>
+          
+          {/* Week Navigation */}
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <button
+              onClick={() => setWeekOffset(weekOffset - 1)}
+              className="px-4 py-2 rounded-lg bg-white/80 backdrop-blur-sm border border-gray-200 hover:bg-primary-50 hover:border-primary-300 transition-all font-medium text-gray-700 hover:text-primary-700 shadow-sm"
+            >
+              ← Previous Week
+            </button>
+            
+            <div className="text-center px-6 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm">
+              <div className="font-semibold text-gray-900">
+                {weekOffset === 0 ? "This Week" : weekOffset === 1 ? "Next Week" : weekOffset === -1 ? "Last Week" : `Week of ${weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                {weekDates[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {weekDates[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </div>
+            </div>
+            
+            <button
+              onClick={() => setWeekOffset(weekOffset + 1)}
+              className="px-4 py-2 rounded-lg bg-white/80 backdrop-blur-sm border border-gray-200 hover:bg-primary-50 hover:border-primary-300 transition-all font-medium text-gray-700 hover:text-primary-700 shadow-sm"
+            >
+              Next Week →
+            </button>
+          </div>
         </div>
 
         {/* Filters and View Toggle */}

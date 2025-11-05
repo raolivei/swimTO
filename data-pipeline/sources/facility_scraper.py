@@ -154,6 +154,14 @@ class FacilityScraper:
         sessions = []
         
         try:
+            # Extract the week start date from "For the week of 2025-11-03" text
+            week_text = element.get_text(strip=True)
+            week_match = re.search(r'(\d{4})-(\d{2})-(\d{2})', week_text)
+            week_year = None
+            if week_match:
+                week_year = int(week_match.group(1))
+                logger.debug(f"Found week year: {week_year}")
+            
             # Find the parent container that has both the header and the table
             container = element.find_parent()
             if not container:
@@ -187,32 +195,49 @@ class FacilityScraper:
             if len(rows) < 2:
                 return []
             
-            # Parse header row to get day-of-week to column mapping
+            # Parse header row to get column to date mapping
             header_row = rows[0]
             header_cells = header_row.find_all(['th', 'td'])
             
-            # Build column index to day mapping
+            # Build column index to date mapping
             # Expected format: "Mon Nov 03", "Tue Nov 04", etc.
-            day_columns = {}
-            day_names = {
-                'mon': 'Monday',
-                'tue': 'Tuesday', 
-                'wed': 'Wednesday',
-                'thu': 'Thursday',
-                'fri': 'Friday',
-                'sat': 'Saturday',
-                'sun': 'Sunday'
+            date_columns = {}
+            month_map = {
+                'jan': 1, 'january': 1,
+                'feb': 2, 'february': 2,
+                'mar': 3, 'march': 3,
+                'apr': 4, 'april': 4,
+                'may': 5,
+                'jun': 6, 'june': 6,
+                'jul': 7, 'july': 7,
+                'aug': 8, 'august': 8,
+                'sep': 9, 'sept': 9, 'september': 9,
+                'oct': 10, 'october': 10,
+                'nov': 11, 'november': 11,
+                'dec': 12, 'december': 12
             }
             
             for col_idx, cell in enumerate(header_cells):
-                cell_text = cell.get_text(strip=True).lower()
-                for day_abbr, day_full in day_names.items():
-                    if day_abbr in cell_text:
-                        day_columns[col_idx] = day_full
-                        break
+                cell_text = cell.get_text(strip=True)
+                # Try to extract date like "Mon Nov 03" or "Nov 03"
+                # Pattern: optional day abbr, month name/abbr, day number
+                date_match = re.search(r'([A-Za-z]{3,9})\s+(\d{1,2})', cell_text, re.IGNORECASE)
+                if date_match:
+                    month_text = date_match.group(1).lower()
+                    day = int(date_match.group(2))
+                    month = month_map.get(month_text)
+                    
+                    if month and week_year:
+                        # Create date object
+                        try:
+                            session_date = date_type(week_year, month, day)
+                            date_columns[col_idx] = session_date
+                            logger.debug(f"Mapped column {col_idx} to date {session_date}")
+                        except ValueError as e:
+                            logger.debug(f"Invalid date: {week_year}-{month}-{day}: {e}")
             
-            if not day_columns:
-                logger.debug("Could not parse day columns from header")
+            if not date_columns:
+                logger.debug("Could not parse date columns from header")
                 return []
             
             # Parse data rows
@@ -232,8 +257,8 @@ class FacilityScraper:
                 if swim_type == "OTHER" and 'swim' not in program_name.lower():
                     continue
                 
-                # Parse each day column
-                for col_idx, day_name in day_columns.items():
+                # Parse each date column
+                for col_idx, session_date in date_columns.items():
                     if col_idx >= len(cells):
                         continue
                     
@@ -250,19 +275,20 @@ class FacilityScraper:
                     
                     for time_text in time_slots:
                         session = {
-                            "day": day_name,
+                            "date": session_date,  # Use actual date instead of day name
+                            "day_of_week": session_date.weekday(),  # 0=Monday, 6=Sunday
                             "time_text": time_text,
                             "swim_type": swim_type,
                             "program_name": program_name,
                             "raw": {
-                                "day": day_name,
+                                "date": str(session_date),
                                 "time": time_text,
                                 "type": program_name,
                                 "cell_text": cell_text
                             }
                         }
                         sessions.append(session)
-                        logger.debug(f"Parsed session: {day_name} {time_text} - {program_name}")
+                        logger.debug(f"Parsed session: {session_date} {time_text} - {program_name}")
             
         except Exception as e:
             logger.error(f"Error parsing week section: {e}")
