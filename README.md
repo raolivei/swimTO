@@ -11,7 +11,8 @@ SwimTO collects, normalizes, and presents lane swim schedules from Toronto's com
 - 🗺️ **Interactive Map View** - Toronto-focused map showing all community centers with lane swim sessions
 - 📅 **Schedule View** - Calendar-style layout with weekday + time slots for lane swim programs
 - 🔄 **Auto-refresh** - Daily updates from City of Toronto Open Data sources
-- 📱 **Responsive Design** - Works seamlessly on desktop and mobile
+- 📱 **Mobile-First Design** - Fully responsive with PWA support, tested on iOS and Android
+- 🧪 **Comprehensive Testing** - Automated mobile testing with Playwright across multiple devices
 - 🏗️ **Self-hosted** - Runs on Raspberry Pi k3s cluster
 
 ## 🏗️ Architecture
@@ -58,8 +59,10 @@ curl -X POST http://localhost:8000/update \
 ## 📚 Documentation
 
 - [Quickstart](docs/QUICKSTART.md) - Get running in 5 minutes
+- [Mobile Testing Quick Start](MOBILE_TESTING_QUICK_START.md) - Test on mobile devices 📱
 - [Troubleshooting](TROUBLESHOOTING.md) - Fix common issues
 - [Local Development](docs/LOCAL_DEVELOPMENT.md) - Development setup
+- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Comprehensive mobile testing
 - [Deployment](docs/DEPLOYMENT_PI.md) - Raspberry Pi k3s guide
 - [API Reference](docs/API.md) - Endpoints and usage
 - [Architecture](docs/ARCHITECTURE.md) - System design
@@ -83,6 +86,7 @@ curl -X POST http://localhost:8000/update \
 - Leaflet (maps)
 - TanStack Query
 - Tailwind CSS
+- PWA Support (installable)
 
 **Infrastructure:**
 
@@ -90,6 +94,12 @@ curl -X POST http://localhost:8000/update \
 - Kubernetes (k3s)
 - GitHub Actions
 - Raspberry Pi cluster
+
+**Testing:**
+
+- Vitest (unit tests)
+- Playwright (E2E & mobile testing)
+- Testing Library (React components)
 
 ## 📊 Data Sources
 

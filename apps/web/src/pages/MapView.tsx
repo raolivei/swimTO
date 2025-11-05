@@ -165,12 +165,13 @@ export default function MapView() {
         )}
       </div>
 
-      {/* Sidebar */}
+      {/* Sidebar - Full width on mobile, fixed width on desktop */}
       {selectedFacility && (
-        <div className="absolute top-4 right-4 w-80 bg-white rounded-lg shadow-lg p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+        <div className="absolute top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white rounded-lg shadow-lg p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <button
             onClick={() => setSelectedFacility(null)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+            aria-label="Close facility details"
           >
             ✕
           </button>
@@ -232,16 +233,18 @@ export default function MapView() {
         </div>
       )}
 
-      {/* Stats overlay */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-lg p-4">
-        <p className="text-sm text-gray-600">
-          Showing{" "}
-          <span className="font-semibold text-gray-900">
-            {validFacilities.length}
-          </span>{" "}
-          pools with lane swim
-        </p>
-      </div>
+      {/* Stats overlay - Hide on small screens when facility selected to avoid overlap */}
+      {!selectedFacility && (
+        <div className="absolute bottom-4 left-4 right-4 md:right-auto bg-white rounded-lg shadow-lg p-4">
+          <p className="text-sm text-gray-600 text-center md:text-left">
+            Showing{" "}
+            <span className="font-semibold text-gray-900">
+              {validFacilities.length}
+            </span>{" "}
+            pools with lane swim
+          </p>
+        </div>
+      )}
     </div>
   );
 }

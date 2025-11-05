@@ -4,12 +4,16 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "vite --host",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage"
+    "test:coverage": "vitest --coverage",
+    "test:mobile": "playwright test --project=mobile",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -44,7 +48,8 @@
     "@vitest/ui": "^1.1.0",
     "jsdom": "^23.0.1",
     "vitest": "^1.1.0",
-    "@vitest/coverage-v8": "^1.1.0"
+    "@vitest/coverage-v8": "^1.1.0",
+    "@playwright/test": "^1.40.1"
   }
 }
 
