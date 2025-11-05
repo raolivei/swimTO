@@ -16,6 +16,7 @@ from models import Base, Facility, Session
 from sources.open_data import OpenDataClient
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
+from sources.toronto_pools_data import get_all_indoor_pools
 
 
 def setup_logging():
@@ -42,8 +43,59 @@ def setup_database():
     return SessionLocal()
 
 
+def ingest_curated_facilities(db_session):
+    """Ingest curated facility data from toronto_pools_data."""
+    logger.info("Ingesting curated facility data")
+    
+    facilities = get_all_indoor_pools()
+    
+    ingested = 0
+    updated = 0
+    for facility_data in facilities:
+        # Generate facility_id from name (normalized)
+        facility_id = facility_data['name'].lower().replace(' ', '-').replace("'", '')
+        
+        # Check if exists
+        existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
+        
+        if existing:
+            # Update
+            existing.name = facility_data.get('name', existing.name)
+            existing.address = facility_data.get('address', existing.address)
+            existing.postal_code = facility_data.get('postal_code', existing.postal_code)
+            existing.district = facility_data.get('district', existing.district)
+            existing.latitude = facility_data.get('latitude', existing.latitude)
+            existing.longitude = facility_data.get('longitude', existing.longitude)
+            existing.is_indoor = facility_data.get('is_indoor', existing.is_indoor)
+            existing.phone = facility_data.get('phone', existing.phone)
+            existing.website = facility_data.get('website', existing.website)
+            existing.updated_at = datetime.utcnow()
+            updated += 1
+        else:
+            # Insert
+            facility = Facility(
+                facility_id=facility_id,
+                name=facility_data.get('name', ''),
+                address=facility_data.get('address'),
+                postal_code=facility_data.get('postal_code'),
+                district=facility_data.get('district'),
+                latitude=facility_data.get('latitude'),
+                longitude=facility_data.get('longitude'),
+                is_indoor=facility_data.get('is_indoor', True),
+                phone=facility_data.get('phone'),
+                website=facility_data.get('website'),
+                source='curated',
+                raw=facility_data
+            )
+            db_session.add(facility)
+            ingested += 1
+    
+    db_session.commit()
+    logger.info(f"Ingested {ingested} new facilities, updated {updated} existing facilities")
+
+
 def ingest_facilities(db_session):
-    """Ingest facility metadata."""
+    """Ingest facility metadata from XML parser."""
     logger.info("Ingesting facility metadata from pools.xml")
     
     parser = PoolsXMLParser()
@@ -59,11 +111,12 @@ def ingest_facilities(db_session):
         existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         
         if existing:
-            # Update
-            for key, value in facility_data.items():
-                if hasattr(existing, key) and value is not None:
-                    setattr(existing, key, value)
-            existing.updated_at = datetime.utcnow()
+            # Update only if not from curated source
+            if existing.source != 'curated':
+                for key, value in facility_data.items():
+                    if hasattr(existing, key) and value is not None:
+                        setattr(existing, key, value)
+                existing.updated_at = datetime.utcnow()
         else:
             # Insert
             facility = Facility(
@@ -85,7 +138,7 @@ def ingest_facilities(db_session):
         ingested += 1
     
     db_session.commit()
-    logger.info(f"Ingested {ingested} facilities")
+    logger.info(f"Processed {ingested} facilities from XML")
 
 
 def ingest_schedules(db_session):
@@ -100,6 +153,7 @@ def ingest_schedules(db_session):
     
     scraper = FacilityScraper()
     total_sessions = 0
+    total_inserted = 0
     
     for facility in facilities:
         logger.info(f"Processing {facility.name}")
@@ -110,26 +164,66 @@ def ingest_schedules(db_session):
                 sessions = facility_data['sessions']
                 
                 for session_data in sessions:
-                    # Create session hash for deduplication
-                    session_hash = FacilityScraper.generate_session_hash(
-                        facility.facility_id,
-                        session_data.get('date', ''),
-                        session_data.get('start_time', ''),
-                        session_data.get('swim_type', '')
-                    )
+                    # Parse time text into start/end times
+                    time_text = session_data.get('time_text', '')
+                    times = FacilityScraper.parse_time_text(time_text)
                     
-                    # Check if exists
-                    existing = db_session.query(Session).filter_by(hash=session_hash).first()
-                    if not existing:
-                        # Insert new session (simplified - needs proper date/time parsing)
-                        # In production, you'd parse the session_data properly
-                        logger.debug(f"Would insert session: {session_data}")
+                    if not times:
+                        logger.debug(f"Could not parse time text: {time_text}")
+                        continue
+                    
+                    start_time, end_time = times
+                    
+                    # Convert day name to dates for the next 4 weeks
+                    day_name = session_data.get('day', '')
+                    dates = FacilityScraper.day_name_to_dates(day_name, weeks_ahead=4)
+                    
+                    if not dates:
+                        logger.debug(f"Could not parse day name: {day_name}")
+                        continue
+                    
+                    swim_type = session_data.get('swim_type', 'OTHER')
+                    
+                    # Create a session for each date
+                    for session_date in dates:
+                        # Create session hash for deduplication
+                        session_hash = FacilityScraper.generate_session_hash(
+                            facility.facility_id,
+                            str(session_date),
+                            str(start_time),
+                            swim_type
+                        )
+                        
+                        # Check if exists
+                        existing = db_session.query(Session).filter_by(hash=session_hash).first()
+                        if not existing:
+                            # Insert new session
+                            new_session = Session(
+                                facility_id=facility.facility_id,
+                                swim_type=swim_type,
+                                date=session_date,
+                                start_time=start_time,
+                                end_time=end_time,
+                                source='web_scraper',
+                                hash=session_hash
+                            )
+                            db_session.add(new_session)
+                            total_inserted += 1
+                            logger.debug(
+                                f"Inserted session: {facility.name} - {swim_type} on {session_date} "
+                                f"from {start_time} to {end_time}"
+                            )
+                        
                         total_sessions += 1
+            
+            # Commit after each facility to avoid losing all progress on error
+            db_session.commit()
         
         except Exception as e:
             logger.error(f"Error processing {facility.name}: {e}")
+            db_session.rollback()
     
-    logger.info(f"Processed {total_sessions} new sessions")
+    logger.info(f"Processed {total_sessions} sessions, inserted {total_inserted} new sessions")
 
 
 def main():
@@ -142,10 +236,13 @@ def main():
     db_session = setup_database()
     
     try:
-        # Step 1: Update facility metadata
+        # Step 1: Ingest curated facility data
+        ingest_curated_facilities(db_session)
+        
+        # Step 2: Update facility metadata from XML
         ingest_facilities(db_session)
         
-        # Step 2: Update schedules
+        # Step 3: Update schedules
         ingest_schedules(db_session)
         
         logger.info("Daily refresh completed successfully")
