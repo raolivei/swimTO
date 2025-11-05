@@ -58,6 +58,7 @@ curl -X POST http://localhost:8000/update \
 ## 📚 Documentation
 
 - [Quickstart](docs/QUICKSTART.md) - Get running in 5 minutes
+- [Troubleshooting](TROUBLESHOOTING.md) - Fix common issues
 - [Local Development](docs/LOCAL_DEVELOPMENT.md) - Development setup
 - [Deployment](docs/DEPLOYMENT_PI.md) - Raspberry Pi k3s guide
 - [API Reference](docs/API.md) - Endpoints and usage
