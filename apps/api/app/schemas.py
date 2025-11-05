@@ -98,3 +98,7 @@ class HealthResponse(BaseModel):
     version: str
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
+
+# Resolve forward references for Pydantic v2
+FacilityWithSessions.model_rebuild()
+
