@@ -259,14 +259,14 @@ export default function ScheduleView() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10">
+    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-3">
             Swim Schedule
           </h1>
-          <p className="text-gray-600 text-lg mb-4">
+          <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
             Browse upcoming swim sessions across Toronto
           </p>
 
@@ -274,13 +274,13 @@ export default function ScheduleView() {
           <div className="flex items-center justify-center gap-4 mt-6">
             <button
               onClick={() => setWeekOffset(weekOffset - 1)}
-              className="px-4 py-2 rounded-lg bg-white/80 backdrop-blur-sm border border-gray-200 hover:bg-primary-50 hover:border-primary-300 transition-all font-medium text-gray-700 hover:text-primary-700 shadow-sm"
+              className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm"
             >
               ← Previous Week
             </button>
 
-            <div className="text-center px-6 py-2 bg-white/80 backdrop-blur-sm rounded-lg border border-gray-200 shadow-sm">
-              <div className="font-semibold text-gray-900">
+            <div className="text-center px-6 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="font-semibold text-gray-900 dark:text-gray-100">
                 {weekOffset === 0
                   ? "This Week"
                   : weekOffset === 1
@@ -292,7 +292,7 @@ export default function ScheduleView() {
                       day: "numeric",
                     })}`}
               </div>
-              <div className="text-xs text-gray-500 mt-0.5">
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                 {weekDates[0].toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -308,7 +308,7 @@ export default function ScheduleView() {
 
             <button
               onClick={() => setWeekOffset(weekOffset + 1)}
-              className="px-4 py-2 rounded-lg bg-white/80 backdrop-blur-sm border border-gray-200 hover:bg-primary-50 hover:border-primary-300 transition-all font-medium text-gray-700 hover:text-primary-700 shadow-sm"
+              className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm"
             >
               Next Week →
             </button>
@@ -316,11 +316,11 @@ export default function ScheduleView() {
         </div>
 
         {/* Filters and View Toggle */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-gray-200/50">
+        <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-gray-700 font-semibold md:hidden hover:text-primary-600 transition-colors"
+              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               <Filter className="w-5 h-5" />
               Filters
@@ -333,7 +333,7 @@ export default function ScheduleView() {
                   <button
                     onClick={handleGetLocation}
                     disabled={isLoadingLocation}
-                    className="flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
+                    className="flex items-center justify-center gap-2 bg-green-500 dark:bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-600 dark:hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed w-full sm:w-auto"
                   >
                     <Navigation
                       className={`w-4 h-4 ${
@@ -346,7 +346,7 @@ export default function ScheduleView() {
                   </button>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-green-600 font-semibold flex items-center gap-1">
+                    <span className="text-sm text-green-600 dark:text-green-400 font-semibold flex items-center gap-1">
                       <Navigation className="w-4 h-4" />
                       {sortByDistance
                         ? "Sorted by distance"
@@ -354,7 +354,7 @@ export default function ScheduleView() {
                     </span>
                     <button
                       onClick={() => setSortByDistance(!sortByDistance)}
-                      className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors"
+                      className="text-xs px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                     >
                       {sortByDistance ? "Default order" : "Sort"}
                     </button>
@@ -364,7 +364,7 @@ export default function ScheduleView() {
                         setSortByDistance(false);
                         setLocationError(null);
                       }}
-                      className="text-xs px-3 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                      className="text-xs px-3 py-1 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"
                     >
                       Clear
                     </button>
@@ -373,7 +373,7 @@ export default function ScheduleView() {
               </div>
 
               {/* View Mode Toggle */}
-              <div className="flex gap-2 bg-gray-100 rounded-xl p-1 ml-auto">
+              <div className="flex gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 ml-auto">
                 <button
                   onClick={() => setViewMode("list")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
