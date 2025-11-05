@@ -1,5 +1,7 @@
 # 🏗️ SwimTO - System Architecture
 
+> **Proprietary & Confidential** - SwimTO Commercial Project
+
 This document describes the overall architecture of the SwimTO application.
 
 ## System Overview

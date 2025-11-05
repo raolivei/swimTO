@@ -46,7 +46,9 @@ dist/
 .env.local
 .env.*.local
 .envrc
+.direnv/
 .python-version
+.venv/
 
 # Personal setup markers
 *_COMPLETE.md
@@ -59,6 +61,7 @@ dist/
 # Logs
 logs/
 *.log
+*.pid
 
 # Testing
 .coverage

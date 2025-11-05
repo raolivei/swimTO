@@ -1,6 +1,8 @@
 # 🤝 Contributing to SwimTO
 
-Thank you for your interest in contributing to SwimTO! This document provides guidelines and best practices.
+> **Note:** SwimTO is a private commercial project. This guide is for authorized developers only.
+
+Thank you for your interest in contributing to SwimTO! This document provides guidelines and best practices for authorized team members.
 
 ## Git Branch Strategy
 
@@ -351,8 +353,8 @@ Update documentation for:
 
 ## Getting Help
 
-- **Questions**: Open a GitHub Discussion
-- **Bugs**: Open an Issue with reproduction steps
+- **Questions**: Contact the project maintainer
+- **Bugs**: Open an Issue with reproduction steps (private repository)
 - **Feature Requests**: Open an Issue with use case
 
 ## Code of Conduct
@@ -361,6 +363,14 @@ Update documentation for:
 - Provide constructive feedback
 - Focus on the code, not the person
 - Help others learn and grow
+- Respect proprietary nature of code
+
+## Confidentiality
+
+This is proprietary software. By contributing, you agree to:
+- Keep all code and discussions confidential
+- Not share or distribute code without permission
+- Follow the terms outlined in the LICENSE file
 
 Thank you for contributing to SwimTO! 🏊‍♂️
 

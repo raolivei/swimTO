@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     
     # Application
     app_name: str = "SwimTO API"
-    version: str = "1.0.0"
+    version: str = "2.0.0"
     debug: bool = False
     
     # Database

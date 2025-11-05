@@ -23,10 +23,10 @@ Build a monorepo called **swimto** that aggregates and displays **indoor communi
    - **Value Proposition:** Convenience, reliability, and supporting local development
 
 3. **Licensing**
-   - Current code under MIT (v1.0.0-oss) remains as-is
-   - New development (v2.0.0+) under proprietary license
-   - Consider AGPL or Commons Clause if partial openness desired
-   - **Important:** License changes only affect new versions, not already-released MIT code
+   - Fully proprietary from inception (v1.0.0+)
+   - All rights reserved by Rafael Oliveira
+   - Commercial use only with explicit permission
+   - No open-source release planned initially
 
 4. **Future Considerations**
    - Build user base first
@@ -298,8 +298,8 @@ INGEST_WINDOW_DAYS=56
 
 **Version:** 4.0  
 **Last Updated:** November 5, 2025  
-**Status:** Production + Commercial  
-**License:** Proprietary (v2.0.0+), MIT (v1.0.0-oss legacy)
+**Status:** Development → Commercial Launch  
+**License:** Proprietary (all versions)
 
 ---
 

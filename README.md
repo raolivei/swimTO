@@ -2,6 +2,8 @@
 
 **SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
+> **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.
+
 ## 🎯 Overview
 
 SwimTO collects, normalizes, and presents lane swim schedules from Toronto's community pools, helping residents find convenient swimming times near them.
@@ -34,9 +36,11 @@ swimto/
 
 ### Local Development
 
+**Note:** This is a private repository. Access is restricted to authorized developers only.
+
 ```bash
-# Clone the repository
-git clone https://github.com/raolivei/swimTO.git
+# If you have access, clone the repository
+git clone git@github.com:raolivei/swimTO.git
 cd swimTO
 
 # Start all services
@@ -119,11 +123,15 @@ This project uses **official data** from the [City of Toronto Open Data Portal](
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
+This is a private commercial project. Contributions are not currently accepted from external developers.
+
+For authorized developers, see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) file for details.
+**Proprietary License** - All rights reserved. See [LICENSE](LICENSE) and [COPYRIGHT](COPYRIGHT) files for full details.
+
+This software is commercial and may not be copied, modified, or distributed without explicit written permission from Rafael Oliveira.
 
 ## 🙏 Acknowledgments
 

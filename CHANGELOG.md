@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+---
+
+## [2.0.0] - 2025-11-05
+
+### Changed
+
+- **Commercial Release**: Project transitioned to fully proprietary license
+- Updated version to 2.0.0 to reflect commercial nature
+- Made GitHub repository private
+- Added comprehensive licensing documentation
+
+### Added
+
+- PROJECT_STRATEGY.md documenting business model and go-to-market strategy
+- COPYRIGHT file with proprietary notice
+- LICENSE file with commercial terms
+- GitHub Actions workflows for deployment and testing
+- Enhanced security contexts in Kubernetes manifests
+- Improved .gitignore for better coverage
+
+### Updated
+
+- README.md to reflect commercial status and private repository
+- MASTER_PROMPT.md with updated licensing information
+- All version references to 2.0.0
+- Documentation to note private/commercial nature
+
 ## [Unreleased]
 
 ### Added
@@ -90,5 +117,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Links
 
-- [GitHub Repository](https://github.com/raolivei/swimTO)
+- GitHub Repository: Private
 - [City of Toronto Open Data](https://open.toronto.ca)
+
+---
+
+**Note:** This is a proprietary commercial project. All rights reserved. See LICENSE and COPYRIGHT files for details.
