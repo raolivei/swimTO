@@ -378,8 +378,8 @@ export default function ScheduleView() {
                   onClick={() => setViewMode("list")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                     viewMode === "list"
-                      ? "bg-white text-primary-600 shadow-md"
-                      : "text-gray-600 hover:text-gray-900"
+                      ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
                   <List className="w-5 h-5" />
@@ -389,8 +389,8 @@ export default function ScheduleView() {
                   onClick={() => setViewMode("table")}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
                     viewMode === "table"
-                      ? "bg-white text-primary-600 shadow-md"
-                      : "text-gray-600 hover:text-gray-900"
+                      ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
+                      : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
                   <Table2 className="w-5 h-5" />
@@ -401,8 +401,8 @@ export default function ScheduleView() {
           </div>
 
           {locationError && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">{locationError}</p>
+            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-600 dark:text-red-400">{locationError}</p>
             </div>
           )}
 
@@ -421,7 +421,7 @@ export default function ScheduleView() {
                   className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
                     swimType === type
                       ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
-                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                   }`}
                 >
                   {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
@@ -440,14 +440,14 @@ export default function ScheduleView() {
             </p>
           </div>
         ) : sortedDates.length === 0 ? (
-          <div className="text-center py-16 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertCircle className="w-10 h-10 text-gray-400" />
+          <div className="text-center py-16 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg">
+            <div className="w-20 h-20 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="w-10 h-10 text-gray-400 dark:text-gray-500" />
             </div>
-            <p className="text-gray-600 text-xl font-semibold">
+            <p className="text-gray-600 dark:text-gray-300 text-xl font-semibold">
               No sessions found
             </p>
-            <p className="text-gray-500 mt-2">Try adjusting your filters</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">Try adjusting your filters</p>
           </div>
         ) : viewMode === "list" ? (
           <div className="space-y-6">
@@ -456,7 +456,7 @@ export default function ScheduleView() {
               return (
                 <div
                   key={date}
-                  className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 transform transition-all duration-300 hover:shadow-xl"
+                  className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 dark:border-gray-700/50 transform transition-all duration-300 hover:shadow-xl"
                 >
                   {/* Date Header */}
                   <div className="bg-gradient-to-r from-primary-500 to-primary-600 text-white px-6 py-4">
@@ -467,16 +467,16 @@ export default function ScheduleView() {
                   </div>
 
                   {/* Sessions */}
-                  <div className="divide-y divide-gray-200">
+                  <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {dateSessions.map((session) => (
                       <div
                         key={session.id}
-                        className="p-5 hover:bg-primary-50/50 transition-all duration-300"
+                        className="p-5 hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-all duration-300"
                       >
                         <div className="flex flex-col md:flex-row md:items-center gap-4">
                           {/* Time */}
                           <div className="md:w-48 flex-shrink-0">
-                            <p className="text-lg font-bold text-gray-900">
+                            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
                               {formatTimeRange(
                                 session.start_time,
                                 session.end_time
@@ -486,16 +486,16 @@ export default function ScheduleView() {
 
                           {/* Facility */}
                           <div className="flex-1">
-                            <h3 className="font-bold text-gray-900 mb-1 text-lg">
+                            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
                               {session.facility?.name}
                               {session.distance !== undefined && (
-                                <span className="ml-2 text-sm font-semibold text-green-600">
+                                <span className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400">
                                   ({formatDistance(session.distance)})
                                 </span>
                               )}
                             </h3>
                             {session.facility?.address && (
-                              <p className="text-sm text-gray-600 flex items-start gap-1">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
                                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
                                 <a
                                   href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
