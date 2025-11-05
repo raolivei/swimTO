@@ -43,5 +43,7 @@ export interface ScheduleFilters {
   date_to?: string
   time_from?: string
   time_to?: string
+  limit?: number
+  offset?: number
 }
 

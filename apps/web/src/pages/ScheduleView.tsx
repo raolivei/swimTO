@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { scheduleApi } from "@/lib/api";
 import {
@@ -51,10 +51,16 @@ export default function ScheduleView() {
     queryFn: () =>
       scheduleApi.getSchedule({
         swim_type: swimType === "ALL" ? undefined : swimType,
+        limit: 1000, // Fetch enough sessions to cover multiple weeks
       }),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Automatically get user location on mount
+  useEffect(() => {
+    handleGetLocation();
+  }, []);
 
   // Handle getting user location
   const handleGetLocation = async () => {
