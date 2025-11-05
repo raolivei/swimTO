@@ -1,8 +1,125 @@
-# swimTO
+# 🏊‍♂️ SwimTO
 
-A new project initialized on November 5, 2025.
+**SwimTO** is a production-grade application that aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
-## Getting Started
+## 🎯 Overview
 
-This repository is ready for development.
+SwimTO collects, normalizes, and presents lane swim schedules from Toronto's community pools, helping residents find convenient swimming times near them.
 
+### Features
+
+- 🗺️ **Interactive Map View** - Toronto-focused map showing all community centers with lane swim sessions
+- 📅 **Schedule View** - Calendar-style layout with weekday + time slots for lane swim programs
+- 🔄 **Auto-refresh** - Daily updates from City of Toronto Open Data sources
+- 📱 **Mobile-First Design** - Fully responsive with PWA support, tested on iOS and Android
+- 🧪 **Comprehensive Testing** - Automated mobile testing with Playwright across multiple devices
+- 🏗️ **Self-hosted** - Runs on Raspberry Pi k3s cluster
+
+## 🏗️ Architecture
+
+```
+swimto/
+├── apps/
+│   ├── api/              # FastAPI backend
+│   └── web/              # React + Vite frontend
+├── data-pipeline/        # ETL and data discovery
+├── k8s/                  # Kubernetes manifests
+├── infrastructure/       # Terraform (if needed)
+├── .github/workflows/    # CI/CD
+├── docker-compose.yml    # Local development
+└── docs/                 # Documentation
+```
+
+## 🚀 Quick Start
+
+### Local Development
+
+```bash
+# Clone the repository
+git clone https://github.com/raolivei/swimTO.git
+cd swimTO
+
+# Start all services
+docker compose up
+
+# Access the application
+# Frontend: http://localhost:5173
+# API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
+
+### Initial Data Load
+
+```bash
+# Trigger data ingestion
+curl -X POST http://localhost:8000/update \
+  -H "Authorization: Bearer your-admin-token"
+```
+
+## 📚 Documentation
+
+- [Quickstart](docs/QUICKSTART.md) - Get running in 5 minutes
+- [Mobile Testing Quick Start](MOBILE_TESTING_QUICK_START.md) - Test on mobile devices 📱
+- [Troubleshooting](TROUBLESHOOTING.md) - Fix common issues
+- [Local Development](docs/LOCAL_DEVELOPMENT.md) - Development setup
+- [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Comprehensive mobile testing
+- [Deployment](docs/DEPLOYMENT_PI.md) - Raspberry Pi k3s guide
+- [API Reference](docs/API.md) - Endpoints and usage
+- [Architecture](docs/ARCHITECTURE.md) - System design
+- [Contributing](docs/CONTRIBUTING.md) - Development workflow
+
+## 🛠️ Tech Stack
+
+**Backend:**
+
+- FastAPI
+- PostgreSQL
+- SQLAlchemy + Alembic
+- Playwright (web scraping)
+- BeautifulSoup4
+
+**Frontend:**
+
+- React 18
+- TypeScript
+- Vite
+- Leaflet (maps)
+- TanStack Query
+- Tailwind CSS
+- PWA Support (installable)
+
+**Infrastructure:**
+
+- Docker
+- Kubernetes (k3s)
+- GitHub Actions
+- Raspberry Pi cluster
+
+**Testing:**
+
+- Vitest (unit tests)
+- Playwright (E2E & mobile testing)
+- Testing Library (React components)
+
+## 📊 Data Sources
+
+This project uses data from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
+
+- Recreation facilities metadata
+- Pool schedules (when available via API)
+- Facility web pages (fallback)
+
+**License:** Open Government Licence – Toronto
+
+## 🤝 Contributing
+
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
+
+## 📄 License
+
+MIT License - See [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- City of Toronto for providing open data
+- Toronto community centers for maintaining accurate schedules

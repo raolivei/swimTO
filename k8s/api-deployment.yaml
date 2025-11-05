@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: swimto-api
+  namespace: swimto
+  labels:
+    app: swimto-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: swimto-api
+  template:
+    metadata:
+      labels:
+        app: swimto-api
+    spec:
+      containers:
+      - name: api
+        image: swimto-api:latest
+        imagePullPolicy: Never  # For local k3s
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: swimto-secrets
+              key: DATABASE_URL
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: swimto-secrets
+              key: REDIS_URL
+        - name: ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: swimto-secrets
+              key: ADMIN_TOKEN
+        envFrom:
+        - configMapRef:
+            name: swimto-config
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: swimto-api-service
+  namespace: swimto
+spec:
+  selector:
+    app: swimto-api
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30800  # Accessible at <node-ip>:30800
+  type: NodePort
+
