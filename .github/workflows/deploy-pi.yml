@@ -2,85 +2,68 @@ name: Deploy to Raspberry Pi k3s
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - dev
   workflow_dispatch:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy
-    runs-on: [self-hosted, linux, ARM64]
+    runs-on: [self-hosted, linux, arm64]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "NAMESPACE=swimto-prod" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "NAMESPACE=swimto-dev" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Build API image
         run: |
-          cd apps/api
-          docker build -t swimto-api:latest -t swimto-api:${{ github.sha }} .
+          docker build -t swimto-api:${{ github.sha }} \
+            -t swimto-api:latest \
+            ./apps/api
       
       - name: Build Web image
         run: |
-          cd apps/web
-          docker build -t swimto-web:latest -t swimto-web:${{ github.sha }} --target production .
+          docker build -t swimto-web:${{ github.sha }} \
+            -t swimto-web:latest \
+            --build-arg VITE_API_URL=${{ secrets.API_URL }} \
+            ./apps/web
       
-      - name: Import images to k3s
+      - name: Load images into k3s
         run: |
-          docker save swimto-api:latest | sudo k3s ctr images import -
-          docker save swimto-web:latest | sudo k3s ctr images import -
+          docker save swimto-api:${{ github.sha }} | sudo k3s ctr images import -
+          docker save swimto-web:${{ github.sha }} | sudo k3s ctr images import -
       
-      - name: Create namespace if not exists
+      - name: Update image tags in k8s manifests
         run: |
-          kubectl create namespace swimto --dry-run=client -o yaml | kubectl apply -f -
+          sed -i "s|swimto-api:latest|swimto-api:${{ github.sha }}|g" k8s/api-deployment.yaml
+          sed -i "s|swimto-web:latest|swimto-web:${{ github.sha }}|g" k8s/web-deployment.yaml
       
-      - name: Apply ConfigMap and Secrets
+      - name: Deploy to k3s
         run: |
-          kubectl apply -f k8s/configmap.yaml
-          # Note: Ensure k8s/secret.yaml exists and is properly configured
-          if [ -f k8s/secret.yaml ]; then
-            kubectl apply -f k8s/secret.yaml
-          else
-            echo "Warning: k8s/secret.yaml not found. Make sure secrets are configured."
-          fi
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/ -n ${{ steps.set-env.outputs.NAMESPACE }}
       
-      - name: Apply database manifests
+      - name: Wait for deployments
         run: |
-          kubectl apply -f k8s/postgres-pvc.yaml
-          kubectl apply -f k8s/postgres-deployment.yaml
-          kubectl apply -f k8s/redis-deployment.yaml
-      
-      - name: Wait for database to be ready
-        run: |
-          kubectl wait --for=condition=ready pod -l app=postgres -n swimto --timeout=120s
-          kubectl wait --for=condition=ready pod -l app=redis -n swimto --timeout=60s
-      
-      - name: Run database migrations
-        run: |
-          kubectl run migrations --image=swimto-api:latest --restart=Never -n swimto \
-            --env="DATABASE_URL=$(kubectl get secret swimto-secrets -n swimto -o jsonpath='{.data.DATABASE_URL}' | base64 -d)" \
-            --command -- alembic upgrade head
-          kubectl wait --for=condition=complete --timeout=60s job/migrations -n swimto || true
-          kubectl delete pod migrations -n swimto --ignore-not-found=true
-      
-      - name: Deploy application
-        run: |
-          kubectl apply -f k8s/api-deployment.yaml
-          kubectl apply -f k8s/web-deployment.yaml
-          kubectl apply -f k8s/cronjob-refresh.yaml
-      
-      - name: Wait for rollout
-        run: |
-          kubectl rollout status deployment/swimto-api -n swimto --timeout=180s
-          kubectl rollout status deployment/swimto-web -n swimto --timeout=180s
+          kubectl rollout status deployment/swimto-api -n ${{ steps.set-env.outputs.NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/swimto-web -n ${{ steps.set-env.outputs.NAMESPACE }} --timeout=5m
       
       - name: Verify deployment
         run: |
-          kubectl get pods -n swimto
-          kubectl get services -n swimto
+          kubectl get pods -n ${{ steps.set-env.outputs.NAMESPACE }}
+          kubectl get services -n ${{ steps.set-env.outputs.NAMESPACE }}
       
-      - name: Health check
+      - name: Cleanup old images
         run: |
-          API_NODE_PORT=$(kubectl get service swimto-api-service -n swimto -o jsonpath='{.spec.ports[0].nodePort}')
-          sleep 10
-          curl -f http://localhost:$API_NODE_PORT/health || echo "Health check failed, but deployment completed"
-
+          docker image prune -f --filter "until=168h"

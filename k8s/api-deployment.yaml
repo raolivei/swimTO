@@ -15,6 +15,10 @@ spec:
       labels:
         app: swimto-api
     spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
       containers:
       - name: api
         image: swimto-api:latest
@@ -22,6 +26,12 @@ spec:
         ports:
         - containerPort: 8000
           name: http
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
         env:
         - name: DATABASE_URL
           valueFrom:

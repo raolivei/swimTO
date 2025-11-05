@@ -1,6 +1,8 @@
 # 🏊‍♂️ SwimTO
 
-**SwimTO** is a production-grade application that aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
+**SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
+
+> **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.
 
 ## 🎯 Overview
 
@@ -34,9 +36,11 @@ swimto/
 
 ### Local Development
 
+**Note:** This is a private repository. Access is restricted to authorized developers only.
+
 ```bash
-# Clone the repository
-git clone https://github.com/raolivei/swimTO.git
+# If you have access, clone the repository
+git clone git@github.com:raolivei/swimTO.git
 cd swimTO
 
 # Start all services
@@ -103,21 +107,31 @@ curl -X POST http://localhost:8000/update \
 
 ## 📊 Data Sources
 
-This project uses data from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
+This project uses **official data** from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
 
-- Recreation facilities metadata
-- Pool schedules (when available via API)
-- Facility web pages (fallback)
+- **Primary Source:** [Registered Programs and Drop-in Courses](https://open.toronto.ca/dataset/registered-programs-and-drop-in-courses-offering/)
+  - Official API updated daily at 8:00 AM
+  - Same data powering toronto.ca website
+  - 100% accurate swim schedules
+- **Secondary Sources:**
+  - Recreation facilities metadata (facility locations, addresses)
+  - Curated facility list (toronto_pools_data.py)
+
+**Data Update Frequency:** Daily at 3:00 AM via automated CronJob
 
 **License:** Open Government Licence – Toronto
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
+This is a private commercial project. Contributions are not currently accepted from external developers.
+
+For authorized developers, see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
 
 ## 📄 License
 
-MIT License - See [LICENSE](LICENSE) file for details.
+**Proprietary License** - All rights reserved. See [LICENSE](LICENSE) and [COPYRIGHT](COPYRIGHT) files for full details.
+
+This software is commercial and may not be copied, modified, or distributed without explicit written permission from Rafael Oliveira.
 
 ## 🙏 Acknowledgments
 

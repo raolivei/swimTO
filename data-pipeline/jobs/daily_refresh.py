@@ -17,6 +17,7 @@ from sources.open_data import OpenDataClient
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
 from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_drop_in_api import TorontoDropInAPI
 
 
 def setup_logging():
@@ -141,9 +142,141 @@ def ingest_facilities(db_session):
     logger.info(f"Processed {ingested} facilities from XML")
 
 
-def ingest_schedules(db_session):
-    """Ingest swim schedules."""
-    logger.info("Ingesting swim schedules")
+def ingest_official_schedules(db_session):
+    """Ingest schedules from Toronto Open Data API (official source)."""
+    logger.info("=" * 60)
+    logger.info("Ingesting swim schedules from Toronto Open Data API")
+    logger.info("=" * 60)
+    
+    api = TorontoDropInAPI()
+    
+    # Fetch data from API
+    logger.info("Fetching drop-in programs...")
+    programs = api.fetch_drop_in_programs()
+    
+    logger.info("Fetching locations...")
+    locations = api.fetch_locations()
+    
+    if not programs:
+        logger.error("No programs fetched from API")
+        return
+    
+    # Filter for swim activities
+    swim_programs = api.filter_swim_activities(programs)
+    
+    if not swim_programs:
+        logger.warning("No swim programs found in drop-in data")
+        return
+    
+    # Get all existing facilities for matching
+    existing_facilities = db_session.query(Facility).all()
+    
+    total_sessions = 0
+    total_inserted = 0
+    total_skipped = 0
+    facilities_processed = set()
+    unmatched_locations = set()
+    
+    for program in swim_programs:
+        location_id = program.get('LocationID')
+        location = locations.get(location_id)
+        
+        # Parse program into sessions
+        sessions = api.parse_schedule_to_sessions(
+            program,
+            location,
+            weeks_ahead=4
+        )
+        
+        if not sessions:
+            continue
+        
+        # Try to match facility
+        facility_name = sessions[0]['facility_name']
+        facility_id = api.match_facility(
+            facility_name,
+            location_id,
+            location,
+            existing_facilities
+        )
+        
+        if not facility_id:
+            unmatched_locations.add(f"{facility_name} (ID: {location_id})")
+            total_skipped += len(sessions)
+            continue
+        
+        facilities_processed.add(facility_id)
+        
+        # Insert sessions
+        for session_data in sessions:
+            try:
+                # Generate hash for deduplication
+                session_hash = api.generate_session_hash(
+                    facility_id,
+                    session_data['date'],
+                    session_data['start_time'],
+                    session_data['swim_type']
+                )
+                
+                # Check if exists
+                existing = db_session.query(Session).filter_by(hash=session_hash).first()
+                
+                if not existing:
+                    # Insert new session
+                    new_session = Session(
+                        facility_id=facility_id,
+                        swim_type=session_data['swim_type'],
+                        date=session_data['date'],
+                        start_time=session_data['start_time'],
+                        end_time=session_data['end_time'],
+                        notes=session_data.get('notes'),
+                        source='toronto_open_data',
+                        hash=session_hash
+                    )
+                    db_session.add(new_session)
+                    total_inserted += 1
+                    
+                    logger.debug(
+                        f"Inserted: {facility_name} - {session_data['swim_type']} "
+                        f"on {session_data['date']} at {session_data['start_time']}"
+                    )
+                
+                total_sessions += 1
+                
+            except Exception as e:
+                logger.error(f"Error inserting session: {e}")
+                db_session.rollback()
+                continue
+        
+        # Commit after each program to avoid losing progress
+        db_session.commit()
+    
+    logger.info("=" * 60)
+    logger.success(f"✓ Processed {len(swim_programs)} swim programs")
+    logger.success(f"✓ Matched {len(facilities_processed)} facilities")
+    logger.success(f"✓ Processed {total_sessions} sessions")
+    logger.success(f"✓ Inserted {total_inserted} new sessions")
+    
+    if total_skipped > 0:
+        logger.warning(f"⚠ Skipped {total_skipped} sessions from {len(unmatched_locations)} unmatched locations")
+        
+        if unmatched_locations:
+            logger.warning("Unmatched locations:")
+            for loc in sorted(unmatched_locations):
+                logger.warning(f"  - {loc}")
+    
+    logger.info("=" * 60)
+
+
+def ingest_schedules_legacy(db_session):
+    """
+    Legacy web scraper (DEPRECATED - use ingest_official_schedules instead).
+    
+    This scraper is kept as a fallback but should not be used in production.
+    The official Toronto Open Data API provides more accurate and complete data.
+    """
+    logger.warning("Using legacy web scraper (DEPRECATED)")
+    logger.info("Ingesting swim schedules via web scraping")
     
     # Get all facilities with websites
     facilities = db_session.query(Facility).filter(
@@ -242,10 +375,12 @@ def main():
         # Step 2: Update facility metadata from XML
         ingest_facilities(db_session)
         
-        # Step 3: Update schedules
-        ingest_schedules(db_session)
+        # Step 3: Update schedules from official Toronto Open Data API
+        ingest_official_schedules(db_session)
         
-        logger.info("Daily refresh completed successfully")
+        logger.info("=" * 60)
+        logger.success("✓ Daily refresh completed successfully!")
+        logger.info("=" * 60)
     except Exception as e:
         logger.exception(f"Error during daily refresh: {e}")
         sys.exit(1)
