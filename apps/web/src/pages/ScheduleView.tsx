@@ -2,18 +2,20 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { scheduleApi } from '@/lib/api'
 import { formatDate, formatTimeRange, getSwimTypeLabel, getSwimTypeColor, getDayOfWeek } from '@/lib/utils'
-import { Filter, MapPin } from 'lucide-react'
+import { Filter, MapPin, AlertCircle, RefreshCw } from 'lucide-react'
 import type { SwimType } from '@/types'
 
 export default function ScheduleView() {
   const [swimType, setSwimType] = useState<SwimType | 'ALL'>('LANE_SWIM')
   const [showFilters, setShowFilters] = useState(false)
 
-  const { data: sessions, isLoading, error } = useQuery({
+  const { data: sessions, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['schedule', swimType],
     queryFn: () => scheduleApi.getSchedule({
       swim_type: swimType === 'ALL' ? undefined : swimType,
     }),
+    retry: 2,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   // Group sessions by date
@@ -31,9 +33,45 @@ export default function ScheduleView() {
   if (error) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">Failed to load schedule</p>
-          <p className="text-gray-600 mt-2">Please try again later</p>
+        <div className="max-w-md mx-auto">
+          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Failed to Load Schedule
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  We couldn't load the swim schedule. This might be due to:
+                </p>
+                <ul className="text-sm text-gray-600 mb-4 space-y-1 list-disc list-inside">
+                  <li>Network connectivity issues</li>
+                  <li>API service temporarily unavailable</li>
+                  <li>Server maintenance</li>
+                </ul>
+                <button
+                  onClick={() => refetch()}
+                  disabled={isRefetching}
+                  className="flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+                  {isRefetching ? 'Retrying...' : 'Try Again'}
+                </button>
+                {error instanceof Error && (
+                  <details className="mt-4">
+                    <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+                      Technical details
+                    </summary>
+                    <p className="mt-2 text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
+                      {error.message}
+                    </p>
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )

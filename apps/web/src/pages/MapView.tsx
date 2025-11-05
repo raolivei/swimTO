@@ -4,7 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
 import { Icon } from 'leaflet'
 import { facilityApi } from '@/lib/api'
 import { formatTimeRange, formatDate } from '@/lib/utils'
-import { MapPin, ExternalLink, Phone } from 'lucide-react'
+import { MapPin, ExternalLink, Phone, AlertCircle, RefreshCw } from 'lucide-react'
 import type { Facility } from '@/types'
 
 // Toronto coordinates
@@ -22,17 +22,55 @@ const poolIcon = new Icon({
 export default function MapView() {
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null)
 
-  const { data: facilities, isLoading, error } = useQuery({
+  const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ['facilities', 'lane-swim'],
     queryFn: () => facilityApi.getAll(true),
+    retry: 2,
+    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
   })
 
   if (error) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 text-lg">Failed to load facilities</p>
-          <p className="text-gray-600 mt-2">Please try again later</p>
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full mx-4">
+          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Failed to Load Facilities
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  We couldn't load the pool locations. This might be due to:
+                </p>
+                <ul className="text-sm text-gray-600 mb-4 space-y-1 list-disc list-inside">
+                  <li>Network connectivity issues</li>
+                  <li>API service temporarily unavailable</li>
+                  <li>Server maintenance</li>
+                </ul>
+                <button
+                  onClick={() => refetch()}
+                  disabled={isRefetching}
+                  className="flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <RefreshCw className={`w-4 h-4 ${isRefetching ? 'animate-spin' : ''}`} />
+                  {isRefetching ? 'Retrying...' : 'Try Again'}
+                </button>
+                {error instanceof Error && (
+                  <details className="mt-4">
+                    <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+                      Technical details
+                    </summary>
+                    <p className="mt-2 text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
+                      {error.message}
+                    </p>
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
