@@ -178,7 +178,7 @@ def ingest_official_schedules(db_session):
     unmatched_locations = set()
     
     for program in swim_programs:
-        location_id = program.get('LocationID')
+        location_id = api.get_field(program, 'Location ID', 'LocationID', 'Location_ID')
         location = locations.get(location_id)
         
         # Parse program into sessions

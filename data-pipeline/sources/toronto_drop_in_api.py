@@ -346,19 +346,52 @@ class TorontoDropInAPI:
         course_name = self.get_field(program, 'Course Title', 'CourseName', 'Course_Title')
         swim_type = self.classify_swim_type(course_name)
         
-        # Parse schedule information
-        schedule_text = self.get_field(program, 'Schedule', 'Days', 'Day')
-        days_of_week = self.parse_days_of_week(schedule_text)
-        time_ranges = self.parse_time_range(schedule_text)
+        # Check if this is the new API format with explicit time/date fields
+        has_explicit_fields = 'Start Hour' in program or 'DayOftheWeek' in program
         
-        if not days_of_week or not time_ranges:
-            logger.debug(f"Could not parse schedule for: {course_name} - {schedule_text}")
-            return []
-        
-        # Parse date range
-        start_date_str = self.get_field(program, 'Start Date', 'StartDate', 'Date Range')
-        end_date_str = self.get_field(program, 'End Date', 'EndDate')
-        start_date, end_date = self.parse_date_range(start_date_str, end_date_str)
+        if has_explicit_fields:
+            # New API format with explicit time and date fields
+            day_of_week_str = self.get_field(program, 'DayOftheWeek', 'Day', 'DayOfWeek')
+            if not day_of_week_str:
+                logger.debug(f"No day of week for: {course_name}")
+                return []
+            
+            days_of_week = self.parse_days_of_week(day_of_week_str)
+            if not days_of_week:
+                return []
+            
+            # Parse time from hour/minute fields
+            try:
+                start_hour = int(self.get_field(program, 'Start Hour', 'StartHour'))
+                start_minute = int(self.get_field(program, 'Start Minute', 'StartMinute'))
+                end_hour = int(self.get_field(program, 'End Hour', 'EndHour'))
+                end_minute = int(self.get_field(program, 'End Min', 'End Minute', 'EndMinute'))
+                
+                start_time = time(start_hour, start_minute)
+                end_time = time(end_hour, end_minute)
+                time_ranges = [(start_time, end_time)]
+            except (ValueError, TypeError) as e:
+                logger.debug(f"Could not parse time for: {course_name} - {e}")
+                return []
+            
+            # Parse date range from First Date / Last Date
+            first_date_str = self.get_field(program, 'First Date', 'FirstDate', 'Start Date')
+            last_date_str = self.get_field(program, 'Last Date', 'LastDate', 'End Date')
+            start_date, end_date = self.parse_date_range(first_date_str, last_date_str)
+        else:
+            # Old API format with schedule text
+            schedule_text = self.get_field(program, 'Schedule', 'Days')
+            days_of_week = self.parse_days_of_week(schedule_text)
+            time_ranges = self.parse_time_range(schedule_text)
+            
+            if not days_of_week or not time_ranges:
+                logger.debug(f"Could not parse schedule for: {course_name} - {schedule_text}")
+                return []
+            
+            # Parse date range
+            start_date_str = self.get_field(program, 'Start Date', 'StartDate', 'Date Range')
+            end_date_str = self.get_field(program, 'End Date', 'EndDate')
+            start_date, end_date = self.parse_date_range(start_date_str, end_date_str)
         
         # Generate session dates
         session_dates = self.generate_session_dates(
@@ -376,10 +409,10 @@ class TorontoDropInAPI:
         age_min = self.get_field(program, 'Age Min', 'AgeMin', 'Age_Min')
         age_max = self.get_field(program, 'Age Max', 'AgeMax', 'Age_Max')
         if age_min or age_max:
-            notes_parts.append(f"Age: {age_min}-{age_max}" if age_max else f"Age: {age_min}+")
-        category = self.get_field(program, 'Category')
-        if category:
-            notes_parts.append(f"Category: {category}")
+            notes_parts.append(f"Age: {age_min}-{age_max}" if age_max and age_max != 'None' else f"Age: {age_min}+")
+        section = self.get_field(program, 'Section')
+        if section:
+            notes_parts.append(f"{section}")
         notes = '; '.join(notes_parts) if notes_parts else None
         
         # Create session for each date and time slot
