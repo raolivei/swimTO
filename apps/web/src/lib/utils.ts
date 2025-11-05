@@ -1,4 +1,4 @@
-import { format, parse, isToday, isTomorrow, parseISO } from "date-fns";
+import { format, parse, isToday, isTomorrow } from "date-fns";
 import { clsx, type ClassValue } from "clsx";
 
 export function cn(...inputs: ClassValue[]) {
@@ -6,7 +6,9 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string): string {
-  const date = parseISO(dateString);
+  // Parse date as local date to avoid timezone issues
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
 
   if (isToday(date)) return "Today";
   if (isTomorrow(date)) return "Tomorrow";
@@ -46,7 +48,9 @@ export function getSwimTypeColor(type: string): string {
 }
 
 export function getDayOfWeek(dateString: string): string {
-  const date = parseISO(dateString);
+  // Parse date as local date to avoid timezone issues
+  const [year, month, day] = dateString.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   return format(date, "EEEE");
 }
 
