@@ -1,18 +1,21 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Waves, Map, Calendar, Info } from 'lucide-react'
+import { Waves, Map, Calendar, Info, Moon, Sun } from 'lucide-react'
+import { useDarkMode } from '../contexts/DarkModeContext'
 
 export default function Layout() {
+  const { isDarkMode, toggleDarkMode } = useDarkMode()
+  
   const navLinkClass = ({ isActive }: { isActive: boolean }) => {
     const base = "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-medium relative overflow-hidden group"
     return isActive
       ? `${base} bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30 scale-105`
-      : `${base} text-gray-700 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 hover:scale-105`
+      : `${base} text-gray-700 dark:text-gray-300 hover:bg-gradient-to-r hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-600 hover:scale-105`
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-primary-50/20">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-primary-50/20 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
       {/* Header with glassmorphism effect */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 shadow-sm border-b border-gray-200/50">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 shadow-sm border-b border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <NavLink to="/" className="flex items-center gap-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
@@ -22,28 +25,44 @@ export default function Layout() {
               </div>
               <div>
                 <span className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">SwimTO</span>
-                <p className="text-xs text-gray-500 font-medium">Toronto's Pool Finder</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Toronto's Pool Finder</p>
               </div>
             </NavLink>
 
-            <nav className="flex gap-2" aria-label="Main navigation">
-              <NavLink to="/" end className={navLinkClass}>
-                <Waves className="w-5 h-5" />
-                <span className="hidden sm:inline">Home</span>
-              </NavLink>
-              <NavLink to="/map" className={navLinkClass}>
-                <Map className="w-5 h-5" />
-                <span className="hidden sm:inline">Map</span>
-              </NavLink>
-              <NavLink to="/schedule" className={navLinkClass}>
-                <Calendar className="w-5 h-5" />
-                <span className="hidden sm:inline">Schedule</span>
-              </NavLink>
-              <NavLink to="/about" className={navLinkClass}>
-                <Info className="w-5 h-5" />
-                <span className="hidden sm:inline">About</span>
-              </NavLink>
-            </nav>
+            <div className="flex items-center gap-2">
+              <nav className="flex gap-2" aria-label="Main navigation">
+                <NavLink to="/" end className={navLinkClass}>
+                  <Waves className="w-5 h-5" />
+                  <span className="hidden sm:inline">Home</span>
+                </NavLink>
+                <NavLink to="/map" className={navLinkClass}>
+                  <Map className="w-5 h-5" />
+                  <span className="hidden sm:inline">Map</span>
+                </NavLink>
+                <NavLink to="/schedule" className={navLinkClass}>
+                  <Calendar className="w-5 h-5" />
+                  <span className="hidden sm:inline">Schedule</span>
+                </NavLink>
+                <NavLink to="/about" className={navLinkClass}>
+                  <Info className="w-5 h-5" />
+                  <span className="hidden sm:inline">About</span>
+                </NavLink>
+              </nav>
+              
+              {/* Dark mode toggle */}
+              <button
+                onClick={toggleDarkMode}
+                className="ml-2 p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-110 group"
+                aria-label={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'}
+              >
+                {isDarkMode ? (
+                  <Sun className="w-5 h-5 text-yellow-500 group-hover:rotate-45 transition-transform duration-300" />
+                ) : (
+                  <Moon className="w-5 h-5 text-gray-700 group-hover:-rotate-12 transition-transform duration-300" />
+                )}
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -54,14 +73,14 @@ export default function Layout() {
       </main>
 
       {/* Footer with gradient */}
-      <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-gray-700">
+      <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 border-t border-gray-700 dark:border-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">
             <div className="flex items-center justify-center gap-2 mb-4">
               <Waves className="w-6 h-6 text-primary-400" />
               <span className="text-xl font-bold text-white">SwimTO</span>
             </div>
-            <p className="text-sm text-gray-400">
+            <p className="text-sm text-gray-400 dark:text-gray-500">
               Data from{' '}
               <a
                 href="https://open.toronto.ca"
@@ -72,7 +91,7 @@ export default function Layout() {
                 City of Toronto Open Data Portal
               </a>
             </p>
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-600">
               Licensed under the Open Government Licence – Toronto
             </p>
           </div>
