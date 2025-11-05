@@ -206,6 +206,35 @@ export default function ScheduleView() {
     "Saturday",
   ];
 
+  // Get dates for the current week (Sunday to Saturday)
+  const getWeekDates = () => {
+    const today = new Date();
+    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+    const weekDates: Date[] = [];
+    
+    // Calculate dates for each day of the week
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - currentDay + i);
+      weekDates.push(date);
+    }
+    
+    return weekDates;
+  };
+
+  const weekDates = getWeekDates();
+
+  // Format date as "Mon 11/5"
+  const formatWeekdayHeader = (date: Date) => {
+    const weekdayShort = weekdays[date.getDay()].substring(0, 3);
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return {
+      weekday: weekdayShort,
+      date: `${month}/${day}`,
+    };
+  };
+
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -450,14 +479,20 @@ export default function ScheduleView() {
                     <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 z-10">
                       Community Center
                     </th>
-                    {weekdays.map((day) => (
-                      <th
-                        key={day}
-                        className="px-4 py-4 text-center text-sm font-bold uppercase tracking-wider min-w-[120px]"
-                      >
-                        {day.substring(0, 3)}
-                      </th>
-                    ))}
+                    {weekDates.map((date, index) => {
+                      const formatted = formatWeekdayHeader(date);
+                      return (
+                        <th
+                          key={index}
+                          className="px-4 py-4 text-center text-sm font-bold tracking-wider min-w-[120px]"
+                        >
+                          <div className="uppercase">{formatted.weekday}</div>
+                          <div className="text-xs font-normal text-primary-100 mt-0.5">
+                            {formatted.date}
+                          </div>
+                        </th>
+                      );
+                    })}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
