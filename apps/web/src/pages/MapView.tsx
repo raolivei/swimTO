@@ -20,6 +20,7 @@ import {
   Navigation,
   Locate,
 } from "lucide-react";
+import { useDarkMode } from "../contexts/DarkModeContext";
 import type { Facility } from "@/types";
 
 // Toronto coordinates
@@ -106,6 +107,7 @@ function MapController({
 }
 
 export default function MapView() {
+  const { isDarkMode } = useDarkMode();
   const [selectedFacility, setSelectedFacility] =
     useState<FacilityWithDistance | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
@@ -175,21 +177,21 @@ export default function MapView() {
 
   if (error) {
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50">
+      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="max-w-md w-full mx-4">
-          <div className="bg-white rounded-lg shadow-lg p-6 border-l-4 border-red-500">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
             <div className="flex items-start">
               <div className="flex-shrink-0">
                 <AlertCircle className="h-6 w-6 text-red-500" />
               </div>
               <div className="ml-3 flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                   Failed to Load Facilities
                 </h3>
-                <p className="text-gray-600 mb-4">
+                <p className="text-gray-600 dark:text-gray-400 mb-4">
                   We couldn't load the pool locations. This might be due to:
                 </p>
-                <ul className="text-sm text-gray-600 mb-4 space-y-1 list-disc list-inside">
+                <ul className="text-sm text-gray-600 dark:text-gray-400 mb-4 space-y-1 list-disc list-inside">
                   <li>Network connectivity issues</li>
                   <li>API service temporarily unavailable</li>
                   <li>Server maintenance</li>
@@ -197,7 +199,7 @@ export default function MapView() {
                 <button
                   onClick={() => refetch()}
                   disabled={isRefetching}
-                  className="flex items-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 bg-primary-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isRefetching ? "animate-spin" : ""}`}
@@ -206,10 +208,10 @@ export default function MapView() {
                 </button>
                 {error instanceof Error && (
                   <details className="mt-4">
-                    <summary className="text-sm text-gray-500 cursor-pointer hover:text-gray-700">
+                    <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
                       Technical details
                     </summary>
-                    <p className="mt-2 text-xs text-gray-500 font-mono bg-gray-50 p-2 rounded">
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded">
                       {error.message}
                     </p>
                   </details>
@@ -231,10 +233,10 @@ export default function MapView() {
       {/* Map */}
       <div className="absolute inset-0">
         {isLoading ? (
-          <div className="h-full flex items-center justify-center bg-gray-100">
+          <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading pools...</p>
+              <p className="text-gray-600 dark:text-gray-400">Loading pools...</p>
             </div>
           </div>
         ) : (
@@ -245,10 +247,14 @@ export default function MapView() {
             zoomControl={true}
             scrollWheelZoom={true}
           >
-            {/* Better map tiles - CartoDB Voyager for cleaner appearance */}
+            {/* Map tiles with dark mode support */}
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              url={
+                isDarkMode
+                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                  : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+              }
               subdomains="abcd"
               maxZoom={20}
             />
@@ -340,27 +346,27 @@ export default function MapView() {
 
       {/* Sidebar - Full width on mobile, fixed width on desktop */}
       {selectedFacility && (
-        <div className="absolute top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white rounded-lg shadow-lg p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
+        <div className="absolute top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-[calc(100vh-12rem)] overflow-y-auto">
           <button
             onClick={() => setSelectedFacility(null)}
-            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded"
+            className="absolute top-2 right-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
             aria-label="Close facility details"
           >
             ✕
           </button>
 
-          <h2 className="text-xl font-bold mb-3">{selectedFacility.name}</h2>
+          <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-gray-100">{selectedFacility.name}</h2>
 
           {selectedFacility.address && (
             <div className="flex gap-2 mb-2 text-sm">
-              <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+              <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0 mt-0.5" />
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
                   selectedFacility.address
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-500 hover:underline"
+                className="text-primary-500 dark:text-primary-400 hover:underline"
               >
                 {selectedFacility.address}
                 <ExternalLink className="w-3 h-3 inline ml-1" />
@@ -370,10 +376,10 @@ export default function MapView() {
 
           {selectedFacility.phone && (
             <div className="flex gap-2 mb-3 text-sm">
-              <Phone className="w-4 h-4 text-gray-400" />
+              <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500" />
               <a
                 href={`tel:${selectedFacility.phone}`}
-                className="text-primary-500 hover:underline"
+                className="text-primary-500 dark:text-primary-400 hover:underline"
               >
                 {selectedFacility.phone}
               </a>
@@ -381,26 +387,26 @@ export default function MapView() {
           )}
 
           {selectedFacility.distance !== undefined && (
-            <div className="bg-green-50 p-3 rounded-lg mb-3">
-              <p className="text-xs font-semibold text-green-900 mb-1 flex items-center gap-1">
+            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3">
+              <p className="text-xs font-semibold text-green-900 dark:text-green-400 mb-1 flex items-center gap-1">
                 <Navigation className="w-3 h-3" />
                 DISTANCE FROM YOU
               </p>
-              <p className="font-semibold text-lg">
+              <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                 {formatDistance(selectedFacility.distance)}
               </p>
             </div>
           )}
 
           {selectedFacility.next_session && (
-            <div className="bg-blue-50 p-3 rounded-lg mb-3">
-              <p className="text-xs font-semibold text-blue-900 mb-1">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-3">
+              <p className="text-xs font-semibold text-blue-900 dark:text-blue-400 mb-1">
                 NEXT SESSION
               </p>
-              <p className="font-semibold">
+              <p className="font-semibold text-gray-900 dark:text-gray-100">
                 {formatDate(selectedFacility.next_session.date)}
               </p>
-              <p className="text-sm">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
                 {formatTimeRange(
                   selectedFacility.next_session.start_time,
                   selectedFacility.next_session.end_time
@@ -409,7 +415,7 @@ export default function MapView() {
             </div>
           )}
 
-          <div className="text-sm text-gray-600">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
             <p>{selectedFacility.session_count || 0} upcoming sessions</p>
             {selectedFacility.district && (
               <p className="mt-1">District: {selectedFacility.district}</p>
@@ -422,19 +428,19 @@ export default function MapView() {
       {!selectedFacility && (
         <div className="absolute bottom-4 left-4 right-4 md:right-auto md:w-96 space-y-2">
           {/* Location controls */}
-          <div className="bg-white rounded-lg shadow-lg p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
             {!userLocation && !isLoadingLocation && locationError ? (
               <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-amber-600 mb-1">
+                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
                   <AlertCircle className="w-4 h-4" />
                   <span className="text-sm font-semibold">Location Access</span>
                 </div>
-                <p className="text-xs text-gray-600 mb-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
                   {locationError}. You can still browse all pools.
                 </p>
                 <button
                   onClick={handleGetLocation}
-                  className="flex items-center justify-center gap-2 bg-primary-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 transition-colors text-sm"
+                  className="flex items-center justify-center gap-2 bg-primary-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors text-sm"
                 >
                   <Navigation className="w-4 h-4" />
                   Try Again
@@ -442,7 +448,7 @@ export default function MapView() {
               </div>
             ) : !userLocation ? (
               <div className="flex items-center justify-center gap-2">
-                <div className="animate-pulse flex items-center gap-2 text-primary-600">
+                <div className="animate-pulse flex items-center gap-2 text-primary-600 dark:text-primary-400">
                   <Navigation className="w-4 h-4 animate-spin" />
                   <span className="text-sm font-semibold">
                     Getting your location...
@@ -452,20 +458,20 @@ export default function MapView() {
             ) : (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-green-600">
+                  <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <Locate className="w-4 h-4" />
                     <span className="text-sm font-semibold">Location Active</span>
                   </div>
                   <button
                     onClick={handleGetLocation}
-                    className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 transition-colors flex items-center gap-1"
+                    className="text-xs px-3 py-1 rounded bg-gray-100 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex items-center gap-1"
                     title="Recenter map on your location"
                   >
                     <Navigation className="w-3 h-3" />
                     Recenter
                   </button>
                 </div>
-                <div className="flex items-center justify-between text-xs text-gray-600">
+                <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                   <span>
                     Showing pools within 10km radius
                   </span>
@@ -475,7 +481,7 @@ export default function MapView() {
                       setSortByDistance(false);
                       setLocationError(null);
                     }}
-                    className="text-red-600 hover:text-red-700 underline"
+                    className="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 underline"
                   >
                     Disable
                   </button>
@@ -485,10 +491,10 @@ export default function MapView() {
           </div>
 
           {/* Stats */}
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <p className="text-sm text-gray-600 text-center md:text-left">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400 text-center md:text-left">
               Showing{" "}
-              <span className="font-semibold text-gray-900">
+              <span className="font-semibold text-gray-900 dark:text-gray-100">
                 {validFacilities.length}
               </span>{" "}
               pools with lane swim
