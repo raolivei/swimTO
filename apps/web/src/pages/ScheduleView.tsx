@@ -503,7 +503,7 @@ export default function ScheduleView() {
                                   )}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
-                                  className="hover:text-primary-600 hover:underline transition-colors"
+                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
                                 >
                                   {session.facility.address}
                                 </a>
@@ -525,7 +525,7 @@ export default function ScheduleView() {
 
                         {/* Notes */}
                         {session.notes && (
-                          <p className="mt-3 text-sm text-gray-600 md:ml-48 bg-gray-50 p-3 rounded-lg">
+                          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 md:ml-48 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
                             {session.notes}
                           </p>
                         )}
@@ -538,12 +538,12 @@ export default function ScheduleView() {
           </div>
         ) : (
           /* Table View */
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 z-10">
+                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-10">
                       Community Center
                     </th>
                     {weekDates.map((date, index) => {
@@ -562,23 +562,23 @@ export default function ScheduleView() {
                     })}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-200">
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {sortedFacilityEntries.map(([facilityName, data]) => (
                     <tr
                       key={facilityName}
-                      className="hover:bg-primary-50/50 transition-colors"
+                      className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
-                      <td className="px-6 py-4 sticky left-0 bg-white/95 backdrop-blur-sm z-10 border-r border-gray-200">
-                        <div className="font-bold text-gray-900">
+                      <td className="px-6 py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
+                        <div className="font-bold text-gray-900 dark:text-gray-100">
                           {facilityName}
                           {data.distance !== undefined && (
-                            <span className="ml-2 text-xs font-semibold text-green-600">
+                            <span className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400">
                               ({formatDistance(data.distance)})
                             </span>
                           )}
                         </div>
                         {data.facility?.address && (
-                          <div className="text-xs text-gray-500 mt-1 flex items-start gap-1">
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-start gap-1">
                             <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
                             <span className="line-clamp-1">
                               {data.facility.address}
@@ -597,7 +597,7 @@ export default function ScheduleView() {
                               <div className="space-y-2">
                                 {daySessions.slice(0, 3).map((session) => (
                                   <div key={session.id} className="text-xs">
-                                    <div className="font-semibold text-gray-900">
+                                    <div className="font-semibold text-gray-900 dark:text-gray-100">
                                       {formatTimeRange(
                                         session.start_time,
                                         session.end_time
@@ -613,13 +613,13 @@ export default function ScheduleView() {
                                   </div>
                                 ))}
                                 {daySessions.length > 3 && (
-                                  <div className="text-xs text-primary-600 font-semibold">
+                                  <div className="text-xs text-primary-600 dark:text-primary-400 font-semibold">
                                     +{daySessions.length - 3} more
                                   </div>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-400 text-xs">—</span>
+                              <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
                             )}
                           </td>
                         );
@@ -630,7 +630,7 @@ export default function ScheduleView() {
               </table>
             </div>
             {sortedFacilityEntries.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
                 No facilities found with the selected filters
               </div>
             )}
