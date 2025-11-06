@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Icon, LatLngBounds } from "leaflet";
-import { facilityApi } from "@/lib/api";
+import { facilityApi, getApiErrorMessage } from "@/lib/api";
 import {
   formatTimeRange,
   formatDate,
@@ -213,9 +213,11 @@ export default function MapView() {
   });
 
   if (error) {
+    const errorInfo = getApiErrorMessage(error);
+    
     return (
       <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-md w-full mx-4">
+        <div className="max-w-2xl w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -223,16 +225,21 @@ export default function MapView() {
               </div>
               <div className="ml-3 flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Failed to Load Facilities
+                  {errorInfo.title}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  We couldn't load the pool locations. This might be due to:
+                  {errorInfo.message}
                 </p>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 mb-4 space-y-1 list-disc list-inside">
-                  <li>Network connectivity issues</li>
-                  <li>API service temporarily unavailable</li>
-                  <li>Server maintenance</li>
-                </ul>
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Troubleshooting Steps:
+                  </h4>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                    {errorInfo.suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
+                  </ul>
+                </div>
                 <button
                   onClick={() => refetch()}
                   disabled={isRefetching}
@@ -243,16 +250,14 @@ export default function MapView() {
                   />
                   {isRefetching ? "Retrying..." : "Try Again"}
                 </button>
-                {error instanceof Error && (
-                  <details className="mt-4">
-                    <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                      Technical details
-                    </summary>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                      {error.message}
-                    </p>
-                  </details>
-                )}
+                <details className="mt-4">
+                  <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                    Technical details
+                  </summary>
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
+                    {errorInfo.details}
+                  </p>
+                </details>
               </div>
             </div>
           </div>
