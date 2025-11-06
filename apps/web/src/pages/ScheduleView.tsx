@@ -536,7 +536,18 @@ export default function ScheduleView() {
                             </button>
                             <div className="flex-1">
                               <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
-                                {session.facility?.name}
+                                {session.facility?.website ? (
+                                  <a
+                                    href={session.facility.website}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                  >
+                                    {session.facility.name}
+                                  </a>
+                                ) : (
+                                  session.facility?.name
+                                )}
                                 {session.distance !== undefined && (
                                   <span className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400">
                                     ({formatDistance(session.distance)})
@@ -636,7 +647,18 @@ export default function ScheduleView() {
                           </button>
                           <div className="flex-1">
                             <div className="font-bold text-gray-900 dark:text-gray-100">
-                              {facilityName}
+                              {data.facility?.website ? (
+                                <a
+                                  href={data.facility.website}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                >
+                                  {facilityName}
+                                </a>
+                              ) : (
+                                facilityName
+                              )}
                               {data.distance !== undefined && (
                                 <span className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400">
                                   ({formatDistance(data.distance)})

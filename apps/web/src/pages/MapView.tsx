@@ -343,7 +343,18 @@ export default function MapView() {
                     <div className="min-w-[250px]">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h3 className="font-semibold text-lg flex-1">
-                          {facility.name}
+                          {facility.website ? (
+                            <a
+                              href={facility.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary-600 hover:underline transition-colors"
+                            >
+                              {facility.name}
+                            </a>
+                          ) : (
+                            facility.name
+                          )}
                         </h3>
                         <button
                           onClick={() => handleToggleFavorite(facility.facility_id)}
@@ -417,7 +428,20 @@ export default function MapView() {
           </button>
 
           <div className="flex items-start gap-2 mb-3">
-            <h2 className="text-xl font-bold flex-1 text-gray-900 dark:text-gray-100">{selectedFacility.name}</h2>
+            <h2 className="text-xl font-bold flex-1 text-gray-900 dark:text-gray-100">
+              {selectedFacility.website ? (
+                <a
+                  href={selectedFacility.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                >
+                  {selectedFacility.name}
+                </a>
+              ) : (
+                selectedFacility.name
+              )}
+            </h2>
             <button
               onClick={() => handleToggleFavorite(selectedFacility.facility_id)}
               className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
