@@ -10,6 +10,8 @@ import {
   getUserLocation,
   calculateDistance,
   formatDistance,
+  getFavorites,
+  toggleFavorite,
   type UserLocation,
 } from "@/lib/utils";
 import {
@@ -20,6 +22,7 @@ import {
   List,
   Table2,
   Navigation,
+  Star,
 } from "lucide-react";
 import type { SwimType, Session } from "@/types";
 
@@ -40,6 +43,7 @@ export default function ScheduleView() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
+  const [favorites, setFavorites] = useState<Set<string>>(new Set()); // Track favorite facilities
 
   const {
     data: sessions,
@@ -57,6 +61,18 @@ export default function ScheduleView() {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Load favorites on mount
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
+
+  // Handle toggling favorites
+  const handleToggleFavorite = (facilityId: string | undefined) => {
+    if (!facilityId) return;
+    toggleFavorite(facilityId);
+    setFavorites(getFavorites());
+  };
 
   // Automatically get user location on mount
   useEffect(() => {
@@ -226,17 +242,29 @@ export default function ScheduleView() {
     return acc;
   }, {} as Record<string, { facility: any; sessions: Record<number, SessionWithDistance[]>; distance?: number }>);
 
-  // Sort facilities by distance if enabled
+  // Sort facilities: favorites first, then by distance if enabled
   const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {});
-  if (sortByDistance && userLocation) {
-    sortedFacilityEntries.sort((a, b) => {
+  sortedFacilityEntries.sort((a, b) => {
+    const facilityA = a[1].facility;
+    const facilityB = b[1].facility;
+    const isFavA = facilityA?.facility_id ? favorites.has(facilityA.facility_id) : false;
+    const isFavB = facilityB?.facility_id ? favorites.has(facilityB.facility_id) : false;
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Then sort by distance if enabled
+    if (sortByDistance && userLocation) {
       const distA = a[1].distance;
       const distB = b[1].distance;
       if (distA === undefined) return 1;
       if (distB === undefined) return -1;
       return distA - distB;
-    });
-  }
+    }
+
+    return 0;
+  });
 
   const weekdays = [
     "Sunday",
@@ -486,30 +514,46 @@ export default function ScheduleView() {
                           </div>
 
                           {/* Facility */}
-                          <div className="flex-1">
-                            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
-                              {session.facility?.name}
-                              {session.distance !== undefined && (
-                                <span className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400">
-                                  ({formatDistance(session.distance)})
-                                </span>
+                          <div className="flex-1 flex items-start gap-2">
+                            <button
+                              onClick={() => handleToggleFavorite(session.facility?.facility_id)}
+                              className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
+                              aria-label={favorites.has(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                              title={favorites.has(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <Star
+                                className={`w-5 h-5 ${
+                                  favorites.has(session.facility?.facility_id || '')
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                                }`}
+                              />
+                            </button>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
+                                {session.facility?.name}
+                                {session.distance !== undefined && (
+                                  <span className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                                    ({formatDistance(session.distance)})
+                                  </span>
+                                )}
+                              </h3>
+                              {session.facility?.address && (
+                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                      session.facility.address
+                                    )}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                  >
+                                    {session.facility.address}
+                                  </a>
+                                </p>
                               )}
-                            </h3>
-                            {session.facility?.address && (
-                              <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                <a
-                                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                    session.facility.address
-                                  )}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                >
-                                  {session.facility.address}
-                                </a>
-                              </p>
-                            )}
+                            </div>
                           </div>
 
                           {/* Type */}
@@ -570,22 +614,40 @@ export default function ScheduleView() {
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <td className="px-6 py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
-                        <div className="font-bold text-gray-900 dark:text-gray-100">
-                          {facilityName}
-                          {data.distance !== undefined && (
-                            <span className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400">
-                              ({formatDistance(data.distance)})
-                            </span>
-                          )}
-                        </div>
-                        {data.facility?.address && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-start gap-1">
-                            <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
-                            <span className="line-clamp-1">
-                              {data.facility.address}
-                            </span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleFavorite(data.facility?.facility_id)}
+                            className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+                            aria-label={favorites.has(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                            title={favorites.has(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                          >
+                            <Star
+                              className={`w-5 h-5 ${
+                                favorites.has(data.facility?.facility_id || '')
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                              }`}
+                            />
+                          </button>
+                          <div className="flex-1">
+                            <div className="font-bold text-gray-900 dark:text-gray-100">
+                              {facilityName}
+                              {data.distance !== undefined && (
+                                <span className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400">
+                                  ({formatDistance(data.distance)})
+                                </span>
+                              )}
+                            </div>
+                            {data.facility?.address && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-start gap-1">
+                                <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                                <span className="line-clamp-1">
+                                  {data.facility.address}
+                                </span>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       {weekdays.map((_, dayIndex) => {
                         const daySessions = data.sessions[dayIndex] || [];
