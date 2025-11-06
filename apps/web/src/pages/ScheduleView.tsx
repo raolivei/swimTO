@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { scheduleApi, getApiErrorMessage } from "@/lib/api";
+import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import {
   formatDate,
   formatTimeRange,
@@ -13,7 +13,7 @@ import {
   getFavorites,
   toggleFavorite,
   type UserLocation,
-} from "@/lib/utils";
+} from "../lib/utils";
 import {
   Filter,
   MapPin,
@@ -24,7 +24,7 @@ import {
   Navigation,
   Star,
 } from "lucide-react";
-import type { SwimType, Session } from "@/types";
+import type { SwimType, Session } from "../types";
 
 type ViewMode = "list" | "table";
 
@@ -282,14 +282,14 @@ export default function ScheduleView() {
     "Saturday",
   ];
 
-  // Format date as "Mon 11/5"
+  // Format date as "Mon Jan-15"
   const formatWeekdayHeader = (date: Date) => {
     const weekdayShort = weekdays[date.getDay()].substring(0, 3);
-    const month = date.getMonth() + 1;
+    const monthShort = date.toLocaleDateString("en-US", { month: "short" });
     const day = date.getDate();
     return {
       weekday: weekdayShort,
-      date: `${month}/${day}`,
+      date: `${monthShort}-${day}`,
     };
   };
 
@@ -607,9 +607,9 @@ export default function ScheduleView() {
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white">
+                <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-10">
+                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-30">
                       Community Center
                     </th>
                     {weekDates.map((date, index) => {
@@ -617,10 +617,10 @@ export default function ScheduleView() {
                       return (
                         <th
                           key={index}
-                          className="px-4 py-4 text-center text-sm font-bold tracking-wider min-w-[120px]"
+                          className="px-4 py-5 text-center min-w-[120px]"
                         >
-                          <div className="uppercase">{formatted.weekday}</div>
-                          <div className="text-xs font-normal text-primary-100 mt-0.5">
+                          <div className="text-lg font-extrabold uppercase tracking-wide">{formatted.weekday}</div>
+                          <div className="text-sm font-semibold text-primary-100 mt-1">
                             {formatted.date}
                           </div>
                         </th>
