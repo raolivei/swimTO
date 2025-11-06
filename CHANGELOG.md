@@ -43,6 +43,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Facility Coordinates**: Corrected map pin positions for facilities
+  - York Recreation Centre: Fixed coordinates (43.627689, -79.545319)
+  - Norseman Community School and Pool: Fixed coordinates (43.609883, -79.519066)
+  - Map pins now show at correct locations matching addresses
+- **Website URLs**: Fixed broken facility website links
+  - Updated 2 facilities to new Toronto.ca URL format
+  - Removed 40 broken old-format URLs that no longer work
+  - Old format: `/data/parks/prd/facilities/complex/{id}/index.html`
+  - New format: `/explore-enjoy/parks-recreation/.../location/?id={id}&title={name}`
+  - Facilities without correct URLs now show no link (instead of broken link)
 - **Schedule Table Expandability**: "+X more" buttons in schedule table view now expand to show all sessions
   - Buttons are now clickable with hover effects
   - Shows "Show less" when expanded to collapse
