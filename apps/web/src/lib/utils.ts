@@ -143,67 +143,84 @@ export function getUserLocation(): Promise<UserLocation> {
   });
 }
 
-// Favorites management using localStorage
+// Favorites management - supports both localStorage (guest) and backend (authenticated)
 const FAVORITES_KEY = "swimto_favorites";
 
 /**
- * Get all favorite facility IDs from localStorage
+ * Get all favorite facility IDs from localStorage (for guest users)
  */
-export function getFavorites(): Set<string> {
+export function getFavoritesFromLocalStorage(): Set<string> {
   try {
     const stored = localStorage.getItem(FAVORITES_KEY);
     if (stored) {
       return new Set(JSON.parse(stored));
     }
   } catch (error) {
-    console.error("Error loading favorites:", error);
+    console.error("Error loading favorites from localStorage:", error);
   }
   return new Set();
 }
 
 /**
- * Check if a facility is favorited
+ * Save favorites to localStorage (for guest users)
  */
-export function isFavorite(facilityId: string): boolean {
-  return getFavorites().has(facilityId);
+export function saveFavoritesToLocalStorage(facilityIds: Set<string>): void {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(facilityIds)));
+  } catch (error) {
+    console.error("Error saving favorites to localStorage:", error);
+  }
 }
 
 /**
- * Add a facility to favorites
+ * Add a facility to localStorage favorites (for guest users)
  */
-export function addFavorite(facilityId: string): void {
+export function addFavoriteToLocalStorage(facilityId: string): void {
   try {
-    const favorites = getFavorites();
+    const favorites = getFavoritesFromLocalStorage();
     favorites.add(facilityId);
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favorites)));
+    saveFavoritesToLocalStorage(favorites);
   } catch (error) {
-    console.error("Error adding favorite:", error);
+    console.error("Error adding favorite to localStorage:", error);
   }
 }
 
 /**
- * Remove a facility from favorites
+ * Remove a facility from localStorage favorites (for guest users)
  */
-export function removeFavorite(facilityId: string): void {
+export function removeFavoriteFromLocalStorage(facilityId: string): void {
   try {
-    const favorites = getFavorites();
+    const favorites = getFavoritesFromLocalStorage();
     favorites.delete(facilityId);
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favorites)));
+    saveFavoritesToLocalStorage(favorites);
   } catch (error) {
-    console.error("Error removing favorite:", error);
+    console.error("Error removing favorite from localStorage:", error);
   }
 }
 
 /**
- * Toggle favorite status for a facility
+ * Sync localStorage favorites to backend when user logs in
+ * This should be called after successful authentication
  */
-export function toggleFavorite(facilityId: string): boolean {
-  const favorites = getFavorites();
-  if (favorites.has(facilityId)) {
-    removeFavorite(facilityId);
-    return false;
-  } else {
-    addFavorite(facilityId);
-    return true;
+export async function syncLocalFavoritesToBackend(
+  favoritesApi: {
+    add: (facilityId: string) => Promise<void>;
+  }
+): Promise<void> {
+  try {
+    const localFavorites = getFavoritesFromLocalStorage();
+    if (localFavorites.size > 0) {
+      // Add all local favorites to backend
+      const promises = Array.from(localFavorites).map((facilityId) =>
+        favoritesApi.add(facilityId).catch((err) => {
+          console.warn(`Failed to sync favorite ${facilityId}:`, err);
+        })
+      );
+      await Promise.all(promises);
+      // Clear localStorage favorites after successful sync
+      localStorage.removeItem(FAVORITES_KEY);
+    }
+  } catch (error) {
+    console.error("Error syncing favorites to backend:", error);
   }
 }
