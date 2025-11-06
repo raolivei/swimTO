@@ -9,17 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Favorites System**: Users can now favorite facilities in both schedule and map views
+  - Click star icon to add/remove favorites
+  - Favorites persist across sessions using localStorage
+  - Favorites automatically appear at the top of lists
+  - Gold map markers distinguish favorite facilities on the map
+- **Real-Time Updates Page**: New dedicated page explaining how SwimTO keeps data current
+  - Details on daily automatic refresh process
+  - Information about data sources (City of Toronto Open Data)
+  - Technical details about caching and infrastructure
+- **Clickable Homepage Widgets**: Feature cards on homepage now link to their respective pages
+  - Interactive Map → `/map`
+  - Smart Schedules → `/schedule`
+  - Real-Time Updates → `/real-time-updates`
+
 ### Fixed
 
-- **Schedule Data Ingestion**: Fixed missing schedule data for facilities like Norseman by ensuring `ingest_json_api_schedules()` is properly integrated into the daily refresh pipeline
-- **Week Navigation**: Fixed "Next Week" showing no sessions by increasing API limit from 100 to 1000 sessions in the frontend
-- **Data Coverage**: Schedule view now properly displays sessions for multiple weeks ahead instead of just the first few days
+- **Schedule Table Expandability**: "+X more" buttons in schedule table view now expand to show all sessions
+  - Buttons are now clickable with hover effects
+  - Shows "Show less" when expanded to collapse
+  - Fixes #1: Users couldn't view all sessions in busy time slots
+- **Mobile Logo Spacing**: Improved header layout on mobile devices
+  - Reduced spacing between logo icon and "SwimTO" text
+  - Made logo icon smaller on mobile (32px vs 40px)
+  - Hide tagline on mobile to save horizontal space
+- **Error Messages**: Significantly improved error handling with specific troubleshooting steps
+  - Detects network connection failures, timeouts, DNS errors, server errors
+  - Provides iPhone-specific suggestions (e.g., clearing Safari cache)
+  - Shows targeted troubleshooting steps for each error type
+  - Includes expandable technical details section
+  - Fixes #6: Users on iPhone 15 Pro get more helpful error messages
 
 ### Technical
 
 - Cleared Redis cache to serve fresh schedule data
 - Updated frontend `ScheduleView.tsx` to request 1000 sessions instead of default 100
 - Added `limit` and `offset` parameters to `ScheduleFilters` TypeScript interface
+- Implemented `getApiErrorMessage()` utility for comprehensive error classification
+- Added favorites utilities: `getFavorites()`, `toggleFavorite()`, `isFavorite()`
+- Created `RealTimeUpdates.tsx` page component with routing
 
 ---
 
