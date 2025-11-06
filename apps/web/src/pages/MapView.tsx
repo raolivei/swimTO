@@ -22,6 +22,8 @@ import {
   Navigation,
   Locate,
   Star,
+  Search,
+  X,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import type { Facility } from "@/types";
@@ -50,6 +52,17 @@ const favoritePoolIcon = new Icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
+});
+
+const highlightedPoolIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [30, 49],
+  iconAnchor: [15, 49],
+  popupAnchor: [1, -40],
+  shadowSize: [49, 49],
 });
 
 const userLocationIcon = new Icon({
@@ -130,6 +143,8 @@ export default function MapView() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
 
   const {
     data: facilities,
@@ -159,6 +174,34 @@ export default function MapView() {
     if (!facilityId) return;
     toggleFavorite(facilityId);
     setFavorites(getFavorites());
+  };
+
+  // Filter facilities by search query
+  const searchFilteredFacilities = sortedFacilities.filter((facility) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      facility.name.toLowerCase().includes(query) ||
+      facility.address?.toLowerCase().includes(query) ||
+      facility.district?.toLowerCase().includes(query)
+    );
+  });
+
+  // Handle search
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      // Find first matching facility
+      const match = sortedFacilities.find((f) =>
+        f.name.toLowerCase().includes(query.toLowerCase())
+      );
+      if (match) {
+        setHighlightedFacilityId(match.facility_id);
+        setSelectedFacility(match);
+      }
+    } else {
+      setHighlightedFacilityId(null);
+    }
   };
 
   // Handle getting user location
@@ -267,12 +310,44 @@ export default function MapView() {
     );
   }
 
-  const validFacilities = sortedFacilities.filter(
+  const validFacilities = searchFilteredFacilities.filter(
     (f) => f.latitude && f.longitude
   );
 
   return (
     <div className="h-[calc(100vh-8rem)] relative">
+      {/* Search Bar */}
+      <div className="absolute top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-10">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search community centers..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 text-gray-900 dark:text-gray-100"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setHighlightedFacilityId(null);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Found {validFacilities.length} {validFacilities.length === 1 ? 'facility' : 'facilities'}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Map */}
       <div className="absolute inset-0">
         {isLoading ? (
@@ -331,15 +406,28 @@ export default function MapView() {
             {/* Pool markers */}
             {validFacilities.map((facility) => {
               const isFavorited = favorites.has(facility.facility_id);
+              const isHighlighted = highlightedFacilityId === facility.facility_id;
+              
+              // Determine which icon to use (priority: highlighted > favorited > default)
+              let icon = poolIcon;
+              if (isHighlighted) {
+                icon = highlightedPoolIcon;
+              } else if (isFavorited) {
+                icon = favoritePoolIcon;
+              }
+              
               return (
-              <Marker
-                key={facility.facility_id}
-                position={[facility.latitude!, facility.longitude!]}
-                  icon={isFavorited ? favoritePoolIcon : poolIcon}
-                eventHandlers={{
-                  click: () => setSelectedFacility(facility),
-                }}
-              >
+                <Marker
+                  key={facility.facility_id}
+                  position={[facility.latitude!, facility.longitude!]}
+                  icon={icon}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedFacility(facility);
+                      setHighlightedFacilityId(facility.facility_id);
+                    },
+                  }}
+                >
                 <Popup>
                   <div className="min-w-[250px]">
                       <div className="flex items-start justify-between gap-2 mb-2">
