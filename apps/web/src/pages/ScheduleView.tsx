@@ -44,6 +44,7 @@ export default function ScheduleView() {
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [favorites, setFavorites] = useState<Set<string>>(new Set()); // Track favorite facilities
+  const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
 
   const {
     data: sessions,
@@ -548,10 +549,14 @@ export default function ScheduleView() {
                                 ) : (
                                   session.facility?.name
                                 )}
-                                {session.distance !== undefined && (
-                                  <span className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400">
+                                {session.distance !== undefined && session.facility?.address && (
+                                  <button
+                                    onClick={() => setMapsModalAddress(session.facility!.address!)}
+                                    className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                                    title="Open in maps"
+                                  >
                                     ({formatDistance(session.distance)})
-                                  </span>
+                                  </button>
                                 )}
                               </h3>
                               {session.facility?.address && (
@@ -659,10 +664,14 @@ export default function ScheduleView() {
                               ) : (
                                 facilityName
                               )}
-                              {data.distance !== undefined && (
-                                <span className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400">
+                              {data.distance !== undefined && data.facility?.address && (
+                                <button
+                                  onClick={() => setMapsModalAddress(data.facility!.address!)}
+                                  className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                                  title="Open in maps"
+                                >
                                   ({formatDistance(data.distance)})
-                                </span>
+                                </button>
                               )}
                             </div>
                             {data.facility?.address && (
@@ -742,6 +751,66 @@ export default function ScheduleView() {
           </div>
         )}
       </div>
+
+      {/* Maps Modal */}
+      {mapsModalAddress && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setMapsModalAddress(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Open in Maps
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Choose which map app to open:
+            </p>
+            <div className="space-y-3">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Google Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in browser or app</div>
+                </div>
+              </a>
+
+              <a
+                href={`http://maps.apple.com/?q=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Apple Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in Maps app</div>
+                </div>
+              </a>
+            </div>
+
+            <button
+              onClick={() => setMapsModalAddress(null)}
+              className="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

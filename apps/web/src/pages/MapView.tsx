@@ -129,6 +129,7 @@ export default function MapView() {
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null);
 
   const {
     data: facilities,
@@ -204,9 +205,9 @@ export default function MapView() {
 
     // Then sort by distance if enabled
     if (sortByDistance && userLocation) {
-      if (a.distance === undefined) return 1;
-      if (b.distance === undefined) return -1;
-      return a.distance - b.distance;
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
     }
 
     return 0;
@@ -238,7 +239,7 @@ export default function MapView() {
                     {errorInfo.suggestions.map((suggestion, index) => (
                       <li key={index}>{suggestion}</li>
                     ))}
-                  </ul>
+                </ul>
                 </div>
                 <button
                   onClick={() => refetch()}
@@ -250,14 +251,14 @@ export default function MapView() {
                   />
                   {isRefetching ? "Retrying..." : "Try Again"}
                 </button>
-                <details className="mt-4">
-                  <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                    Technical details
-                  </summary>
+                  <details className="mt-4">
+                    <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                      Technical details
+                    </summary>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
                     {errorInfo.details}
-                  </p>
-                </details>
+                    </p>
+                  </details>
               </div>
             </div>
           </div>
@@ -331,16 +332,16 @@ export default function MapView() {
             {validFacilities.map((facility) => {
               const isFavorited = favorites.has(facility.facility_id);
               return (
-                <Marker
-                  key={facility.facility_id}
-                  position={[facility.latitude!, facility.longitude!]}
+              <Marker
+                key={facility.facility_id}
+                position={[facility.latitude!, facility.longitude!]}
                   icon={isFavorited ? favoritePoolIcon : poolIcon}
-                  eventHandlers={{
-                    click: () => setSelectedFacility(facility),
-                  }}
-                >
-                  <Popup>
-                    <div className="min-w-[250px]">
+                eventHandlers={{
+                  click: () => setSelectedFacility(facility),
+                }}
+              >
+                <Popup>
+                  <div className="min-w-[250px]">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h3 className="font-semibold text-lg flex-1">
                           {facility.website ? (
@@ -350,12 +351,12 @@ export default function MapView() {
                               rel="noopener noreferrer"
                               className="hover:text-primary-600 hover:underline transition-colors"
                             >
-                              {facility.name}
+                      {facility.name}
                             </a>
                           ) : (
                             facility.name
                           )}
-                        </h3>
+                    </h3>
                         <button
                           onClick={() => handleToggleFavorite(facility.facility_id)}
                           className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
@@ -377,16 +378,20 @@ export default function MapView() {
                         {facility.address}
                       </p>
                     )}
-                    {facility.distance !== undefined && (
-                      <div className="bg-green-50 p-2 rounded mb-2">
+                    {facility.distance !== undefined && facility.address && (
+                      <button
+                        onClick={() => setMapsModalAddress(facility.address!)}
+                        className="bg-green-50 p-2 rounded mb-2 w-full hover:bg-green-100 transition-colors cursor-pointer text-left"
+                        title="Open in maps"
+                      >
                         <p className="text-xs font-semibold text-green-900 flex items-center gap-1">
                           <Navigation className="w-3 h-3" />
-                          Distance
+                          Distance (click to open in maps)
                         </p>
                         <p className="text-sm font-semibold">
                           {formatDistance(facility.distance)}
                         </p>
-                      </div>
+                      </button>
                     )}
                     {facility.next_session && (
                       <div className="bg-blue-50 p-2 rounded mb-2">
@@ -487,16 +492,20 @@ export default function MapView() {
             </div>
           )}
 
-          {selectedFacility.distance !== undefined && (
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3">
+          {selectedFacility.distance !== undefined && selectedFacility.address && (
+            <button
+              onClick={() => setMapsModalAddress(selectedFacility.address!)}
+              className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3 w-full hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer text-left"
+              title="Open in maps"
+            >
               <p className="text-xs font-semibold text-green-900 dark:text-green-400 mb-1 flex items-center gap-1">
                 <Navigation className="w-3 h-3" />
-                DISTANCE FROM YOU
+                DISTANCE FROM YOU (CLICK TO OPEN IN MAPS)
               </p>
               <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                 {formatDistance(selectedFacility.distance)}
               </p>
-            </div>
+            </button>
           )}
 
           {selectedFacility.next_session && (
@@ -600,6 +609,66 @@ export default function MapView() {
               </span>{" "}
               pools with lane swim
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Maps Modal */}
+      {mapsModalAddress && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setMapsModalAddress(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Open in Maps
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Choose which map app to open:
+            </p>
+            <div className="space-y-3">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Google Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in browser or app</div>
+                </div>
+              </a>
+
+              <a
+                href={`http://maps.apple.com/?q=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Apple Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in Maps app</div>
+                </div>
+              </a>
+            </div>
+
+            <button
+              onClick={() => setMapsModalAddress(null)}
+              className="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
