@@ -43,10 +43,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Facility Coordinates**: Corrected map pin positions for facilities
-  - York Recreation Centre: Fixed coordinates (43.627689, -79.545319)
-  - Norseman Community School and Pool: Fixed coordinates (43.609883, -79.519066)
-  - Map pins now show at correct locations matching addresses
+- **Facility Coordinates**: Geocoded all 48 facilities for accurate map pin positions
+  - Geocoded 47 facilities using Nominatim (OpenStreetMap) API
+  - Updated all coordinates to match actual street addresses
+  - Fixed York Recreation Centre: (43.627689, -79.545319)
+  - Fixed Norseman Community School and Pool: (43.634194, -79.516238)
+  - Westway Community Centre: Geocoding failed, kept existing coordinates
+  - Created reusable geocoding script for future coordinate updates
+  - Map pins now accurately reflect facility locations
 - **Website URLs**: Fixed broken facility website links
   - Updated 2 facilities to new Toronto.ca URL format
   - Removed 40 broken old-format URLs that no longer work
