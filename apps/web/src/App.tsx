@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import MapView from './pages/MapView'
 import ScheduleView from './pages/ScheduleView'
 import About from './pages/About'
+import RealTimeUpdates from './pages/RealTimeUpdates'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
             <Route path="map" element={<MapView />} />
             <Route path="schedule" element={<ScheduleView />} />
             <Route path="about" element={<About />} />
+            <Route path="real-time-updates" element={<RealTimeUpdates />} />
           </Route>
         </Routes>
       </Router>
