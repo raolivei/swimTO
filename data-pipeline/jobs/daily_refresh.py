@@ -320,6 +320,13 @@ def ingest_json_api_schedules(db_session):
                 logger.warning(f"No sessions found for {facility_name}")
                 continue
             
+            # Delete all existing sessions for this facility to ensure 100% accuracy
+            # This prevents stale data and ensures we match the official source exactly
+            deleted_count = db_session.query(Session).filter_by(facility_id=facility_id).delete()
+            if deleted_count > 0:
+                logger.info(f"  Deleted {deleted_count} existing sessions for {facility_name}")
+                db_session.commit()
+            
             # Insert sessions
             for session_data in sessions:
                 try:

@@ -27,8 +27,7 @@ function App() {
         </Router>
       </AuthProvider>
     </DarkModeProvider>
-  )
+  );
 }
 
-export default App
-
+export default App;
