@@ -2,13 +2,15 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Icon, LatLngBounds } from "leaflet";
-import { facilityApi } from "@/lib/api";
+import { facilityApi, getApiErrorMessage } from "@/lib/api";
 import {
   formatTimeRange,
   formatDate,
   getUserLocation,
   calculateDistance,
   formatDistance,
+  getFavorites,
+  toggleFavorite,
   type UserLocation,
 } from "@/lib/utils";
 import {
@@ -19,6 +21,9 @@ import {
   RefreshCw,
   Navigation,
   Locate,
+  Star,
+  Search,
+  X,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import type { Facility } from "@/types";
@@ -36,6 +41,28 @@ const poolIcon = new Icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
+});
+
+const favoritePoolIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const highlightedPoolIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [30, 49],
+  iconAnchor: [15, 49],
+  popupAnchor: [1, -40],
+  shadowSize: [49, 49],
 });
 
 const userLocationIcon = new Icon({
@@ -114,6 +141,10 @@ export default function MapView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
+  const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
 
   const {
     data: facilities,
@@ -128,10 +159,50 @@ export default function MapView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  // Load favorites on mount
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
+
   // Automatically get user location on mount
   useEffect(() => {
     handleGetLocation();
   }, []);
+
+  // Handle toggling favorites
+  const handleToggleFavorite = (facilityId: string | undefined) => {
+    if (!facilityId) return;
+    toggleFavorite(facilityId);
+    setFavorites(getFavorites());
+  };
+
+  // Filter facilities by search query
+  const searchFilteredFacilities = sortedFacilities.filter((facility) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      facility.name.toLowerCase().includes(query) ||
+      facility.address?.toLowerCase().includes(query) ||
+      facility.district?.toLowerCase().includes(query)
+    );
+  });
+
+  // Handle search
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      // Find first matching facility
+      const match = sortedFacilities.find((f) =>
+        f.name.toLowerCase().includes(query.toLowerCase())
+      );
+      if (match) {
+        setHighlightedFacilityId(match.facility_id);
+        setSelectedFacility(match);
+      }
+    } else {
+      setHighlightedFacilityId(null);
+    }
+  };
 
   // Handle getting user location
   const handleGetLocation = async () => {
@@ -166,19 +237,31 @@ export default function MapView() {
       return f;
     }) || [];
 
-  const sortedFacilities =
-    sortByDistance && userLocation
-      ? [...facilitiesWithDistance].sort((a, b) => {
+  // Sort facilities: favorites first, then by distance if enabled
+  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
+    const isFavA = favorites.has(a.facility_id);
+    const isFavB = favorites.has(b.facility_id);
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Then sort by distance if enabled
+    if (sortByDistance && userLocation) {
           if (a.distance === undefined) return 1;
           if (b.distance === undefined) return -1;
           return a.distance - b.distance;
-        })
-      : facilitiesWithDistance;
+    }
+
+    return 0;
+  });
 
   if (error) {
+    const errorInfo = getApiErrorMessage(error);
+    
     return (
       <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-        <div className="max-w-md w-full mx-4">
+        <div className="max-w-2xl w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
             <div className="flex items-start">
               <div className="flex-shrink-0">
@@ -186,16 +269,21 @@ export default function MapView() {
               </div>
               <div className="ml-3 flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                  Failed to Load Facilities
+                  {errorInfo.title}
                 </h3>
                 <p className="text-gray-600 dark:text-gray-400 mb-4">
-                  We couldn't load the pool locations. This might be due to:
+                  {errorInfo.message}
                 </p>
-                <ul className="text-sm text-gray-600 dark:text-gray-400 mb-4 space-y-1 list-disc list-inside">
-                  <li>Network connectivity issues</li>
-                  <li>API service temporarily unavailable</li>
-                  <li>Server maintenance</li>
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                    Troubleshooting Steps:
+                  </h4>
+                  <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1 list-disc list-inside">
+                    {errorInfo.suggestions.map((suggestion, index) => (
+                      <li key={index}>{suggestion}</li>
+                    ))}
                 </ul>
+                </div>
                 <button
                   onClick={() => refetch()}
                   disabled={isRefetching}
@@ -206,16 +294,14 @@ export default function MapView() {
                   />
                   {isRefetching ? "Retrying..." : "Try Again"}
                 </button>
-                {error instanceof Error && (
                   <details className="mt-4">
                     <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
                       Technical details
                     </summary>
-                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded">
-                      {error.message}
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
+                    {errorInfo.details}
                     </p>
                   </details>
-                )}
               </div>
             </div>
           </div>
@@ -224,12 +310,44 @@ export default function MapView() {
     );
   }
 
-  const validFacilities = sortedFacilities.filter(
+  const validFacilities = searchFilteredFacilities.filter(
     (f) => f.latitude && f.longitude
   );
 
   return (
     <div className="h-[calc(100vh-8rem)] relative">
+      {/* Search Bar */}
+      <div className="absolute top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-10">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search community centers..."
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+              className="w-full pl-10 pr-10 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 dark:focus:ring-primary-400 text-gray-900 dark:text-gray-100"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setHighlightedFacilityId(null);
+                }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
+          {searchQuery && (
+            <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Found {validFacilities.length} {validFacilities.length === 1 ? 'facility' : 'facilities'}
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Map */}
       <div className="absolute inset-0">
         {isLoading ? (
@@ -286,36 +404,82 @@ export default function MapView() {
             )}
             
             {/* Pool markers */}
-            {validFacilities.map((facility) => (
-              <Marker
-                key={facility.facility_id}
-                position={[facility.latitude!, facility.longitude!]}
-                icon={poolIcon}
-                eventHandlers={{
-                  click: () => setSelectedFacility(facility),
-                }}
-              >
+            {validFacilities.map((facility) => {
+              const isFavorited = favorites.has(facility.facility_id);
+              const isHighlighted = highlightedFacilityId === facility.facility_id;
+              
+              // Determine which icon to use (priority: highlighted > favorited > default)
+              let icon = poolIcon;
+              if (isHighlighted) {
+                icon = highlightedPoolIcon;
+              } else if (isFavorited) {
+                icon = favoritePoolIcon;
+              }
+              
+              return (
+                <Marker
+                  key={facility.facility_id}
+                  position={[facility.latitude!, facility.longitude!]}
+                  icon={icon}
+                  eventHandlers={{
+                    click: () => {
+                      setSelectedFacility(facility);
+                      setHighlightedFacilityId(facility.facility_id);
+                    },
+                  }}
+                >
                 <Popup>
                   <div className="min-w-[250px]">
-                    <h3 className="font-semibold text-lg mb-2">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-lg flex-1">
+                          {facility.website ? (
+                            <a
+                              href={facility.website}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:text-primary-600 hover:underline transition-colors"
+                            >
                       {facility.name}
+                            </a>
+                          ) : (
+                            facility.name
+                          )}
                     </h3>
+                        <button
+                          onClick={() => handleToggleFavorite(facility.facility_id)}
+                          className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+                          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Star
+                            className={`w-5 h-5 ${
+                              isFavorited
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300 hover:text-yellow-400'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     {facility.address && (
                       <p className="text-sm text-gray-600 mb-2 flex gap-1">
                         <MapPin className="w-4 h-4 flex-shrink-0" />
                         {facility.address}
                       </p>
                     )}
-                    {facility.distance !== undefined && (
-                      <div className="bg-green-50 p-2 rounded mb-2">
+                    {facility.distance !== undefined && facility.address && (
+                      <button
+                        onClick={() => setMapsModalAddress(facility.address!)}
+                        className="bg-green-50 p-2 rounded mb-2 w-full hover:bg-green-100 transition-colors cursor-pointer text-left"
+                        title="Open in maps"
+                      >
                         <p className="text-xs font-semibold text-green-900 flex items-center gap-1">
                           <Navigation className="w-3 h-3" />
-                          Distance
+                          Distance (click to open in maps)
                         </p>
                         <p className="text-sm font-semibold">
                           {formatDistance(facility.distance)}
                         </p>
-                      </div>
+                      </button>
                     )}
                     {facility.next_session && (
                       <div className="bg-blue-50 p-2 rounded mb-2">
@@ -339,7 +503,8 @@ export default function MapView() {
                   </div>
                 </Popup>
               </Marker>
-            ))}
+            );
+            })}
           </MapContainer>
         )}
       </div>
@@ -355,7 +520,36 @@ export default function MapView() {
             ✕
           </button>
 
-          <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-gray-100">{selectedFacility.name}</h2>
+          <div className="flex items-start gap-2 mb-3">
+            <h2 className="text-xl font-bold flex-1 text-gray-900 dark:text-gray-100">
+              {selectedFacility.website ? (
+                <a
+                  href={selectedFacility.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                >
+                  {selectedFacility.name}
+                </a>
+              ) : (
+                selectedFacility.name
+              )}
+            </h2>
+            <button
+              onClick={() => handleToggleFavorite(selectedFacility.facility_id)}
+              className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+              aria-label={favorites.has(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+              title={favorites.has(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Star
+                className={`w-6 h-6 ${
+                  favorites.has(selectedFacility.facility_id)
+                    ? 'fill-yellow-400 text-yellow-400'
+                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                }`}
+              />
+            </button>
+          </div>
 
           {selectedFacility.address && (
             <div className="flex gap-2 mb-2 text-sm">
@@ -386,16 +580,20 @@ export default function MapView() {
             </div>
           )}
 
-          {selectedFacility.distance !== undefined && (
-            <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3">
+          {selectedFacility.distance !== undefined && selectedFacility.address && (
+            <button
+              onClick={() => setMapsModalAddress(selectedFacility.address!)}
+              className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3 w-full hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer text-left"
+              title="Open in maps"
+            >
               <p className="text-xs font-semibold text-green-900 dark:text-green-400 mb-1 flex items-center gap-1">
                 <Navigation className="w-3 h-3" />
-                DISTANCE FROM YOU
+                DISTANCE FROM YOU (CLICK TO OPEN IN MAPS)
               </p>
               <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
                 {formatDistance(selectedFacility.distance)}
               </p>
-            </div>
+            </button>
           )}
 
           {selectedFacility.next_session && (
@@ -499,6 +697,66 @@ export default function MapView() {
               </span>{" "}
               pools with lane swim
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Maps Modal */}
+      {mapsModalAddress && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setMapsModalAddress(null)}
+        >
+          <div
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Open in Maps
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Choose which map app to open:
+            </p>
+            <div className="space-y-3">
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Google Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in browser or app</div>
+                </div>
+              </a>
+
+              <a
+                href={`http://maps.apple.com/?q=${encodeURIComponent(mapsModalAddress)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
+                onClick={() => setMapsModalAddress(null)}
+              >
+                <div className="w-12 h-12 bg-gradient-to-br from-gray-700 to-gray-900 dark:from-gray-600 dark:to-gray-800 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <MapPin className="w-6 h-6 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-gray-900 dark:text-gray-100">Apple Maps</div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in Maps app</div>
+                </div>
+              </a>
+            </div>
+
+            <button
+              onClick={() => setMapsModalAddress(null)}
+              className="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
