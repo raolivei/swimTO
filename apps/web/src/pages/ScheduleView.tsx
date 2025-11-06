@@ -10,11 +10,9 @@ import {
   getUserLocation,
   calculateDistance,
   formatDistance,
-  getFavorites,
-  toggleFavorite,
-  isNextAvailableSession,
   type UserLocation,
-} from "../lib/utils";
+} from "@/lib/utils";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   Filter,
   MapPin,
@@ -35,6 +33,7 @@ interface SessionWithDistance extends Session {
 }
 
 export default function ScheduleView() {
+  const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("table");
@@ -44,7 +43,6 @@ export default function ScheduleView() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
-  const [favorites, setFavorites] = useState<Set<string>>(new Set()); // Track favorite facilities
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
 
   const {
@@ -64,16 +62,10 @@ export default function ScheduleView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Load favorites on mount
-  useEffect(() => {
-    setFavorites(getFavorites());
-  }, []);
-
   // Handle toggling favorites
-  const handleToggleFavorite = (facilityId: string | undefined) => {
+  const handleToggleFavorite = async (facilityId: string | undefined) => {
     if (!facilityId) return;
-    toggleFavorite(facilityId);
-    setFavorites(getFavorites());
+    await toggleFavorite(facilityId);
   };
 
   // Automatically get user location on mount
@@ -254,12 +246,8 @@ export default function ScheduleView() {
   sortedFacilityEntries.sort((a, b) => {
     const facilityA = a[1].facility;
     const facilityB = b[1].facility;
-    const isFavA = facilityA?.facility_id
-      ? favorites.has(facilityA.facility_id)
-      : false;
-    const isFavB = facilityB?.facility_id
-      ? favorites.has(facilityB.facility_id)
-      : false;
+    const isFavA = facilityA?.facility_id ? isFavorite(facilityA.facility_id) : false;
+    const isFavB = facilityB?.facility_id ? isFavorite(facilityB.facility_id) : false;
 
     // Favorites always come first
     if (isFavA && !isFavB) return -1;
@@ -518,22 +506,35 @@ export default function ScheduleView() {
                         filteredSessions
                       );
 
-                      return (
-                        <div
-                          key={session.id}
-                          className={`p-5 transition-all duration-300 ${
-                            isNextAvailable
-                              ? "bg-yellow-200 dark:bg-yellow-900/50 ring-2 ring-inset ring-yellow-400 dark:ring-yellow-600 hover:bg-yellow-300 dark:hover:bg-yellow-900/60"
-                              : "hover:bg-primary-50/50 dark:hover:bg-gray-700/50"
-                          }`}
-                        >
-                          <div className="flex flex-col md:flex-row md:items-center gap-4">
-                            {/* Time */}
-                            <div className="md:w-48 flex-shrink-0">
-                              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                                {formatTimeRange(
-                                  session.start_time,
-                                  session.end_time
+                          {/* Facility */}
+                          <div className="flex-1 flex items-start gap-2">
+                            <button
+                              onClick={() => handleToggleFavorite(session.facility?.facility_id)}
+                              className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
+                              aria-label={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                              title={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <Star
+                                className={`w-5 h-5 ${
+                                  isFavorite(session.facility?.facility_id || '')
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                                }`}
+                              />
+                            </button>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
+                                {session.facility?.website ? (
+                                  <a
+                                    href={session.facility.website}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                  >
+                                    {session.facility.name}
+                                  </a>
+                                ) : (
+                                  session.facility?.name
                                 )}
                               </p>
                             </div>
@@ -686,22 +687,14 @@ export default function ScheduleView() {
                               handleToggleFavorite(data.facility?.facility_id)
                             }
                             className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
-                            aria-label={
-                              favorites.has(data.facility?.facility_id || "")
-                                ? "Remove from favorites"
-                                : "Add to favorites"
-                            }
-                            title={
-                              favorites.has(data.facility?.facility_id || "")
-                                ? "Remove from favorites"
-                                : "Add to favorites"
-                            }
+                            aria-label={isFavorite(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                            title={isFavorite(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
                           >
                             <Star
                               className={`w-5 h-5 ${
-                                favorites.has(data.facility?.facility_id || "")
-                                  ? "fill-yellow-400 text-yellow-400"
-                                  : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
+                                isFavorite(data.facility?.facility_id || '')
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
                               }`}
                             />
                           </button>

@@ -8,7 +8,7 @@ import sys
 from app.config import settings
 from app.database import engine
 from app.models import Base
-from app.routes import facilities, schedule, update, health
+from app.routes import facilities, schedule, update, health, auth, favorites
 
 # Configure logging
 logger.remove()
@@ -41,6 +41,8 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["health"])
+app.include_router(auth.router, tags=["auth"])
+app.include_router(favorites.router, tags=["favorites"])
 app.include_router(facilities.router, prefix="/facilities", tags=["facilities"])
 app.include_router(schedule.router, prefix="/schedule", tags=["schedule"])
 app.include_router(update.router, prefix="/update", tags=["update"])

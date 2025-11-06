@@ -1,9 +1,11 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Waves, Map, Calendar, Info, Moon, Sun } from 'lucide-react'
+import { Waves, Map, Calendar, Info, Moon, Sun, LogIn, LogOut, User } from 'lucide-react'
 import { useDarkMode } from '../contexts/DarkModeContext'
+import { useAuth } from '../contexts/AuthContext'
 
 export default function Layout() {
   const { isDarkMode, toggleDarkMode } = useDarkMode()
+  const { user, isAuthenticated, login, logout, isLoading } = useAuth()
   
   const navLinkClass = ({ isActive }: { isActive: boolean }) => {
     const base = "flex items-center gap-2 px-4 py-2 rounded-xl transition-all duration-300 font-medium relative overflow-hidden group"
@@ -48,6 +50,45 @@ export default function Layout() {
                   <span className="hidden sm:inline">About</span>
                 </NavLink>
               </nav>
+              
+              {/* Auth button */}
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2 ml-2">
+                  <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-sm">
+                    {user?.picture ? (
+                      <img
+                        src={user.picture}
+                        alt={user.name || user.email}
+                        className="w-6 h-6 rounded-full"
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
+                    )}
+                    <span className="text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                      {user?.name || user?.email}
+                    </span>
+                  </div>
+                  <button
+                    onClick={logout}
+                    className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-110 group"
+                    aria-label="Logout"
+                    title="Logout"
+                  >
+                    <LogOut className="w-5 h-5 text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={login}
+                  disabled={isLoading}
+                  className="ml-2 px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-medium transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  aria-label="Login with Google"
+                  title="Login with Google"
+                >
+                  <LogIn className="w-5 h-5" />
+                  <span className="hidden sm:inline">Login</span>
+                </button>
+              )}
               
               {/* Dark mode toggle */}
               <button

@@ -9,10 +9,9 @@ import {
   getUserLocation,
   calculateDistance,
   formatDistance,
-  getFavorites,
-  toggleFavorite,
   type UserLocation,
-} from "../lib/utils";
+} from "@/lib/utils";
+import { useFavorites } from "@/hooks/useFavorites";
 import {
   MapPin,
   ExternalLink,
@@ -135,13 +134,13 @@ function MapController({
 
 export default function MapView() {
   const { isDarkMode } = useDarkMode();
+  const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [selectedFacility, setSelectedFacility] =
     useState<FacilityWithDistance | null>(null);
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<
@@ -161,21 +160,15 @@ export default function MapView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Load favorites on mount
-  useEffect(() => {
-    setFavorites(getFavorites());
-  }, []);
-
   // Automatically get user location on mount
   useEffect(() => {
     handleGetLocation();
   }, []);
 
   // Handle toggling favorites
-  const handleToggleFavorite = (facilityId: string | undefined) => {
+  const handleToggleFavorite = async (facilityId: string | undefined) => {
     if (!facilityId) return;
-    toggleFavorite(facilityId);
-    setFavorites(getFavorites());
+    await toggleFavorite(facilityId);
   };
 
   // Calculate distances and sort facilities if user location is available
@@ -257,6 +250,40 @@ export default function MapView() {
       setIsLoadingLocation(false);
     }
   };
+
+  // Calculate distances and sort facilities if user location is available
+  const facilitiesWithDistance: FacilityWithDistance[] =
+    facilities?.map((f) => {
+      if (userLocation && f.latitude && f.longitude) {
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          f.latitude,
+          f.longitude
+        );
+        return { ...f, distance };
+      }
+      return f;
+    }) || [];
+
+  // Sort facilities: favorites first, then by distance if enabled
+  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
+    const isFavA = isFavorite(a.facility_id);
+    const isFavB = isFavorite(b.facility_id);
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Then sort by distance if enabled
+    if (sortByDistance && userLocation) {
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+    }
+
+    return 0;
+  });
 
   if (error) {
     const errorInfo = getApiErrorMessage(error);
@@ -410,10 +437,9 @@ export default function MapView() {
 
             {/* Pool markers */}
             {validFacilities.map((facility) => {
-              const isFavorited = favorites.has(facility.facility_id);
-              const isHighlighted =
-                highlightedFacilityId === facility.facility_id;
-
+              const isFavorited = isFavorite(facility.facility_id);
+              const isHighlighted = highlightedFacilityId === facility.facility_id;
+              
               // Determine which icon to use (priority: highlighted > favorited > default)
               let icon = poolIcon;
               if (isHighlighted) {
@@ -554,22 +580,14 @@ export default function MapView() {
             <button
               onClick={() => handleToggleFavorite(selectedFacility.facility_id)}
               className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
-              aria-label={
-                favorites.has(selectedFacility.facility_id)
-                  ? "Remove from favorites"
-                  : "Add to favorites"
-              }
-              title={
-                favorites.has(selectedFacility.facility_id)
-                  ? "Remove from favorites"
-                  : "Add to favorites"
-              }
+              aria-label={isFavorite(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+              title={isFavorite(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
             >
               <Star
                 className={`w-6 h-6 ${
-                  favorites.has(selectedFacility.facility_id)
-                    ? "fill-yellow-400 text-yellow-400"
-                    : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
+                  isFavorite(selectedFacility.facility_id)
+                    ? 'fill-yellow-400 text-yellow-400'
+                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
                 }`}
               />
             </button>

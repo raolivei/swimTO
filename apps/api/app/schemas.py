@@ -99,6 +99,49 @@ class HealthResponse(BaseModel):
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 
+class UserBase(BaseModel):
+    """Base user schema."""
+    email: str
+    name: Optional[str] = None
+    picture: Optional[str] = None
+
+
+class UserCreate(UserBase):
+    """Create user schema."""
+    google_id: str
+
+
+class UserResponse(UserBase):
+    """User response schema."""
+    id: int
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class TokenResponse(BaseModel):
+    """Token response schema."""
+    access_token: str
+    token_type: str = "bearer"
+    user: UserResponse
+
+
+class FavoriteResponse(BaseModel):
+    """Favorite response schema."""
+    facility_id: str
+    created_at: datetime
+    facility: Optional[FacilityResponse] = None
+    
+    class Config:
+        from_attributes = True
+
+
+class FavoriteCreate(BaseModel):
+    """Create favorite schema."""
+    facility_id: str
+
+
 # Resolve forward references for Pydantic v2
 FacilityWithSessions.model_rebuild()
 
