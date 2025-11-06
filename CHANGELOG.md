@@ -24,6 +24,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Interactive Map → `/map`
   - Smart Schedules → `/schedule`
   - Real-Time Updates → `/real-time-updates`
+- **Clickable Community Center Names**: Facility names now link to their official websites
+  - Opens in new tab with proper rel attributes
+  - Hover effects indicate clickability
+  - Applied to schedule view (list and table) and map view (popup and sidebar)
+- **Maps App Choice Modal**: Distance displays now open a modal to choose map app
+  - Click distance to choose between Google Maps or Apple Maps
+  - Beautiful modal UI with icons and hover effects
+  - Works in both schedule view and map view
+  - Modal closes on backdrop click or Cancel button
+- **Map Search Functionality**: Search for community centers by name
+  - Search bar at top of map view
+  - Filters facilities by name, address, or district
+  - Highlighted facilities show with larger red marker
+  - Shows count of search results
+  - Clear button to reset search
+  - First match auto-selected and centered
 
 ### Fixed
 
