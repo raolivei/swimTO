@@ -39,6 +39,7 @@ export default function ScheduleView() {
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
+  const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
 
   const {
     data: sessions,
@@ -588,6 +589,10 @@ export default function ScheduleView() {
                       </td>
                       {weekdays.map((_, dayIndex) => {
                         const daySessions = data.sessions[dayIndex] || [];
+                        const cellKey = `${facilityName}-${dayIndex}`;
+                        const isExpanded = expandedCells.has(cellKey);
+                        const displaySessions = isExpanded ? daySessions : daySessions.slice(0, 3);
+                        
                         return (
                           <td
                             key={dayIndex}
@@ -595,7 +600,7 @@ export default function ScheduleView() {
                           >
                             {daySessions.length > 0 ? (
                               <div className="space-y-2">
-                                {daySessions.slice(0, 3).map((session) => (
+                                {displaySessions.map((session) => (
                                   <div key={session.id} className="text-xs">
                                     <div className="font-semibold text-gray-900 dark:text-gray-100">
                                       {formatTimeRange(
@@ -613,9 +618,20 @@ export default function ScheduleView() {
                                   </div>
                                 ))}
                                 {daySessions.length > 3 && (
-                                  <div className="text-xs text-primary-600 dark:text-primary-400 font-semibold">
-                                    +{daySessions.length - 3} more
-                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const newExpanded = new Set(expandedCells);
+                                      if (isExpanded) {
+                                        newExpanded.delete(cellKey);
+                                      } else {
+                                        newExpanded.add(cellKey);
+                                      }
+                                      setExpandedCells(newExpanded);
+                                    }}
+                                    className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors cursor-pointer"
+                                  >
+                                    {isExpanded ? 'Show less' : `+${daySessions.length - 3} more`}
+                                  </button>
                                 )}
                               </div>
                             ) : (
