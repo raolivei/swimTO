@@ -9,6 +9,8 @@ import {
   getUserLocation,
   calculateDistance,
   formatDistance,
+  getFavorites,
+  toggleFavorite,
   type UserLocation,
 } from "@/lib/utils";
 import {
@@ -19,6 +21,7 @@ import {
   RefreshCw,
   Navigation,
   Locate,
+  Star,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import type { Facility } from "@/types";
@@ -30,6 +33,17 @@ const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
 const poolIcon = new Icon({
   iconUrl:
     "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const favoritePoolIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-gold.png",
   shadowUrl:
     "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
   iconSize: [25, 41],
@@ -114,6 +128,7 @@ export default function MapView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [favorites, setFavorites] = useState<Set<string>>(new Set());
 
   const {
     data: facilities,
@@ -128,10 +143,22 @@ export default function MapView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  // Load favorites on mount
+  useEffect(() => {
+    setFavorites(getFavorites());
+  }, []);
+
   // Automatically get user location on mount
   useEffect(() => {
     handleGetLocation();
   }, []);
+
+  // Handle toggling favorites
+  const handleToggleFavorite = (facilityId: string | undefined) => {
+    if (!facilityId) return;
+    toggleFavorite(facilityId);
+    setFavorites(getFavorites());
+  };
 
   // Handle getting user location
   const handleGetLocation = async () => {
@@ -166,14 +193,24 @@ export default function MapView() {
       return f;
     }) || [];
 
-  const sortedFacilities =
-    sortByDistance && userLocation
-      ? [...facilitiesWithDistance].sort((a, b) => {
-          if (a.distance === undefined) return 1;
-          if (b.distance === undefined) return -1;
-          return a.distance - b.distance;
-        })
-      : facilitiesWithDistance;
+  // Sort facilities: favorites first, then by distance if enabled
+  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
+    const isFavA = favorites.has(a.facility_id);
+    const isFavB = favorites.has(b.facility_id);
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Then sort by distance if enabled
+    if (sortByDistance && userLocation) {
+      if (a.distance === undefined) return 1;
+      if (b.distance === undefined) return -1;
+      return a.distance - b.distance;
+    }
+
+    return 0;
+  });
 
   if (error) {
     return (
@@ -286,20 +323,38 @@ export default function MapView() {
             )}
             
             {/* Pool markers */}
-            {validFacilities.map((facility) => (
-              <Marker
-                key={facility.facility_id}
-                position={[facility.latitude!, facility.longitude!]}
-                icon={poolIcon}
-                eventHandlers={{
-                  click: () => setSelectedFacility(facility),
-                }}
-              >
-                <Popup>
-                  <div className="min-w-[250px]">
-                    <h3 className="font-semibold text-lg mb-2">
-                      {facility.name}
-                    </h3>
+            {validFacilities.map((facility) => {
+              const isFavorited = favorites.has(facility.facility_id);
+              return (
+                <Marker
+                  key={facility.facility_id}
+                  position={[facility.latitude!, facility.longitude!]}
+                  icon={isFavorited ? favoritePoolIcon : poolIcon}
+                  eventHandlers={{
+                    click: () => setSelectedFacility(facility),
+                  }}
+                >
+                  <Popup>
+                    <div className="min-w-[250px]">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h3 className="font-semibold text-lg flex-1">
+                          {facility.name}
+                        </h3>
+                        <button
+                          onClick={() => handleToggleFavorite(facility.facility_id)}
+                          className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+                          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                          <Star
+                            className={`w-5 h-5 ${
+                              isFavorited
+                                ? 'fill-yellow-400 text-yellow-400'
+                                : 'text-gray-300 hover:text-yellow-400'
+                            }`}
+                          />
+                        </button>
+                      </div>
                     {facility.address && (
                       <p className="text-sm text-gray-600 mb-2 flex gap-1">
                         <MapPin className="w-4 h-4 flex-shrink-0" />
@@ -339,7 +394,8 @@ export default function MapView() {
                   </div>
                 </Popup>
               </Marker>
-            ))}
+            );
+            })}
           </MapContainer>
         )}
       </div>
@@ -355,7 +411,23 @@ export default function MapView() {
             ✕
           </button>
 
-          <h2 className="text-xl font-bold mb-3 text-gray-900 dark:text-gray-100">{selectedFacility.name}</h2>
+          <div className="flex items-start gap-2 mb-3">
+            <h2 className="text-xl font-bold flex-1 text-gray-900 dark:text-gray-100">{selectedFacility.name}</h2>
+            <button
+              onClick={() => handleToggleFavorite(selectedFacility.facility_id)}
+              className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+              aria-label={favorites.has(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+              title={favorites.has(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              <Star
+                className={`w-6 h-6 ${
+                  favorites.has(selectedFacility.facility_id)
+                    ? 'fill-yellow-400 text-yellow-400'
+                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                }`}
+              />
+            </button>
+          </div>
 
           {selectedFacility.address && (
             <div className="flex gap-2 mb-2 text-sm">
