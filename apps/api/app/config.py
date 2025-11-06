@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     
     # Security
     admin_token: str = "change-me-in-production"
+    secret_key: Optional[str] = None
+    
+    # Google OAuth (optional, for auth features)
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
     
     # CORS
     cors_origins: list = [
