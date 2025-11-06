@@ -18,14 +18,14 @@ export default function Layout() {
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 shadow-sm border-b border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <NavLink to="/" className="flex items-center gap-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
-              <div className="relative">
+            <NavLink to="/" className="flex items-center gap-2 sm:gap-3 hover:opacity-80 transition-all duration-300 transform hover:scale-105 group">
+              <div className="relative flex-shrink-0">
                 <div className="absolute inset-0 bg-primary-500/20 blur-xl rounded-full group-hover:bg-primary-500/30 transition-all duration-300"></div>
-                <Waves className="w-10 h-10 text-primary-500 relative animate-pulse" />
+                <Waves className="w-8 h-8 sm:w-10 sm:h-10 text-primary-500 relative animate-pulse" />
               </div>
-              <div>
-                <span className="text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">SwimTO</span>
-                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Toronto's Pool Finder</p>
+              <div className="min-w-0">
+                <span className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent">SwimTO</span>
+                <p className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">Toronto's Pool Finder</p>
               </div>
             </NavLink>
 

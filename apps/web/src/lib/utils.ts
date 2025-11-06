@@ -142,3 +142,68 @@ export function getUserLocation(): Promise<UserLocation> {
     );
   });
 }
+
+// Favorites management using localStorage
+const FAVORITES_KEY = "swimto_favorites";
+
+/**
+ * Get all favorite facility IDs from localStorage
+ */
+export function getFavorites(): Set<string> {
+  try {
+    const stored = localStorage.getItem(FAVORITES_KEY);
+    if (stored) {
+      return new Set(JSON.parse(stored));
+    }
+  } catch (error) {
+    console.error("Error loading favorites:", error);
+  }
+  return new Set();
+}
+
+/**
+ * Check if a facility is favorited
+ */
+export function isFavorite(facilityId: string): boolean {
+  return getFavorites().has(facilityId);
+}
+
+/**
+ * Add a facility to favorites
+ */
+export function addFavorite(facilityId: string): void {
+  try {
+    const favorites = getFavorites();
+    favorites.add(facilityId);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favorites)));
+  } catch (error) {
+    console.error("Error adding favorite:", error);
+  }
+}
+
+/**
+ * Remove a facility from favorites
+ */
+export function removeFavorite(facilityId: string): void {
+  try {
+    const favorites = getFavorites();
+    favorites.delete(facilityId);
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(favorites)));
+  } catch (error) {
+    console.error("Error removing favorite:", error);
+  }
+}
+
+/**
+ * Toggle favorite status for a facility
+ */
+export function toggleFavorite(facilityId: string): boolean {
+  const favorites = getFavorites();
+  if (favorites.has(facilityId)) {
+    removeFavorite(facilityId);
+    return false;
+  } else {
+    addFavorite(facilityId);
+    return true;
+  }
+}

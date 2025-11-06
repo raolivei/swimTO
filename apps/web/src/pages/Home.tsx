@@ -90,7 +90,10 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
-            <div className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 transform hover:-translate-y-2">
+            <Link
+              to="/map"
+              className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 transform hover:-translate-y-2 cursor-pointer"
+            >
               <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <MapPin className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               </div>
@@ -101,9 +104,12 @@ export default function Home() {
                 Explore all Toronto community centers with lane swim sessions on
                 an interactive map with real-time availability.
               </p>
-            </div>
+            </Link>
 
-            <div className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-green-200 dark:hover:border-green-600 transform hover:-translate-y-2">
+            <Link
+              to="/schedule"
+              className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-green-200 dark:hover:border-green-600 transform hover:-translate-y-2 cursor-pointer"
+            >
               <div className="w-16 h-16 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Calendar className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
@@ -114,9 +120,12 @@ export default function Home() {
                 View comprehensive schedules with times, locations, and session
                 types. Filter by your preferences.
               </p>
-            </div>
+            </Link>
 
-            <div className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-600 transform hover:-translate-y-2">
+            <Link
+              to="/real-time-updates"
+              className="group bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-600 transform hover:-translate-y-2 cursor-pointer"
+            >
               <div className="w-16 h-16 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
                 <Clock className="w-8 h-8 text-purple-600 dark:text-purple-400" />
               </div>
@@ -127,7 +136,7 @@ export default function Home() {
                 Automatically updated schedules from City of Toronto Open Data.
                 Always current, always accurate.
               </p>
-            </div>
+            </Link>
           </div>
         </div>
       </section>
