@@ -536,7 +536,7 @@ export default function ScheduleView() {
                                 ) : (
                                   session.facility?.name
                                 )}
-                              </p>
+                              </h3>
                             </div>
 
                             {/* Facility */}
