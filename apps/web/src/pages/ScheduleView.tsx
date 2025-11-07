@@ -525,26 +525,41 @@ export default function ScheduleView() {
                         filteredSessions
                       );
 
-                      return (
-                        <div
-                          className={`p-6 flex flex-col md:flex-row md:items-center gap-4 ${
-                            isNextAvailable
-                              ? "bg-yellow-100 dark:bg-yellow-900/20 ring-2 ring-yellow-400 dark:ring-yellow-600"
-                              : ""
-                          }`}
-                        >
-                          {/* Time */}
-                          <div className="flex-shrink-0 md:w-40">
-                            <div className="font-bold text-xl text-primary-600 dark:text-primary-400">
-                              {formatTimeRange(
-                                session.start_time,
-                                session.end_time
-                              )}
-                            </div>
-                          </div>
-
                           {/* Facility */}
                           <div className="flex-1 flex items-start gap-2">
+                            <button
+                              onClick={() => handleToggleFavorite(session.facility?.facility_id)}
+                              className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
+                              aria-label={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                              title={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                              <Star
+                                className={`w-5 h-5 ${
+                                  isFavorite(session.facility?.facility_id || '')
+                                    ? 'fill-yellow-400 text-yellow-400'
+                                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                                }`}
+                              />
+                            </button>
+                            <div className="flex-1">
+                              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
+                                {session.facility?.website ? (
+                                  <a
+                                    href={session.facility.website}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                  >
+                                    {session.facility.name}
+                                  </a>
+                                ) : (
+                                  session.facility?.name
+                                )}
+                              </p>
+                            </div>
+
+                            {/* Facility */}
+                            <div className="flex-1 flex items-start gap-2">
                               <button
                                 onClick={() =>
                                   handleToggleFavorite(
@@ -638,11 +653,9 @@ export default function ScheduleView() {
 
                           {/* Notes */}
                           {session.notes && (
-                            <div className="w-full mt-3 md:ml-0">
-                              <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                {session.notes}
-                              </p>
-                            </div>
+                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 md:ml-48 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                              {session.notes}
+                            </p>
                           )}
                         </div>
                       );
