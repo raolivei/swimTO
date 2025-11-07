@@ -251,40 +251,6 @@ export default function MapView() {
     }
   };
 
-  // Calculate distances and sort facilities if user location is available
-  const facilitiesWithDistance: FacilityWithDistance[] =
-    facilities?.map((f) => {
-      if (userLocation && f.latitude && f.longitude) {
-        const distance = calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          f.latitude,
-          f.longitude
-        );
-        return { ...f, distance };
-      }
-      return f;
-    }) || [];
-
-  // Sort facilities: favorites first, then by distance if enabled
-  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
-    const isFavA = isFavorite(a.facility_id);
-    const isFavB = isFavorite(b.facility_id);
-
-    // Favorites always come first
-    if (isFavA && !isFavB) return -1;
-    if (!isFavA && isFavB) return 1;
-
-    // Then sort by distance if enabled
-    if (sortByDistance && userLocation) {
-          if (a.distance === undefined) return 1;
-          if (b.distance === undefined) return -1;
-          return a.distance - b.distance;
-    }
-
-    return 0;
-  });
-
   if (error) {
     const errorInfo = getApiErrorMessage(error);
 

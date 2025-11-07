@@ -32,6 +32,25 @@ interface SessionWithDistance extends Session {
   distance?: number;
 }
 
+// Helper function to check if a session is the next available one
+const isNextAvailableSession = (
+  session: Session,
+  allSessions: Session[]
+): boolean => {
+  const now = new Date();
+  const sessionDateTime = new Date(`${session.date} ${session.start_time}`);
+  
+  if (sessionDateTime < now) return false;
+  
+  // Check if this is the earliest upcoming session
+  const earliestUpcoming = allSessions
+    .map((s) => new Date(`${s.date} ${s.start_time}`))
+    .filter((d) => d >= now)
+    .sort((a, b) => a.getTime() - b.getTime())[0];
+  
+  return earliestUpcoming && sessionDateTime.getTime() === earliestUpcoming.getTime();
+};
+
 export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");

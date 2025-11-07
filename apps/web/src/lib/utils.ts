@@ -224,3 +224,71 @@ export async function syncLocalFavoritesToBackend(
     console.error("Error syncing favorites to backend:", error);
   }
 }
+
+/**
+ * Check if a session is the next available session the user can attend
+ * A session is "next available" if:
+ * - Current time is before the session ends (ongoing or upcoming)
+ * - It's the earliest such session chronologically
+ */
+export function isNextAvailableSession(
+  session: { date: string; start_time: string; end_time: string },
+  allSessions: Array<{
+    date: string;
+    start_time: string;
+    end_time: string;
+    id: number;
+  }>
+): boolean {
+  try {
+    const now = new Date();
+
+    // Parse session date and times
+    const [year, month, day] = session.date.split("-").map(Number);
+    const [startHour, startMinute] = session.start_time.split(":").map(Number);
+    const [endHour, endMinute] = session.end_time.split(":").map(Number);
+
+    const sessionStart = new Date(year, month - 1, day, startHour, startMinute);
+    const sessionEnd = new Date(year, month - 1, day, endHour, endMinute);
+
+    // Session must not be finished yet
+    if (now >= sessionEnd) {
+      return false;
+    }
+
+    // Find all sessions that are not finished yet
+    const availableSessions = allSessions.filter((s) => {
+      const [y, m, d] = s.date.split("-").map(Number);
+      const [eh, em] = s.end_time.split(":").map(Number);
+      const sEnd = new Date(y, m - 1, d, eh, em);
+      return now < sEnd;
+    });
+
+    // Find the earliest available session
+    if (availableSessions.length === 0) {
+      return false;
+    }
+
+    const earliest = availableSessions.reduce((earliest, current) => {
+      const [cy, cm, cd] = current.date.split("-").map(Number);
+      const [csh, csm] = current.start_time.split(":").map(Number);
+      const currentStart = new Date(cy, cm - 1, cd, csh, csm);
+
+      const [ey, em, ed] = earliest.date.split("-").map(Number);
+      const [esh, esm] = earliest.start_time.split(":").map(Number);
+      const earliestStart = new Date(ey, em - 1, ed, esh, esm);
+
+      return currentStart < earliestStart ? current : earliest;
+    });
+
+    // Check if this session is the earliest
+    return (
+      session.date === earliest.date &&
+      session.start_time === earliest.start_time &&
+      session.end_time === earliest.end_time
+    );
+  } catch (error) {
+    console.error("Error checking if session is next available:", error);
+    return false;
+  }
+}
