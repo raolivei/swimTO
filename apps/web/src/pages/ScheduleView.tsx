@@ -638,9 +638,11 @@ export default function ScheduleView() {
 
                           {/* Notes */}
                           {session.notes && (
-                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 md:ml-48 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                              {session.notes}
-                            </p>
+                            <div className="w-full mt-3 md:ml-0">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                                {session.notes}
+                              </p>
+                            </div>
                           )}
                         </div>
                       );
