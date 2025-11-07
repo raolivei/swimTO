@@ -11,6 +11,29 @@ const api = axios.create({
   },
 });
 
+// Add auth token to requests if available
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('swimto_auth_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Handle 401 errors (unauthorized)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Clear token and redirect to login
+      localStorage.removeItem('swimto_auth_token')
+      localStorage.removeItem('swimto_user')
+      // Don't redirect automatically - let components handle it
+    }
+    return Promise.reject(error)
+  }
+)
+
 export const facilityApi = {
   getAll: async (hasLaneSwim = true): Promise<Facility[]> => {
     const { data } = await api.get("/facilities", {
@@ -47,6 +70,66 @@ export const healthApi = {
     return data;
   },
 };
+
+export interface User {
+  id: number
+  email: string
+  name?: string
+  picture?: string
+  created_at: string
+}
+
+export interface TokenResponse {
+  access_token: string
+  token_type: string
+  user: User
+}
+
+export interface FavoriteResponse {
+  facility_id: string
+  created_at: string
+  facility?: Facility
+}
+
+export const authApi = {
+  getGoogleAuthUrl: async (): Promise<{ auth_url: string }> => {
+    const { data } = await api.get('/auth/google-url')
+    return data
+  },
+
+  googleCallback: async (code: string): Promise<TokenResponse> => {
+    const { data } = await api.post('/auth/google-callback', null, {
+      params: { code },
+    })
+    return data
+  },
+
+  getCurrentUser: async (): Promise<User> => {
+    const { data } = await api.get('/auth/me')
+    return data
+  },
+}
+
+export const favoritesApi = {
+  getAll: async (): Promise<FavoriteResponse[]> => {
+    const { data } = await api.get('/favorites')
+    return data
+  },
+
+  add: async (facilityId: string): Promise<FavoriteResponse> => {
+    const { data } = await api.post('/favorites', { facility_id: facilityId })
+    return data
+  },
+
+  remove: async (facilityId: string): Promise<void> => {
+    await api.delete(`/favorites/${facilityId}`)
+  },
+
+  check: async (facilityId: string): Promise<{ is_favorite: boolean; facility_id: string }> => {
+    const { data } = await api.get(`/favorites/check/${facilityId}`)
+    return data
+  },
+}
 
 /**
  * Get a user-friendly error message from an API error

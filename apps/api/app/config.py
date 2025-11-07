@@ -20,6 +20,14 @@ class Settings(BaseSettings):
     
     # Security
     admin_token: str = "change-me-in-production"
+    secret_key: str = "change-me-in-production-secret-key"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
+    
+    # Google OAuth
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: Optional[str] = None
     
     # CORS
     cors_origins: list = [

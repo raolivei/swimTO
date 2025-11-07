@@ -65,3 +65,45 @@ class Session(Base):
     def __repr__(self):
         return f"<Session(facility={self.facility_id}, type={self.swim_type}, date={self.date})>"
 
+
+class User(Base):
+    """User account."""
+    
+    __tablename__ = "users"
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    name = Column(String(255))
+    google_id = Column(String(255), unique=True, nullable=False, index=True)
+    picture = Column(Text)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email})>"
+
+
+class UserFavorite(Base):
+    """User's favorite facilities."""
+    
+    __tablename__ = "user_favorites"
+    
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
+    facility_id = Column(String, ForeignKey("facilities.facility_id"), nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="favorites")
+    facility = relationship("Facility")
+    
+    __table_args__ = (
+        UniqueConstraint('user_id', 'facility_id', name='uq_user_favorite'),
+    )
+    
+    def __repr__(self):
+        return f"<UserFavorite(user_id={self.user_id}, facility_id={self.facility_id})>"
+

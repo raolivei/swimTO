@@ -1,0 +1,33 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#grad)" rx="76.8"/>
+  <g transform="translate(256, 256)">
+    <!-- Main wave -->
+    <path d="M -153.6 0 Q -76.8 -51.2, 0 0 T 153.6 0" 
+          stroke="white" 
+          stroke-width="25.6" 
+          fill="none" 
+          stroke-linecap="round"
+          opacity="0.9"/>
+    <!-- Middle wave -->
+    <path d="M -153.6 76.8 Q -76.8 25.6, 0 76.8 T 153.6 76.8" 
+          stroke="white" 
+          stroke-width="20.48" 
+          fill="none" 
+          stroke-linecap="round"
+          opacity="0.7"/>
+    <!-- Top wave -->
+    <path d="M -128 -76.8 Q -64 -128, 0 -76.8 T 128 -76.8" 
+          stroke="white" 
+          stroke-width="20.48" 
+          fill="none" 
+          stroke-linecap="round"
+          opacity="0.6"/>
+  </g>
+</svg>
+
