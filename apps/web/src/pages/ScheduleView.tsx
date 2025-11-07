@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { scheduleApi, getApiErrorMessage } from "@/lib/api";
+import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import {
   formatDate,
   formatTimeRange,
@@ -23,7 +23,7 @@ import {
   Navigation,
   Star,
 } from "lucide-react";
-import type { SwimType, Session } from "@/types";
+import type { SwimType, Session } from "../types";
 
 type ViewMode = "list" | "table";
 
@@ -166,7 +166,7 @@ export default function ScheduleView() {
 
   if (error) {
     const errorInfo = getApiErrorMessage(error);
-    
+
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="max-w-2xl mx-auto">
@@ -275,14 +275,14 @@ export default function ScheduleView() {
     "Saturday",
   ];
 
-  // Format date as "Mon 11/5"
+  // Format date as "Mon Jan-15"
   const formatWeekdayHeader = (date: Date) => {
     const weekdayShort = weekdays[date.getDay()].substring(0, 3);
-    const month = date.getMonth() + 1;
+    const monthShort = date.toLocaleDateString("en-US", { month: "short" });
     const day = date.getDate();
     return {
       weekday: weekdayShort,
-      date: `${month}/${day}`,
+      date: `${monthShort}-${day}`,
     };
   };
 
@@ -430,7 +430,9 @@ export default function ScheduleView() {
 
           {locationError && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{locationError}</p>
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {locationError}
+              </p>
             </div>
           )}
 
@@ -475,7 +477,9 @@ export default function ScheduleView() {
             <p className="text-gray-600 dark:text-gray-300 text-xl font-semibold">
               No sessions found
             </p>
-            <p className="text-gray-500 dark:text-gray-400 mt-2">Try adjusting your filters</p>
+            <p className="text-gray-500 dark:text-gray-400 mt-2">
+              Try adjusting your filters
+            </p>
           </div>
         ) : viewMode === "list" ? (
           <div className="space-y-6">
@@ -496,21 +500,11 @@ export default function ScheduleView() {
 
                   {/* Sessions */}
                   <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                    {dateSessions.map((session) => (
-                      <div
-                        key={session.id}
-                        className="p-5 hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-all duration-300"
-                      >
-                        <div className="flex flex-col md:flex-row md:items-center gap-4">
-                          {/* Time */}
-                          <div className="md:w-48 flex-shrink-0">
-                            <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
-                              {formatTimeRange(
-                                session.start_time,
-                                session.end_time
-                              )}
-                            </p>
-                          </div>
+                    {dateSessions.map((session) => {
+                      const isNextAvailable = isNextAvailableSession(
+                        session,
+                        filteredSessions
+                      );
 
                           {/* Facility */}
                           <div className="flex-1 flex items-start gap-2">
@@ -542,54 +536,111 @@ export default function ScheduleView() {
                                 ) : (
                                   session.facility?.name
                                 )}
-                                {session.distance !== undefined && session.facility?.address && (
-                                  <button
-                                    onClick={() => setMapsModalAddress(session.facility!.address!)}
-                                    className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
-                                    title="Open in maps"
-                                  >
-                                    ({formatDistance(session.distance)})
-                                  </button>
+                              </p>
+                            </div>
+
+                            {/* Facility */}
+                            <div className="flex-1 flex items-start gap-2">
+                              <button
+                                onClick={() =>
+                                  handleToggleFavorite(
+                                    session.facility?.facility_id
+                                  )
+                                }
+                                className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
+                                aria-label={
+                                  favorites.has(
+                                    session.facility?.facility_id || ""
+                                  )
+                                    ? "Remove from favorites"
+                                    : "Add to favorites"
+                                }
+                                title={
+                                  favorites.has(
+                                    session.facility?.facility_id || ""
+                                  )
+                                    ? "Remove from favorites"
+                                    : "Add to favorites"
+                                }
+                              >
+                                <Star
+                                  className={`w-5 h-5 ${
+                                    favorites.has(
+                                      session.facility?.facility_id || ""
+                                    )
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
+                                  }`}
+                                />
+                              </button>
+                              <div className="flex-1">
+                                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
+                                  {session.facility?.website ? (
+                                    <a
+                                      href={session.facility.website}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                    >
+                                      {session.facility.name}
+                                    </a>
+                                  ) : (
+                                    session.facility?.name
+                                  )}
+                                  {session.distance !== undefined &&
+                                    session.facility?.address && (
+                                      <button
+                                        onClick={() =>
+                                          setMapsModalAddress(
+                                            session.facility!.address!
+                                          )
+                                        }
+                                        className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                                        title="Open in maps"
+                                      >
+                                        ({formatDistance(session.distance)})
+                                      </button>
+                                    )}
+                                </h3>
+                                {session.facility?.address && (
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
+                                    <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                        session.facility.address
+                                      )}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                    >
+                                      {session.facility.address}
+                                    </a>
+                                  </p>
                                 )}
-                              </h3>
-                              {session.facility?.address && (
-                                <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                  <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                  <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                      session.facility.address
-                                    )}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                  >
-                                    {session.facility.address}
-                                  </a>
-                                </p>
-                              )}
+                              </div>
+                            </div>
+
+                            {/* Type */}
+                            <div className="flex-shrink-0">
+                              <span
+                                className={`px-4 py-2 rounded-xl text-xs font-bold ${getSwimTypeColor(
+                                  session.swim_type
+                                )} shadow-sm`}
+                              >
+                                {getSwimTypeLabel(session.swim_type)}
+                              </span>
                             </div>
                           </div>
 
-                          {/* Type */}
-                          <div className="flex-shrink-0">
-                            <span
-                              className={`px-4 py-2 rounded-xl text-xs font-bold ${getSwimTypeColor(
-                                session.swim_type
-                              )} shadow-sm`}
-                            >
-                              {getSwimTypeLabel(session.swim_type)}
-                            </span>
-                          </div>
+                          {/* Notes */}
+                          {session.notes && (
+                            <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 md:ml-48 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                              {session.notes}
+                            </p>
+                          )}
                         </div>
-
-                        {/* Notes */}
-                        {session.notes && (
-                          <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 md:ml-48 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                            {session.notes}
-                          </p>
-                        )}
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -598,11 +649,11 @@ export default function ScheduleView() {
         ) : (
           /* Table View */
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto max-h-[calc(100vh-20rem)] overflow-y-auto">
               <table className="w-full">
-                <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white">
+                <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20 shadow-md">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-10">
+                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-30 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
                       Community Center
                     </th>
                     {weekDates.map((date, index) => {
@@ -610,10 +661,12 @@ export default function ScheduleView() {
                       return (
                         <th
                           key={index}
-                          className="px-4 py-4 text-center text-sm font-bold tracking-wider min-w-[120px]"
+                          className="px-4 py-5 text-center min-w-[120px]"
                         >
-                          <div className="uppercase">{formatted.weekday}</div>
-                          <div className="text-xs font-normal text-primary-100 mt-0.5">
+                          <div className="text-lg font-extrabold uppercase tracking-wide">
+                            {formatted.weekday}
+                          </div>
+                          <div className="text-sm font-semibold text-primary-100 mt-1">
                             {formatted.date}
                           </div>
                         </th>
@@ -630,7 +683,9 @@ export default function ScheduleView() {
                       <td className="px-6 py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
                         <div className="flex items-center gap-2">
                           <button
-                            onClick={() => handleToggleFavorite(data.facility?.facility_id)}
+                            onClick={() =>
+                              handleToggleFavorite(data.facility?.facility_id)
+                            }
                             className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
                             aria-label={isFavorite(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
                             title={isFavorite(data.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
@@ -657,15 +712,20 @@ export default function ScheduleView() {
                               ) : (
                                 facilityName
                               )}
-                              {data.distance !== undefined && data.facility?.address && (
-                                <button
-                                  onClick={() => setMapsModalAddress(data.facility!.address!)}
-                                  className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
-                                  title="Open in maps"
-                                >
-                                  ({formatDistance(data.distance)})
-                                </button>
-                              )}
+                              {data.distance !== undefined &&
+                                data.facility?.address && (
+                                  <button
+                                    onClick={() =>
+                                      setMapsModalAddress(
+                                        data.facility!.address!
+                                      )
+                                    }
+                                    className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                                    title="Open in maps"
+                                  >
+                                    ({formatDistance(data.distance)})
+                                  </button>
+                                )}
                             </div>
                             {data.facility?.address && (
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-start gap-1">
@@ -682,8 +742,10 @@ export default function ScheduleView() {
                         const daySessions = data.sessions[dayIndex] || [];
                         const cellKey = `${facilityName}-${dayIndex}`;
                         const isExpanded = expandedCells.has(cellKey);
-                        const displaySessions = isExpanded ? daySessions : daySessions.slice(0, 3);
-                        
+                        const displaySessions = isExpanded
+                          ? daySessions
+                          : daySessions.slice(0, 3);
+
                         return (
                           <td
                             key={dayIndex}
@@ -691,27 +753,44 @@ export default function ScheduleView() {
                           >
                             {daySessions.length > 0 ? (
                               <div className="space-y-2">
-                                {displaySessions.map((session) => (
-                                  <div key={session.id} className="text-xs">
-                                    <div className="font-semibold text-gray-900 dark:text-gray-100">
-                                      {formatTimeRange(
-                                        session.start_time,
-                                        session.end_time
-                                      )}
-                                    </div>
-                                    <span
-                                      className={`inline-block mt-1 px-2 py-1 rounded-lg text-[10px] font-bold ${getSwimTypeColor(
-                                        session.swim_type
-                                      )}`}
+                                {displaySessions.map((session) => {
+                                  const isNextAvailable =
+                                    isNextAvailableSession(
+                                      session,
+                                      filteredSessions
+                                    );
+
+                                  return (
+                                    <div
+                                      key={session.id}
+                                      className={`text-xs p-2 rounded-lg transition-colors ${
+                                        isNextAvailable
+                                          ? "bg-yellow-200 dark:bg-yellow-900/50 ring-2 ring-yellow-400 dark:ring-yellow-600"
+                                          : ""
+                                      }`}
                                     >
-                                      {getSwimTypeLabel(session.swim_type)}
-                                    </span>
-                                  </div>
-                                ))}
+                                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                        {formatTimeRange(
+                                          session.start_time,
+                                          session.end_time
+                                        )}
+                                      </div>
+                                      <span
+                                        className={`inline-block mt-1 px-2 py-1 rounded-lg text-[10px] font-bold ${getSwimTypeColor(
+                                          session.swim_type
+                                        )}`}
+                                      >
+                                        {getSwimTypeLabel(session.swim_type)}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                                 {daySessions.length > 3 && (
                                   <button
                                     onClick={() => {
-                                      const newExpanded = new Set(expandedCells);
+                                      const newExpanded = new Set(
+                                        expandedCells
+                                      );
                                       if (isExpanded) {
                                         newExpanded.delete(cellKey);
                                       } else {
@@ -721,12 +800,16 @@ export default function ScheduleView() {
                                     }}
                                     className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors cursor-pointer"
                                   >
-                                    {isExpanded ? 'Show less' : `+${daySessions.length - 3} more`}
+                                    {isExpanded
+                                      ? "Show less"
+                                      : `+${daySessions.length - 3} more`}
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-600 text-xs">—</span>
+                              <span className="text-gray-400 dark:text-gray-600 text-xs">
+                                —
+                              </span>
                             )}
                           </td>
                         );
@@ -763,7 +846,9 @@ export default function ScheduleView() {
             </p>
             <div className="space-y-3">
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsModalAddress)}`}
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  mapsModalAddress
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
@@ -773,13 +858,19 @@ export default function ScheduleView() {
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-gray-900 dark:text-gray-100">Google Maps</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in browser or app</div>
+                  <div className="font-bold text-gray-900 dark:text-gray-100">
+                    Google Maps
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Open in browser or app
+                  </div>
                 </div>
               </a>
 
               <a
-                href={`http://maps.apple.com/?q=${encodeURIComponent(mapsModalAddress)}`}
+                href={`http://maps.apple.com/?q=${encodeURIComponent(
+                  mapsModalAddress
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
@@ -789,8 +880,12 @@ export default function ScheduleView() {
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-gray-900 dark:text-gray-100">Apple Maps</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in Maps app</div>
+                  <div className="font-bold text-gray-900 dark:text-gray-100">
+                    Apple Maps
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Open in Maps app
+                  </div>
                 </div>
               </a>
             </div>

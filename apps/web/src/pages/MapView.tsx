@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import { Icon, LatLngBounds } from "leaflet";
-import { facilityApi, getApiErrorMessage } from "@/lib/api";
+import { facilityApi, getApiErrorMessage } from "../lib/api";
 import {
   formatTimeRange,
   formatDate,
@@ -25,7 +25,7 @@ import {
   X,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
-import type { Facility } from "@/types";
+import type { Facility } from "../types";
 
 // Toronto coordinates
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
@@ -143,7 +143,9 @@ export default function MapView() {
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
+  const [highlightedFacilityId, setHighlightedFacilityId] = useState<
+    string | null
+  >(null);
 
   const {
     data: facilities,
@@ -168,6 +170,40 @@ export default function MapView() {
     if (!facilityId) return;
     await toggleFavorite(facilityId);
   };
+
+  // Calculate distances and sort facilities if user location is available
+  const facilitiesWithDistance: FacilityWithDistance[] =
+    facilities?.map((f) => {
+      if (userLocation && f.latitude && f.longitude) {
+        const distance = calculateDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          f.latitude,
+          f.longitude
+        );
+        return { ...f, distance };
+      }
+      return f;
+    }) || [];
+
+  // Sort facilities: favorites first, then by distance if enabled
+  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
+    const isFavA = favorites.has(a.facility_id);
+    const isFavB = favorites.has(b.facility_id);
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Then sort by distance if enabled
+    if (sortByDistance && userLocation) {
+      if (a.distance === undefined) return 1;
+      if (b.distance === undefined) return -1;
+      return a.distance - b.distance;
+    }
+
+    return 0;
+  });
 
   // Filter facilities by search query
   const searchFilteredFacilities = sortedFacilities.filter((facility) => {
@@ -251,7 +287,7 @@ export default function MapView() {
 
   if (error) {
     const errorInfo = getApiErrorMessage(error);
-    
+
     return (
       <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="max-w-2xl w-full mx-4">
@@ -275,7 +311,7 @@ export default function MapView() {
                     {errorInfo.suggestions.map((suggestion, index) => (
                       <li key={index}>{suggestion}</li>
                     ))}
-                </ul>
+                  </ul>
                 </div>
                 <button
                   onClick={() => refetch()}
@@ -287,14 +323,14 @@ export default function MapView() {
                   />
                   {isRefetching ? "Retrying..." : "Try Again"}
                 </button>
-                  <details className="mt-4">
-                    <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
-                      Technical details
-                    </summary>
+                <details className="mt-4">
+                  <summary className="text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">
+                    Technical details
+                  </summary>
                   <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono bg-gray-50 dark:bg-gray-700 p-2 rounded break-all">
                     {errorInfo.details}
-                    </p>
-                  </details>
+                  </p>
+                </details>
               </div>
             </div>
           </div>
@@ -335,7 +371,8 @@ export default function MapView() {
           </div>
           {searchQuery && (
             <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-              Found {validFacilities.length} {validFacilities.length === 1 ? 'facility' : 'facilities'}
+              Found {validFacilities.length}{" "}
+              {validFacilities.length === 1 ? "facility" : "facilities"}
             </div>
           )}
         </div>
@@ -347,7 +384,9 @@ export default function MapView() {
           <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-              <p className="text-gray-600 dark:text-gray-400">Loading pools...</p>
+              <p className="text-gray-600 dark:text-gray-400">
+                Loading pools...
+              </p>
             </div>
           </div>
         ) : (
@@ -369,13 +408,13 @@ export default function MapView() {
               subdomains="abcd"
               maxZoom={20}
             />
-            
+
             {/* Map controller for auto-zoom based on location */}
             <MapController
               userLocation={userLocation}
               facilities={validFacilities}
             />
-            
+
             {/* User location marker */}
             {userLocation && (
               <Marker
@@ -395,7 +434,7 @@ export default function MapView() {
                 </Popup>
               </Marker>
             )}
-            
+
             {/* Pool markers */}
             {validFacilities.map((facility) => {
               const isFavorited = isFavorite(facility.facility_id);
@@ -408,7 +447,7 @@ export default function MapView() {
               } else if (isFavorited) {
                 icon = favoritePoolIcon;
               }
-              
+
               return (
                 <Marker
                   key={facility.facility_id}
@@ -421,8 +460,8 @@ export default function MapView() {
                     },
                   }}
                 >
-                <Popup>
-                  <div className="min-w-[250px]">
+                  <Popup>
+                    <div className="min-w-[250px]">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <h3 className="font-semibold text-lg flex-1">
                           {facility.website ? (
@@ -432,71 +471,81 @@ export default function MapView() {
                               rel="noopener noreferrer"
                               className="hover:text-primary-600 hover:underline transition-colors"
                             >
-                      {facility.name}
+                              {facility.name}
                             </a>
                           ) : (
                             facility.name
                           )}
-                    </h3>
+                        </h3>
                         <button
-                          onClick={() => handleToggleFavorite(facility.facility_id)}
+                          onClick={() =>
+                            handleToggleFavorite(facility.facility_id)
+                          }
                           className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
-                          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                          title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                          aria-label={
+                            isFavorited
+                              ? "Remove from favorites"
+                              : "Add to favorites"
+                          }
+                          title={
+                            isFavorited
+                              ? "Remove from favorites"
+                              : "Add to favorites"
+                          }
                         >
                           <Star
                             className={`w-5 h-5 ${
                               isFavorited
-                                ? 'fill-yellow-400 text-yellow-400'
-                                : 'text-gray-300 hover:text-yellow-400'
+                                ? "fill-yellow-400 text-yellow-400"
+                                : "text-gray-300 hover:text-yellow-400"
                             }`}
                           />
                         </button>
                       </div>
-                    {facility.address && (
-                      <p className="text-sm text-gray-600 mb-2 flex gap-1">
-                        <MapPin className="w-4 h-4 flex-shrink-0" />
-                        {facility.address}
+                      {facility.address && (
+                        <p className="text-sm text-gray-600 mb-2 flex gap-1">
+                          <MapPin className="w-4 h-4 flex-shrink-0" />
+                          {facility.address}
+                        </p>
+                      )}
+                      {facility.distance !== undefined && facility.address && (
+                        <button
+                          onClick={() => setMapsModalAddress(facility.address!)}
+                          className="bg-green-50 p-2 rounded mb-2 w-full hover:bg-green-100 transition-colors cursor-pointer text-left"
+                          title="Open in maps"
+                        >
+                          <p className="text-xs font-semibold text-green-900 flex items-center gap-1">
+                            <Navigation className="w-3 h-3" />
+                            Distance (click to open in maps)
+                          </p>
+                          <p className="text-sm font-semibold">
+                            {formatDistance(facility.distance)}
+                          </p>
+                        </button>
+                      )}
+                      {facility.next_session && (
+                        <div className="bg-blue-50 p-2 rounded mb-2">
+                          <p className="text-xs font-semibold text-blue-900">
+                            Next Session
+                          </p>
+                          <p className="text-sm">
+                            {formatDate(facility.next_session.date)}
+                          </p>
+                          <p className="text-sm">
+                            {formatTimeRange(
+                              facility.next_session.start_time,
+                              facility.next_session.end_time
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      <p className="text-sm text-gray-600">
+                        {facility.session_count || 0} upcoming sessions
                       </p>
-                    )}
-                    {facility.distance !== undefined && facility.address && (
-                      <button
-                        onClick={() => setMapsModalAddress(facility.address!)}
-                        className="bg-green-50 p-2 rounded mb-2 w-full hover:bg-green-100 transition-colors cursor-pointer text-left"
-                        title="Open in maps"
-                      >
-                        <p className="text-xs font-semibold text-green-900 flex items-center gap-1">
-                          <Navigation className="w-3 h-3" />
-                          Distance (click to open in maps)
-                        </p>
-                        <p className="text-sm font-semibold">
-                          {formatDistance(facility.distance)}
-                        </p>
-                      </button>
-                    )}
-                    {facility.next_session && (
-                      <div className="bg-blue-50 p-2 rounded mb-2">
-                        <p className="text-xs font-semibold text-blue-900">
-                          Next Session
-                        </p>
-                        <p className="text-sm">
-                          {formatDate(facility.next_session.date)}
-                        </p>
-                        <p className="text-sm">
-                          {formatTimeRange(
-                            facility.next_session.start_time,
-                            facility.next_session.end_time
-                          )}
-                        </p>
-                      </div>
-                    )}
-                    <p className="text-sm text-gray-600">
-                      {facility.session_count || 0} upcoming sessions
-                    </p>
-                  </div>
-                </Popup>
-              </Marker>
-            );
+                    </div>
+                  </Popup>
+                </Marker>
+              );
             })}
           </MapContainer>
         )}
@@ -573,21 +622,22 @@ export default function MapView() {
             </div>
           )}
 
-          {selectedFacility.distance !== undefined && selectedFacility.address && (
-            <button
-              onClick={() => setMapsModalAddress(selectedFacility.address!)}
-              className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3 w-full hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer text-left"
-              title="Open in maps"
-            >
-              <p className="text-xs font-semibold text-green-900 dark:text-green-400 mb-1 flex items-center gap-1">
-                <Navigation className="w-3 h-3" />
-                DISTANCE FROM YOU (CLICK TO OPEN IN MAPS)
-              </p>
-              <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
-                {formatDistance(selectedFacility.distance)}
-              </p>
-            </button>
-          )}
+          {selectedFacility.distance !== undefined &&
+            selectedFacility.address && (
+              <button
+                onClick={() => setMapsModalAddress(selectedFacility.address!)}
+                className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg mb-3 w-full hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors cursor-pointer text-left"
+                title="Open in maps"
+              >
+                <p className="text-xs font-semibold text-green-900 dark:text-green-400 mb-1 flex items-center gap-1">
+                  <Navigation className="w-3 h-3" />
+                  DISTANCE FROM YOU (CLICK TO OPEN IN MAPS)
+                </p>
+                <p className="font-semibold text-lg text-gray-900 dark:text-gray-100">
+                  {formatDistance(selectedFacility.distance)}
+                </p>
+              </button>
+            )}
 
           {selectedFacility.next_session && (
             <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg mb-3">
@@ -651,7 +701,9 @@ export default function MapView() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                     <Locate className="w-4 h-4" />
-                    <span className="text-sm font-semibold">Location Active</span>
+                    <span className="text-sm font-semibold">
+                      Location Active
+                    </span>
                   </div>
                   <button
                     onClick={handleGetLocation}
@@ -663,9 +715,7 @@ export default function MapView() {
                   </button>
                 </div>
                 <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
-                  <span>
-                    Showing pools within 10km radius
-                  </span>
+                  <span>Showing pools within 10km radius</span>
                   <button
                     onClick={() => {
                       setUserLocation(null);
@@ -712,7 +762,9 @@ export default function MapView() {
             </p>
             <div className="space-y-3">
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapsModalAddress)}`}
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  mapsModalAddress
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
@@ -722,13 +774,19 @@ export default function MapView() {
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-gray-900 dark:text-gray-100">Google Maps</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in browser or app</div>
+                  <div className="font-bold text-gray-900 dark:text-gray-100">
+                    Google Maps
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Open in browser or app
+                  </div>
                 </div>
               </a>
 
               <a
-                href={`http://maps.apple.com/?q=${encodeURIComponent(mapsModalAddress)}`}
+                href={`http://maps.apple.com/?q=${encodeURIComponent(
+                  mapsModalAddress
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-4 bg-white dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600 rounded-xl hover:border-primary-500 dark:hover:border-primary-400 hover:shadow-lg transition-all group"
@@ -738,8 +796,12 @@ export default function MapView() {
                   <MapPin className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">
-                  <div className="font-bold text-gray-900 dark:text-gray-100">Apple Maps</div>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">Open in Maps app</div>
+                  <div className="font-bold text-gray-900 dark:text-gray-100">
+                    Apple Maps
+                  </div>
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Open in Maps app
+                  </div>
                 </div>
               </a>
             </div>
