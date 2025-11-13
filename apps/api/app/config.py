@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     city_base_url: str = "https://www.toronto.ca"
     open_data_base_url: str = "https://open.toronto.ca"
     
+    # AI Image Generation APIs
+    openai_api_key: Optional[str] = None
+    leonardo_api_key: Optional[str] = None
+
     # Ingestion
     ingest_window_days: int = 56
     

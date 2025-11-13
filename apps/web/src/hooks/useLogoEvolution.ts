@@ -12,7 +12,6 @@ export function useLogoEvolution() {
   const [logos, setLogos] = useState<Logo[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
-  // Load logos from localStorage on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -27,7 +26,6 @@ export function useLogoEvolution() {
     }
   }, [])
 
-  // Save logos to localStorage whenever they change
   useEffect(() => {
     if (!isLoading) {
       try {
@@ -38,9 +36,6 @@ export function useLogoEvolution() {
     }
   }, [logos, isLoading])
 
-  /**
-   * Initialize with seed logos
-   */
   const initializeLogos = useCallback((seedLogos: Omit<Logo, 'id' | 'createdAt' | 'isFavorite'>[]) => {
     const initializedLogos: Logo[] = seedLogos.map((seed, index) => ({
       ...seed,
@@ -57,9 +52,6 @@ export function useLogoEvolution() {
     setLogos(initializedLogos)
   }, [])
 
-  /**
-   * Create an empty logo slot
-   */
   const createEmptyLogo = (index: number): Logo => ({
     id: nanoid(),
     imageData: '',
@@ -73,9 +65,6 @@ export function useLogoEvolution() {
     }
   })
 
-  /**
-   * Replace a logo at a specific index
-   */
   const replaceLogo = useCallback((index: number, newLogoData: {
     imageData: string
     prompt: string
@@ -104,9 +93,6 @@ export function useLogoEvolution() {
     })
   }, [])
 
-  /**
-   * Update logo metadata
-   */
   const updateLogo = useCallback((index: number, updates: Partial<Logo>) => {
     setLogos(prev => {
       const updated = [...prev]
@@ -115,9 +101,6 @@ export function useLogoEvolution() {
     })
   }, [])
 
-  /**
-   * Toggle favorite status
-   */
   const toggleFavorite = useCallback((index: number) => {
     setLogos(prev => {
       const updated = [...prev]
@@ -129,9 +112,6 @@ export function useLogoEvolution() {
     })
   }, [])
 
-  /**
-   * Get logo lineage (parent chain)
-   */
   const getLineage = useCallback((logoId: string): Logo[] => {
     const lineage: Logo[] = []
     let currentId: string | null = logoId
@@ -147,24 +127,15 @@ export function useLogoEvolution() {
     return lineage.reverse()
   }, [logos])
 
-  /**
-   * Get all favorites
-   */
   const getFavorites = useCallback(() => {
     return logos.filter(logo => logo.isFavorite && logo.imageData)
   }, [logos])
 
-  /**
-   * Clear all logos
-   */
   const clearAll = useCallback(() => {
     const emptyLogos: Logo[] = Array.from({ length: MAX_LOGOS }, (_, i) => createEmptyLogo(i))
     setLogos(emptyLogos)
   }, [])
 
-  /**
-   * Export logos as JSON
-   */
   const exportLogos = useCallback(() => {
     const data = {
       version: '1.0.0',
@@ -174,9 +145,6 @@ export function useLogoEvolution() {
     return JSON.stringify(data, null, 2)
   }, [logos])
 
-  /**
-   * Import logos from JSON
-   */
   const importLogos = useCallback((jsonString: string) => {
     try {
       const data = JSON.parse(jsonString)
@@ -213,4 +181,3 @@ export function useLogoEvolution() {
     importLogos,
   }
 }
-

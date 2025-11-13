@@ -6,7 +6,6 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string): string {
-  // Parse date as local date to avoid timezone issues
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
 
@@ -48,7 +47,6 @@ export function getSwimTypeColor(type: string): string {
 }
 
 export function getDayOfWeek(dateString: string): string {
-  // Parse date as local date to avoid timezone issues
   const [year, month, day] = dateString.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   return format(date, "EEEE");
@@ -60,10 +58,6 @@ export interface UserLocation {
   longitude: number;
 }
 
-/**
- * Calculate distance between two points using Haversine formula
- * Returns distance in kilometers
- */
 export function calculateDistance(
   lat1: number,
   lon1: number,
@@ -91,9 +85,6 @@ function toRadians(degrees: number): number {
   return degrees * (Math.PI / 180);
 }
 
-/**
- * Format distance for display
- */
 export function formatDistance(km: number): string {
   if (km < 1) {
     return `${Math.round(km * 1000)}m`;
@@ -101,10 +92,6 @@ export function formatDistance(km: number): string {
   return `${km.toFixed(1)}km`;
 }
 
-/**
- * Get user's current GPS location
- * Returns a promise that resolves to UserLocation or rejects if permission denied/error
- */
 export function getUserLocation(): Promise<UserLocation> {
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
@@ -137,18 +124,14 @@ export function getUserLocation(): Promise<UserLocation> {
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 300000, // 5 minutes
+        maximumAge: 300000,
       }
     );
   });
 }
 
-// Favorites management - supports both localStorage (guest) and backend (authenticated)
 const FAVORITES_KEY = "swimto_favorites";
 
-/**
- * Get all favorite facility IDs from localStorage (for guest users)
- */
 export function getFavoritesFromLocalStorage(): Set<string> {
   try {
     const stored = localStorage.getItem(FAVORITES_KEY);
@@ -161,9 +144,6 @@ export function getFavoritesFromLocalStorage(): Set<string> {
   return new Set();
 }
 
-/**
- * Save favorites to localStorage (for guest users)
- */
 export function saveFavoritesToLocalStorage(facilityIds: Set<string>): void {
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(facilityIds)));
@@ -172,9 +152,6 @@ export function saveFavoritesToLocalStorage(facilityIds: Set<string>): void {
   }
 }
 
-/**
- * Add a facility to localStorage favorites (for guest users)
- */
 export function addFavoriteToLocalStorage(facilityId: string): void {
   try {
     const favorites = getFavoritesFromLocalStorage();
@@ -185,9 +162,6 @@ export function addFavoriteToLocalStorage(facilityId: string): void {
   }
 }
 
-/**
- * Remove a facility from localStorage favorites (for guest users)
- */
 export function removeFavoriteFromLocalStorage(facilityId: string): void {
   try {
     const favorites = getFavoritesFromLocalStorage();
@@ -198,26 +172,20 @@ export function removeFavoriteFromLocalStorage(facilityId: string): void {
   }
 }
 
-/**
- * Sync localStorage favorites to backend when user logs in
- * This should be called after successful authentication
- */
 export async function syncLocalFavoritesToBackend(
   favoritesApi: {
-    add: (facilityId: string) => Promise<void>;
+    add: (facilityId: string) => Promise<unknown>;
   }
 ): Promise<void> {
   try {
     const localFavorites = getFavoritesFromLocalStorage();
     if (localFavorites.size > 0) {
-      // Add all local favorites to backend
       const promises = Array.from(localFavorites).map((facilityId) =>
         favoritesApi.add(facilityId).catch((err) => {
           console.warn(`Failed to sync favorite ${facilityId}:`, err);
         })
       );
       await Promise.all(promises);
-      // Clear localStorage favorites after successful sync
       localStorage.removeItem(FAVORITES_KEY);
     }
   } catch (error) {
@@ -225,12 +193,6 @@ export async function syncLocalFavoritesToBackend(
   }
 }
 
-/**
- * Check if a session is the next available session the user can attend
- * A session is "next available" if:
- * - Current time is before the session ends (ongoing or upcoming)
- * - It's the earliest such session chronologically
- */
 export function isNextAvailableSession(
   session: { date: string; start_time: string; end_time: string },
   allSessions: Array<{
@@ -242,33 +204,24 @@ export function isNextAvailableSession(
 ): boolean {
   try {
     const now = new Date();
-
-    // Parse session date and times
     const [year, month, day] = session.date.split("-").map(Number);
     const [startHour, startMinute] = session.start_time.split(":").map(Number);
     const [endHour, endMinute] = session.end_time.split(":").map(Number);
 
     const sessionStart = new Date(year, month - 1, day, startHour, startMinute);
     const sessionEnd = new Date(year, month - 1, day, endHour, endMinute);
-
-    // Session must not be finished yet
     if (now >= sessionEnd) {
       return false;
     }
-
-    // Find all sessions that are not finished yet
     const availableSessions = allSessions.filter((s) => {
       const [y, m, d] = s.date.split("-").map(Number);
       const [eh, em] = s.end_time.split(":").map(Number);
       const sEnd = new Date(y, m - 1, d, eh, em);
       return now < sEnd;
     });
-
-    // Find the earliest available session
     if (availableSessions.length === 0) {
       return false;
     }
-
     const earliest = availableSessions.reduce((earliest, current) => {
       const [cy, cm, cd] = current.date.split("-").map(Number);
       const [csh, csm] = current.start_time.split(":").map(Number);
@@ -280,8 +233,6 @@ export function isNextAvailableSession(
 
       return currentStart < earliestStart ? current : earliest;
     });
-
-    // Check if this session is the earliest
     return (
       session.date === earliest.date &&
       session.start_time === earliest.start_time &&

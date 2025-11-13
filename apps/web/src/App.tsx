@@ -13,8 +13,8 @@ import AuthCallback from "./pages/AuthCallback";
 function App() {
   return (
     <DarkModeProvider>
-      <AuthProvider>
-        <Router>
+      <Router>
+        <AuthProvider>
           <Routes>
             <Route path="/" element={<Layout />}>
               <Route index element={<Home />} />
@@ -26,8 +26,8 @@ function App() {
             </Route>
             <Route path="/auth/callback" element={<AuthCallback />} />
           </Routes>
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </DarkModeProvider>
   );
 }

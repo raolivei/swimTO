@@ -34,6 +34,8 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     container_name: swimto-api
+    env_file:
+      - ./apps/api/.env
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/pools
       REDIS_URL: redis://redis:6379
@@ -42,6 +44,8 @@ services:
       OPEN_DATA_BASE_URL: https://open.toronto.ca
       INGEST_WINDOW_DAYS: 56
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LEONARDO_API_KEY: ${LEONARDO_API_KEY:-}
     ports:
       - "8000:8000"
     depends_on:

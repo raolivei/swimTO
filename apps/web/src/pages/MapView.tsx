@@ -404,8 +404,9 @@ export default function MapView() {
             {/* Pool markers */}
             {validFacilities.map((facility) => {
               const isFavorited = isFavorite(facility.facility_id);
-              const isHighlighted = highlightedFacilityId === facility.facility_id;
-              
+              const isHighlighted =
+                highlightedFacilityId === facility.facility_id;
+
               // Determine which icon to use (priority: highlighted > favorited > default)
               let icon = poolIcon;
               if (isHighlighted) {
@@ -546,14 +547,22 @@ export default function MapView() {
             <button
               onClick={() => handleToggleFavorite(selectedFacility.facility_id)}
               className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
-              aria-label={isFavorite(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
-              title={isFavorite(selectedFacility.facility_id) ? 'Remove from favorites' : 'Add to favorites'}
+              aria-label={
+                isFavorite(selectedFacility.facility_id)
+                  ? "Remove from favorites"
+                  : "Add to favorites"
+              }
+              title={
+                isFavorite(selectedFacility.facility_id)
+                  ? "Remove from favorites"
+                  : "Add to favorites"
+              }
             >
               <Star
                 className={`w-6 h-6 ${
                   isFavorite(selectedFacility.facility_id)
-                    ? 'fill-yellow-400 text-yellow-400'
-                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
+                    ? "fill-yellow-400 text-yellow-400"
+                    : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
                 }`}
               />
             </button>

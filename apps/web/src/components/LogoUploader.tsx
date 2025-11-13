@@ -102,7 +102,6 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
@@ -120,8 +119,6 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
             <X className="w-6 h-6" />
           </button>
         </div>
-
-        {/* Current prompt */}
         <div className="p-6 bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Prompt for AI generation:
@@ -133,10 +130,7 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
             Use this prompt with ChatGPT DALL-E 3, Leonardo.ai, or another AI image generator
           </p>
         </div>
-
-        {/* Upload options */}
         <div className="p-6 space-y-4">
-          {/* File upload */}
           <div>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -159,8 +153,6 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
               className="hidden"
             />
           </div>
-
-          {/* Paste from clipboard */}
           <button
             onClick={handlePaste}
             disabled={isLoading}
@@ -176,8 +168,6 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
               </p>
             </div>
           </button>
-
-          {/* URL input */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Or load from URL:
@@ -204,15 +194,11 @@ export function LogoUploader({ onImageSelected, onClose, currentPrompt }: LogoUp
               </button>
             </div>
           </div>
-
-          {/* Error message */}
           {error && (
             <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
               <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
             </div>
           )}
-
-          {/* Loading state */}
           {isLoading && (
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
               <p className="text-sm text-blue-600 dark:text-blue-400">Loading image...</p>

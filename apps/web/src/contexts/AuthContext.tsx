@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { authApi, type User, favoritesApi } from '@/lib/api';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { syncLocalFavoritesToBackend } from '@/lib/utils';
+import { createContext, useContext, useState, ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { authApi, type User, favoritesApi } from "@/lib/api";
+import { useNavigate, useLocation } from "react-router-dom";
+import { syncLocalFavoritesToBackend } from "@/lib/utils";
 
 type AuthContextType = {
   user: User | null;
@@ -15,8 +15,8 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_TOKEN_KEY = 'swimto_auth_token';
-const USER_KEY = 'swimto_user';
+const AUTH_TOKEN_KEY = "swimto_auth_token";
+const USER_KEY = "swimto_user";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -38,7 +38,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Check if user is authenticated by fetching current user
   const { isLoading } = useQuery({
-    queryKey: ['auth', 'me'],
+    queryKey: ["auth", "me"],
     queryFn: async () => {
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (!token) {
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Redirect to Google OAuth
       window.location.href = auth_url;
     } catch (error) {
-      console.error('Failed to get Google auth URL:', error);
+      console.error("Failed to get Google auth URL:", error);
       throw error;
     }
   };
@@ -78,18 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
       setUser(response.user);
-      
+
       // Sync local favorites to backend
       await syncLocalFavoritesToBackend(favoritesApi);
-      
+
       // Invalidate and refetch favorites
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
-      
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
+
       // Redirect to home or previous location
-      const from = location.state?.from?.pathname || '/';
+      const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
     } catch (error) {
-      console.error('Failed to handle Google callback:', error);
+      console.error("Failed to handle Google callback:", error);
       throw error;
     }
   };
@@ -98,12 +98,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setUser(null);
-    
+
     // Clear all favorites queries
-    queryClient.removeQueries({ queryKey: ['favorites'] });
-    
+    queryClient.removeQueries({ queryKey: ["favorites"] });
+
     // Redirect to home
-    navigate('/', { replace: true });
+    navigate("/", { replace: true });
   };
 
   return (
@@ -125,8 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }
-

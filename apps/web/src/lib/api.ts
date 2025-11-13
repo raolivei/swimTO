@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Facility, SessionWithFacility, ScheduleFilters } from "@/types";
+import type { Facility, SessionWithFacility, ScheduleFilters } from "../types";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -11,28 +11,24 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests if available
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('swimto_auth_token')
+  const token = localStorage.getItem("swimto_auth_token");
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers.Authorization = `Bearer ${token}`;
   }
-  return config
-})
+  return config;
+});
 
-// Handle 401 errors (unauthorized)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear token and redirect to login
-      localStorage.removeItem('swimto_auth_token')
-      localStorage.removeItem('swimto_user')
-      // Don't redirect automatically - let components handle it
+      localStorage.removeItem("swimto_auth_token");
+      localStorage.removeItem("swimto_user");
     }
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-)
+);
 
 export const facilityApi = {
   getAll: async (hasLaneSwim = true): Promise<Facility[]> => {
@@ -72,64 +68,94 @@ export const healthApi = {
 };
 
 export interface User {
-  id: number
-  email: string
-  name?: string
-  picture?: string
-  created_at: string
+  id: number;
+  email: string;
+  name?: string;
+  picture?: string;
+  created_at: string;
 }
 
 export interface TokenResponse {
-  access_token: string
-  token_type: string
-  user: User
+  access_token: string;
+  token_type: string;
+  user: User;
 }
 
 export interface FavoriteResponse {
-  facility_id: string
-  created_at: string
-  facility?: Facility
+  facility_id: string;
+  created_at: string;
+  facility?: Facility;
 }
 
 export const authApi = {
   getGoogleAuthUrl: async (): Promise<{ auth_url: string }> => {
-    const { data } = await api.get('/auth/google-url')
-    return data
+    const { data } = await api.get("/auth/google-url");
+    return data;
   },
 
   googleCallback: async (code: string): Promise<TokenResponse> => {
-    const { data } = await api.post('/auth/google-callback', null, {
+    const { data } = await api.post("/auth/google-callback", null, {
       params: { code },
-    })
-    return data
+    });
+    return data;
   },
 
   getCurrentUser: async (): Promise<User> => {
-    const { data } = await api.get('/auth/me')
-    return data
+    const { data } = await api.get("/auth/me");
+    return data;
   },
-}
+};
 
 export const favoritesApi = {
   getAll: async (): Promise<FavoriteResponse[]> => {
-    const { data } = await api.get('/favorites')
-    return data
+    const { data } = await api.get("/favorites");
+    return data;
   },
 
   add: async (facilityId: string): Promise<FavoriteResponse> => {
-    const { data } = await api.post('/favorites', { facility_id: facilityId })
-    return data
+    const { data } = await api.post("/favorites", { facility_id: facilityId });
+    return data;
   },
 
   remove: async (facilityId: string): Promise<void> => {
-    await api.delete(`/favorites/${facilityId}`)
+    await api.delete(`/favorites/${facilityId}`);
   },
 
-  check: async (facilityId: string): Promise<{ is_favorite: boolean; facility_id: string }> => {
-    const { data } = await api.get(`/favorites/check/${facilityId}`)
-    return data
+  check: async (
+    facilityId: string
+  ): Promise<{ is_favorite: boolean; facility_id: string }> => {
+    const { data } = await api.get(`/favorites/check/${facilityId}`);
+    return data;
   },
+};
+
+export interface GeneratedLogo {
+  image_url: string;
+  image_data: string;
+  model: string;
+  prompt: string;
 }
+
+export interface LogoGenerationResponse {
+  logos: GeneratedLogo[];
+  model: string;
+}
+
+export const logoApi = {
+  generate: async (
+    prompt: string,
+    model: "dalle-3" | "leonardo" = "dalle-3",
+    n: number = 1
+  ): Promise<LogoGenerationResponse> => {
+    const { data } = await api.post("/logo/generate", {
+      prompt,
+      model,
+      n,
+      size: "1024x1024",
+    });
+    return data;
+  },
+};
 
 /**
  * Get a user-friendly error message from an API error
