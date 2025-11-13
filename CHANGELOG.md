@@ -40,6 +40,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Shows count of search results
   - Clear button to reset search
   - First match auto-selected and centered
+- **Dark Mode Support**: Comprehensive dark mode implementation with automatic system preference detection
+  - Automatic detection of system dark mode preference (`prefers-color-scheme`)
+  - Manual toggle button (sun/moon icon) in header for user control
+  - Preference persistence via localStorage across sessions
+  - Dark map tiles (CartoDB Dark theme) for comfortable night viewing
+  - Smooth color transitions (300ms) throughout the application
+  - Full dark mode styling for all components (schedule view, map view, navigation, cards, tables)
+  - WCAG AA compliant color contrast ratios
+  - Accessible toggle with proper ARIA labels and keyboard support
 
 ### Fixed
 

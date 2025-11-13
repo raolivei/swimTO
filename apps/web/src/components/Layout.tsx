@@ -1,5 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
-import { Waves, Map, Calendar, Info, Moon, Sun, LogIn, LogOut, User } from 'lucide-react'
+import { Waves, Map, Calendar, Info, Moon, Sun, LogIn, LogOut, User, Palette } from 'lucide-react'
 import { useDarkMode } from '../contexts/DarkModeContext'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -16,7 +16,6 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 via-white to-primary-50/20 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
-      {/* Header with glassmorphism effect */}
       <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 shadow-sm border-b border-gray-200/50 dark:border-gray-700/50 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
@@ -49,9 +48,11 @@ export default function Layout() {
                   <Info className="w-5 h-5" />
                   <span className="hidden sm:inline">About</span>
                 </NavLink>
+                <NavLink to="/logo-picker" className={navLinkClass}>
+                  <Palette className="w-5 h-5" />
+                  <span className="hidden sm:inline">Logo</span>
+                </NavLink>
               </nav>
-              
-              {/* Auth button */}
               {isAuthenticated ? (
                 <div className="flex items-center gap-2 ml-2">
                   <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-sm">
@@ -89,8 +90,6 @@ export default function Layout() {
                   <span className="hidden sm:inline">Login</span>
                 </button>
               )}
-              
-              {/* Dark mode toggle */}
               <button
                 onClick={toggleDarkMode}
                 className="ml-2 p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-110 group"
@@ -107,13 +106,9 @@ export default function Layout() {
           </div>
         </div>
       </header>
-
-      {/* Main content */}
       <main className="flex-1">
         <Outlet />
       </main>
-
-      {/* Footer with gradient */}
       <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 border-t border-gray-700 dark:border-gray-800 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center">

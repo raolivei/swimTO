@@ -1,9 +1,5 @@
 import type { Logo } from '../types/logo'
 
-/**
- * Initial seed logos for the logo evolution tool
- * These are placeholder entries that will be replaced by actual logos
- */
 export const seedLogos: Omit<Logo, 'id' | 'createdAt' | 'isFavorite'>[] = [
   {
     imageData: '',

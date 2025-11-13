@@ -1,44 +1,67 @@
-import { Upload, Star, RefreshCw } from 'lucide-react'
-import type { Logo } from '../types/logo'
+import { Upload, Star, RefreshCw, Sparkles } from "lucide-react";
+import type { Logo } from "../types/logo";
 
 interface LogoCardProps {
-  logo: Logo
-  index: number
-  onClick: () => void
-  onToggleFavorite: () => void
+  logo: Logo;
+  index: number;
+  onClick: () => void;
+  onToggleFavorite: () => void;
+  onGenerate?: () => void;
 }
 
-export function LogoCard({ logo, index, onClick, onToggleFavorite }: LogoCardProps) {
-  const hasImage = Boolean(logo.imageData)
+export function LogoCard({
+  logo,
+  index,
+  onClick,
+  onToggleFavorite,
+  onGenerate,
+}: LogoCardProps) {
+  const hasImage = Boolean(logo.imageData);
 
   return (
     <div
       className={`relative group rounded-xl border-2 transition-all duration-300 overflow-hidden ${
         logo.isFavorite
-          ? 'border-yellow-400 shadow-lg shadow-yellow-400/20'
-          : 'border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500'
-      } ${hasImage ? 'cursor-pointer hover:scale-105' : 'cursor-default'}`}
+          ? "border-yellow-400 shadow-lg shadow-yellow-400/20"
+          : "border-gray-200 dark:border-gray-700 hover:border-primary-400 dark:hover:border-primary-500"
+      } cursor-pointer hover:scale-105`}
     >
-      {/* Favorite button */}
       <button
         onClick={(e) => {
-          e.stopPropagation()
-          onToggleFavorite()
+          e.stopPropagation();
+          onToggleFavorite();
         }}
         className="absolute top-2 right-2 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:scale-110 transition-transform"
-        aria-label={logo.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+        aria-label={
+          logo.isFavorite ? "Remove from favorites" : "Add to favorites"
+        }
       >
         <Star
           className={`w-5 h-5 ${
-            logo.isFavorite ? 'fill-yellow-400 text-yellow-400' : 'text-gray-400'
+            logo.isFavorite
+              ? "fill-yellow-400 text-yellow-400"
+              : "text-gray-400"
           }`}
         />
       </button>
+      {onGenerate && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onGenerate();
+          }}
+          className="absolute top-2 left-2 z-10 p-2 rounded-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm hover:scale-110 transition-transform"
+          aria-label="Generate logo with AI"
+          title="Generate logo with AI"
+        >
+          <Sparkles className="w-5 h-5 text-primary-500" />
+        </button>
+      )}
 
       {/* Logo display area */}
       <div
-        onClick={hasImage ? onClick : undefined}
-        className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center p-6"
+        onClick={onClick}
+        className="aspect-square bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center p-6 cursor-pointer"
       >
         {hasImage ? (
           <div className="relative w-full h-full">
@@ -47,7 +70,6 @@ export function LogoCard({ logo, index, onClick, onToggleFavorite }: LogoCardPro
               alt={`Logo ${index + 1}`}
               className="w-full h-full object-contain"
             />
-            {/* Hover overlay */}
             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <div className="text-white text-center">
                 <RefreshCw className="w-8 h-8 mx-auto mb-2" />
@@ -67,8 +89,6 @@ export function LogoCard({ logo, index, onClick, onToggleFavorite }: LogoCardPro
           </div>
         )}
       </div>
-
-      {/* Logo info */}
       <div className="p-3 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-semibold text-gray-600 dark:text-gray-400">
@@ -80,16 +100,18 @@ export function LogoCard({ logo, index, onClick, onToggleFavorite }: LogoCardPro
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2" title={logo.prompt}>
+        <p
+          className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2"
+          title={logo.prompt}
+        >
           {logo.prompt}
         </p>
-        {logo.metadata.model && logo.metadata.model !== 'manual' && (
+        {logo.metadata.model && logo.metadata.model !== "manual" && (
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 capitalize">
             {logo.metadata.model}
           </p>
         )}
       </div>
     </div>
-  )
+  );
 }
-
