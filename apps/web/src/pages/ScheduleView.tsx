@@ -10,7 +10,6 @@ import {
   getUserLocation,
   calculateDistance,
   formatDistance,
-  isNextAvailableSession,
   type UserLocation,
 } from "@/lib/utils";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -40,16 +39,18 @@ const isNextAvailableSession = (
 ): boolean => {
   const now = new Date();
   const sessionDateTime = new Date(`${session.date} ${session.start_time}`);
-  
+
   if (sessionDateTime < now) return false;
-  
+
   // Check if this is the earliest upcoming session
   const earliestUpcoming = allSessions
     .map((s) => new Date(`${s.date} ${s.start_time}`))
     .filter((d) => d >= now)
     .sort((a, b) => a.getTime() - b.getTime())[0];
-  
-  return earliestUpcoming && sessionDateTime.getTime() === earliestUpcoming.getTime();
+
+  return (
+    earliestUpcoming && sessionDateTime.getTime() === earliestUpcoming.getTime()
+  );
 };
 
 export default function ScheduleView() {
@@ -530,39 +531,16 @@ export default function ScheduleView() {
                         filteredSessions
                       );
 
-                          {/* Facility */}
-                          <div className="flex-1 flex items-start gap-2">
-                            <button
-                              onClick={() => handleToggleFavorite(session.facility?.facility_id)}
-                              className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
-                              aria-label={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
-                              title={isFavorite(session.facility?.facility_id || '') ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                              <Star
-                                className={`w-5 h-5 ${
-                                  isFavorite(session.facility?.facility_id || '')
-                                    ? 'fill-yellow-400 text-yellow-400'
-                                    : 'text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400'
-                                }`}
-                              />
-                            </button>
-                            <div className="flex-1">
-                              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
-                                {session.facility?.website ? (
-                                  <a
-                                    href={session.facility.website}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                  >
-                                    {session.facility.name}
-                                  </a>
-                                ) : (
-                                  session.facility?.name
-                                )}
-                              </p>
-                            </div>
-
+                      return (
+                        <div
+                          key={session.id}
+                          className={`p-4 md:p-6 rounded-xl border-2 transition-all duration-200 ${
+                            isNextAvailable
+                              ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700 shadow-lg"
+                              : "bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
+                          }`}
+                        >
+                          <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
                             {/* Facility */}
                             <div className="flex-1 flex items-start gap-2">
                               <button
@@ -656,14 +634,14 @@ export default function ScheduleView() {
                             </div>
                           </div>
 
-                        {/* Notes */}
-                        {session.notes && (
-                          <div className="w-full mt-3 md:col-span-full">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                              {session.notes}
-                            </p>
-                          </div>
-                        )}
+                          {/* Notes */}
+                          {session.notes && (
+                            <div className="w-full mt-3 md:col-span-full">
+                              <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                                {session.notes}
+                              </p>
+                            </div>
+                          )}
                         </div>
                       );
                     })}

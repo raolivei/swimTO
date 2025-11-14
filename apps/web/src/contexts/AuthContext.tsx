@@ -80,7 +80,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(response.user);
 
       // Sync local favorites to backend
-      await syncLocalFavoritesToBackend(favoritesApi);
+      await syncLocalFavoritesToBackend({
+        add: async (facilityId: string) => {
+          await favoritesApi.add(facilityId);
+          return;
+        },
+      });
 
       // Invalidate and refetch favorites
       queryClient.invalidateQueries({ queryKey: ["favorites"] });

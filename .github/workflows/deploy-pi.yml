@@ -7,13 +7,27 @@ on:
       - dev
   workflow_dispatch:
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/raolivei
+
 jobs:
   build-and-deploy:
     runs-on: [self-hosted, linux, arm64]
+    permissions:
+      contents: read
+      packages: write
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set environment based on branch
         id: set-env
@@ -26,28 +40,32 @@ jobs:
             echo "NAMESPACE=swimto-dev" >> $GITHUB_OUTPUT
           fi
       
-      - name: Build API image
+      - name: Build and push API image
         run: |
-          docker build -t swimto-api:${{ github.sha }} \
-            -t swimto-api:latest \
+          docker build -t ${{ env.IMAGE_PREFIX }}/swimto-api:${{ github.sha }} \
+            -t ${{ env.IMAGE_PREFIX }}/swimto-api:latest \
             ./apps/api
+          docker push ${{ env.IMAGE_PREFIX }}/swimto-api:${{ github.sha }}
+          docker push ${{ env.IMAGE_PREFIX }}/swimto-api:latest
       
-      - name: Build Web image
+      - name: Build and push Web image
         run: |
-          docker build -t swimto-web:${{ github.sha }} \
-            -t swimto-web:latest \
+          docker build -t ${{ env.IMAGE_PREFIX }}/swimto-web:${{ github.sha }} \
+            -t ${{ env.IMAGE_PREFIX }}/swimto-web:latest \
             --build-arg VITE_API_URL=${{ secrets.API_URL }} \
             ./apps/web
+          docker push ${{ env.IMAGE_PREFIX }}/swimto-web:${{ github.sha }}
+          docker push ${{ env.IMAGE_PREFIX }}/swimto-web:latest
       
-      - name: Load images into k3s
+      - name: Pull images into k3s
         run: |
-          docker save swimto-api:${{ github.sha }} | sudo k3s ctr images import -
-          docker save swimto-web:${{ github.sha }} | sudo k3s ctr images import -
+          sudo k3s ctr images pull ${{ env.IMAGE_PREFIX }}/swimto-api:${{ github.sha }}
+          sudo k3s ctr images pull ${{ env.IMAGE_PREFIX }}/swimto-web:${{ github.sha }}
       
       - name: Update image tags in k8s manifests
         run: |
-          sed -i "s|swimto-api:latest|swimto-api:${{ github.sha }}|g" k8s/api-deployment.yaml
-          sed -i "s|swimto-web:latest|swimto-web:${{ github.sha }}|g" k8s/web-deployment.yaml
+          sed -i "s|ghcr.io/raolivei/swimto-api:latest|${{ env.IMAGE_PREFIX }}/swimto-api:${{ github.sha }}|g" k8s/api-deployment.yaml
+          sed -i "s|ghcr.io/raolivei/swimto-web:latest|${{ env.IMAGE_PREFIX }}/swimto-web:${{ github.sha }}|g" k8s/web-deployment.yaml
       
       - name: Deploy to k3s
         run: |

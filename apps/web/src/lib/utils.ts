@@ -166,7 +166,10 @@ export function getFavoritesFromLocalStorage(): Set<string> {
  */
 export function saveFavoritesToLocalStorage(facilityIds: Set<string>): void {
   try {
-    localStorage.setItem(FAVORITES_KEY, JSON.stringify(Array.from(facilityIds)));
+    localStorage.setItem(
+      FAVORITES_KEY,
+      JSON.stringify(Array.from(facilityIds))
+    );
   } catch (error) {
     console.error("Error saving favorites to localStorage:", error);
   }
@@ -202,11 +205,9 @@ export function removeFavoriteFromLocalStorage(facilityId: string): void {
  * Sync localStorage favorites to backend when user logs in
  * This should be called after successful authentication
  */
-export async function syncLocalFavoritesToBackend(
-  favoritesApi: {
-    add: (facilityId: string) => Promise<void>;
-  }
-): Promise<void> {
+export async function syncLocalFavoritesToBackend(favoritesApi: {
+  add: (facilityId: string) => Promise<void>;
+}): Promise<void> {
   try {
     const localFavorites = getFavoritesFromLocalStorage();
     if (localFavorites.size > 0) {
@@ -243,12 +244,10 @@ export function isNextAvailableSession(
   try {
     const now = new Date();
 
-    // Parse session date and times
+    // Parse session date and end time
     const [year, month, day] = session.date.split("-").map(Number);
-    const [startHour, startMinute] = session.start_time.split(":").map(Number);
     const [endHour, endMinute] = session.end_time.split(":").map(Number);
 
-    const sessionStart = new Date(year, month - 1, day, startHour, startMinute);
     const sessionEnd = new Date(year, month - 1, day, endHour, endMinute);
 
     // Session must not be finished yet
