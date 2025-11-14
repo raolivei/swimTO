@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2025-01-XX
+
+### Added
+- Kubernetes ingress configuration for external access
+- Build and deployment documentation (BUILD_AND_DEPLOY.md)
+- Quick build script (QUICK_BUILD.sh)
+- Kubernetes build job manifest (k8s/build-job.yaml)
+- GitHub Container Registry (GHCR) secret external configuration
+- Scripts for GHCR secret management:
+  - create-ghcr-secret.sh
+  - setup-ghcr-secret.sh
+  - update-ghcr-token.sh
+- Vault secrets management scripts:
+  - setup-vault-secrets.sh
+  - update-vault-api-keys.sh
+- Scripts for building and importing container images (build-and-import-images.sh)
+- Test API keys creation script (create-test-api-keys.sh)
+
+### Changed
+- Updated GitHub Actions workflow for Pi deployment
+- Updated MASTER_PROMPT.md with project documentation
+- Updated API Dockerfile and configuration
+- Updated web Dockerfile and nginx configuration
+- Updated Kubernetes deployment manifests (api-deployment.yaml, web-deployment.yaml)
+- Updated Kubernetes ConfigMap and CronJob configurations
+- Updated secret.yaml.example
+- Updated frontend components (AuthContext, hooks, utils, ScheduleView)
+
 ## [Unreleased]
 
 ### Added

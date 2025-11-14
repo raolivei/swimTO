@@ -8,5 +8,4 @@ data:
   OPEN_DATA_BASE_URL: "https://open.toronto.ca"
   INGEST_WINDOW_DAYS: "56"
   LOG_LEVEL: "INFO"
-  CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000"]'
-
+  CORS_ORIGINS: '["http://localhost:5173","http://localhost:3000","https://swimto.local","http://swimto.local"]'

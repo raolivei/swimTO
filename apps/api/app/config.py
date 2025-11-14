@@ -4,7 +4,12 @@ from typing import Optional
 
 
 class Settings(BaseSettings):
-    """Application settings."""
+    """Application settings.
+    
+    Note: Default values are for local development only.
+    In production, all secrets are retrieved from Vault via External Secrets Operator
+    and provided as environment variables (DATABASE_URL, SECRET_KEY, ADMIN_TOKEN, etc.).
+    """
     
     # Application
     app_name: str = "SwimTO API"
@@ -12,21 +17,21 @@ class Settings(BaseSettings):
     debug: bool = False
     
     # Database
-    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pools"
+    database_url: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pools"  # Overridden by DATABASE_URL env var from Vault in production
     
     # Redis
-    redis_url: Optional[str] = "redis://localhost:6379"
+    redis_url: Optional[str] = "redis://localhost:6379"  # Overridden by REDIS_URL env var from Vault in production
     cache_ttl: int = 3600  # 1 hour
     
     # Security
-    admin_token: str = "change-me-in-production"
-    secret_key: str = "change-me-in-production-secret-key"
+    admin_token: str = "change-me-in-production"  # Overridden by ADMIN_TOKEN env var from Vault in production
+    secret_key: str = "change-me-in-production-secret-key"  # Overridden by SECRET_KEY env var from Vault in production
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 24 * 7  # 7 days
     
     # Google OAuth
-    google_client_id: Optional[str] = None
-    google_client_secret: Optional[str] = None
+    google_client_id: Optional[str] = None  # Overridden by GOOGLE_CLIENT_ID env var from Vault in production
+    google_client_secret: Optional[str] = None  # Overridden by GOOGLE_CLIENT_SECRET env var from Vault in production
     google_redirect_uri: Optional[str] = None
     
     # CORS
@@ -41,8 +46,8 @@ class Settings(BaseSettings):
     open_data_base_url: str = "https://open.toronto.ca"
     
     # AI Image Generation APIs
-    openai_api_key: Optional[str] = None
-    leonardo_api_key: Optional[str] = None
+    openai_api_key: Optional[str] = None  # Overridden by OPENAI_API_KEY env var from Vault in production
+    leonardo_api_key: Optional[str] = None  # Overridden by LEONARDO_API_KEY env var from Vault in production
 
     # Ingestion
     ingest_window_days: int = 56

@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useAuth } from '@/contexts/AuthContext';
-import { favoritesApi } from '@/lib/api';
+import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/contexts/AuthContext";
+import { favoritesApi } from "@/lib/api";
 import {
   getFavoritesFromLocalStorage,
   addFavoriteToLocalStorage,
   removeFavoriteFromLocalStorage,
   syncLocalFavoritesToBackend,
-} from '@/lib/utils';
+} from "@/lib/utils";
 
 export function useFavorites() {
   const { isAuthenticated } = useAuth();
@@ -22,11 +22,8 @@ export function useFavorites() {
   }, [isAuthenticated]);
 
   // Fetch favorites from backend for authenticated users
-  const {
-    data: backendFavorites,
-    isLoading: isLoadingBackend,
-  } = useQuery({
-    queryKey: ['favorites'],
+  const { data: backendFavorites, isLoading: isLoadingBackend } = useQuery({
+    queryKey: ["favorites"],
     queryFn: async () => {
       const favorites = await favoritesApi.getAll();
       return new Set(favorites.map((f) => f.facility_id));
@@ -38,9 +35,14 @@ export function useFavorites() {
   // Sync local favorites to backend when user logs in
   useEffect(() => {
     if (isAuthenticated && localFavorites.size > 0) {
-      syncLocalFavoritesToBackend(favoritesApi).then(() => {
+      syncLocalFavoritesToBackend({
+        add: async (facilityId: string) => {
+          await favoritesApi.add(facilityId);
+          return;
+        },
+      }).then(() => {
         setLocalFavorites(new Set());
-        queryClient.invalidateQueries({ queryKey: ['favorites'] });
+        queryClient.invalidateQueries({ queryKey: ["favorites"] });
       });
     }
   }, [isAuthenticated, queryClient]);
@@ -56,7 +58,7 @@ export function useFavorites() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
     },
   });
 
@@ -75,12 +77,14 @@ export function useFavorites() {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['favorites'] });
+      queryClient.invalidateQueries({ queryKey: ["favorites"] });
     },
   });
 
   // Get current favorites set
-  const favorites = isAuthenticated ? (backendFavorites || new Set<string>()) : localFavorites;
+  const favorites = isAuthenticated
+    ? backendFavorites || new Set<string>()
+    : localFavorites;
 
   // Check if facility is favorited
   const isFavorite = (facilityId: string) => favorites.has(facilityId);
@@ -103,4 +107,3 @@ export function useFavorites() {
     isRemoving: removeMutation.isPending,
   };
 }
-
