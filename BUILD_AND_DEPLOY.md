@@ -28,8 +28,8 @@ cd ~/swimTO  # Navigate to swimTO directory
 # Build API image
 docker build -t swimto-api:latest ./apps/api
 
-# Build Web image (production)
-docker build -t swimto-web:latest --target production ./apps/web
+# Build Web image
+docker build -t swimto-web:latest ./apps/web
 
 # Import into k3s
 docker save swimto-api:latest | sudo k3s ctr images import -
@@ -63,7 +63,7 @@ cd /Users/roliveira/WORKSPACE/raolivei/swimTO
 
 # Build for ARM64
 docker buildx build --platform linux/arm64 -t swimto-api:latest -o type=docker,dest=- ./apps/api | docker load
-docker buildx build --platform linux/arm64 -t swimto-web:latest --target production -o type=docker,dest=- ./apps/web | docker load
+docker buildx build --platform linux/arm64 -t swimto-web:latest -o type=docker,dest=- ./apps/web | docker load
 
 # Save images
 docker save swimto-api:latest | gzip > swimto-api.tar.gz
@@ -94,3 +94,4 @@ kubectl describe pod -n swimto -l app=swimto-api
 ```
 
 The pods should start successfully once the images are available in k3s.
+

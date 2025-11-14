@@ -20,7 +20,7 @@ echo "Building API image..."
 docker build -t ${IMAGE_PREFIX}/swimto-api:latest ./apps/api
 
 echo "Building Web image..."
-docker build -t ${IMAGE_PREFIX}/swimto-web:latest --target production ./apps/web
+docker build -t ${IMAGE_PREFIX}/swimto-web:latest ./apps/web
 
 # Push to GitHub Container Registry
 echo "Pushing images to ${REGISTRY}..."

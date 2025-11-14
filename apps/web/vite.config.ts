@@ -21,10 +21,6 @@ export default defineConfig({
     host: true,
     port: 3000,
     strictPort: false,
-    allowedHosts: [
-      "swimto.eldertree.local",
-      "swimto.local",
-      "localhost",
-    ],
+    allowedHosts: ["swimto.eldertree.local", "swimto.local", "localhost"],
   },
 });

@@ -148,7 +148,7 @@ docker build -t swimto-api:latest .
 
 # Build Web
 cd ../web
-docker build -t swimto-web:latest --target production .
+docker build -t swimto-web:latest .
 
 cd ../..
 ```

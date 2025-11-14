@@ -54,10 +54,10 @@ else
     exit 1
 fi
 
-# Build Web image (production target)
+# Build Web image
 echo ""
-echo -e "${YELLOW}Building ${IMAGE_PREFIX}/swimto-web:latest (production)...${NC}"
-if docker build -t ${IMAGE_PREFIX}/swimto-web:latest --target production ./apps/web; then
+echo -e "${YELLOW}Building ${IMAGE_PREFIX}/swimto-web:latest...${NC}"
+if docker build -t ${IMAGE_PREFIX}/swimto-web:latest ./apps/web; then
     echo -e "${GREEN}✅ Web image built successfully${NC}"
 else
     echo -e "${RED}❌ Failed to build Web image${NC}"

@@ -23,8 +23,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS production
+# Runner stage
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
