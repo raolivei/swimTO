@@ -14,10 +14,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - swimto.local
+        - swimto.eldertree.local
       secretName: swimto-tls
   rules:
-    - host: swimto.local
+    - host: swimto.eldertree.local
       http:
         paths:
           - path: /api
