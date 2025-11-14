@@ -1,0 +1,127 @@
+# SwimTO - Cursor Rules
+
+## Project Overview
+SwimTO aggregates and displays indoor community pool drop-in swim schedules for Toronto. Commercial/proprietary project.
+
+## Project Structure
+```
+swimTO/
+├── apps/
+│   ├── api/              # FastAPI backend (Python)
+│   └── web/              # React + Vite frontend (TypeScript)
+├── data-pipeline/        # ETL and data discovery (Python)
+├── k8s/                  # Kubernetes manifests
+├── scripts/              # Utility scripts
+└── docs/                 # Documentation
+```
+
+## Code Conventions
+
+### Python (Backend API)
+- Follow PEP 8
+- Use type hints for all functions
+- Write docstrings (Google style)
+- Use FastAPI dependency injection
+- SQLAlchemy for database models
+- Alembic for migrations
+
+### TypeScript (Frontend)
+- Use TypeScript strictly (avoid `any`)
+- Prefer functional components with hooks
+- Use TanStack Query for data fetching
+- Tailwind CSS for styling
+- Follow React best practices
+
+### Git Workflow
+**Branch Naming:**
+- `feature/api/<name>` - Backend features
+- `feature/web/<name>` - Frontend features
+- `feature/pipeline/<name>` - Data pipeline
+- `fix/<name>` - Bug fixes
+- `infra/k8s/<name>` - Kubernetes changes
+- `docs/<name>` - Documentation
+
+**Commit Messages:**
+- Use conventional commits: `feat(api):`, `fix(web):`, `docs:`
+- Scope indicates component: `api`, `web`, `pipeline`, `k8s`
+
+### Kubernetes Manifests
+- Namespace: `swimto`
+- Resource naming: `swimto-<component>`
+- Separate deployments: `api-deployment.yaml`, `web-deployment.yaml`
+- Use ConfigMaps for non-sensitive config
+- Secrets stored in Vault (see `scripts/setup-vault-secrets.sh`)
+
+## Common Tasks
+
+### Adding API Endpoint
+1. Create branch: `feature/api/add-endpoint`
+2. Add route in `apps/api/app/routes/`
+3. Add schema in `apps/api/app/schemas.py`
+4. Add tests in `apps/api/tests/`
+5. Update `docs/API.md`
+
+### Adding Frontend Component
+1. Create branch: `feature/web/add-component`
+2. Create component in `apps/web/src/components/`
+3. Add types in `apps/web/src/types/`
+4. Add tests if needed
+5. Export from index if reusable
+
+### Updating Data Pipeline
+1. Create branch: `feature/pipeline/update-scraper`
+2. Update scripts in `data-pipeline/`
+3. Test locally with sample data
+4. Update CronJob manifest if schedule changes
+
+### Kubernetes Deployment
+1. Create branch: `infra/k8s/update-deployment`
+2. Update manifests in `k8s/`
+3. Test: `kubectl apply -f k8s/ --dry-run=client`
+4. Update `docs/DEPLOYMENT_PI.md` if needed
+
+## Development Setup
+
+### Backend
+```bash
+cd apps/api
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+```
+
+### Frontend
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+### Docker Compose
+```bash
+docker compose up
+```
+
+## Testing
+- Backend: `cd apps/api && make test`
+- Frontend: `cd apps/web && npm test`
+- E2E: Playwright tests in `apps/web/tests/e2e/`
+
+## Data Sources
+- City of Toronto Open Data Portal
+- Daily updates at 3:00 AM via CronJob
+- See `data-pipeline/` for scraping logic
+
+## Important Notes
+- **Proprietary project** - All rights reserved
+- Secrets managed via Vault (not in git)
+- Mobile-first design (test on devices)
+- Runs on Raspberry Pi k3s cluster
+
+## Documentation
+- `docs/LOCAL_DEVELOPMENT.md` - Setup guide
+- `docs/API.md` - API reference
+- `docs/CONTRIBUTING.md` - Development workflow
+- `docs/DEPLOYMENT_PI.md` - Deployment guide
+
