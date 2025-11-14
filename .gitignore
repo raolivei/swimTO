@@ -1,0 +1,92 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+env/
+ENV/
+swimTO/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+.DS_Store
+*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+.envrc
+.direnv/
+.python-version
+.venv/
+
+# Personal setup markers
+*_COMPLETE.md
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+logs/
+*.log
+*.pid
+
+# Testing
+.coverage
+htmlcov/
+.pytest_cache/
+coverage/
+
+# k8s secrets
+k8s/secret.yaml
+k8s/*-secret.yaml
+
+# Data
+data/raw/
+data/cache/
+*.csv
+*.xml
+!data/seed/*.xml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
+
+# Helm (if added later)
+charts/*/charts/
+*.tgz
+

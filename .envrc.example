@@ -1,0 +1,23 @@
+# Auto-activate Python virtual environment when entering directory
+# Requires direnv: brew install direnv
+# 
+# Setup:
+# 1. Copy this file: cp .envrc.example .envrc
+# 2. Update paths for your environment
+# 3. Enable: direnv allow
+
+# Activate the virtual environment (if it exists)
+# Update 'swimTO' to match your virtual environment name
+if [ -f "swimTO/bin/activate" ]; then
+    source swimTO/bin/activate
+    
+    # Export environment variables
+    export PYTHONPATH="${PWD}/apps/api:${PYTHONPATH}"
+    
+    echo "✅ SwimTO environment activated"
+    echo "   Python: $(which python)"
+    echo "   Version: $(python --version)"
+else
+    echo "⚠️  Virtual environment not found. Run: python3 -m venv swimTO"
+fi
+
