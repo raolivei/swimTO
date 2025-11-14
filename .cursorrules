@@ -1,9 +1,11 @@
 # SwimTO - Cursor Rules
 
 ## Project Overview
+
 SwimTO aggregates and displays indoor community pool drop-in swim schedules for Toronto. Commercial/proprietary project.
 
 ## Project Structure
+
 ```
 swimTO/
 ├── apps/
@@ -18,6 +20,7 @@ swimTO/
 ## Code Conventions
 
 ### Python (Backend API)
+
 - Follow PEP 8
 - Use type hints for all functions
 - Write docstrings (Google style)
@@ -26,6 +29,7 @@ swimTO/
 - Alembic for migrations
 
 ### TypeScript (Frontend)
+
 - Use TypeScript strictly (avoid `any`)
 - Prefer functional components with hooks
 - Use TanStack Query for data fetching
@@ -33,7 +37,9 @@ swimTO/
 - Follow React best practices
 
 ### Git Workflow
+
 **Branch Naming:**
+
 - `feature/api/<name>` - Backend features
 - `feature/web/<name>` - Frontend features
 - `feature/pipeline/<name>` - Data pipeline
@@ -42,19 +48,27 @@ swimTO/
 - `docs/<name>` - Documentation
 
 **Commit Messages:**
+
 - Use conventional commits: `feat(api):`, `fix(web):`, `docs:`
 - Scope indicates component: `api`, `web`, `pipeline`, `k8s`
 
+**Version Consistency:**
+
+- **Git tag versions must match Docker image tag versions** - When creating a release, ensure the git tag (e.g., `v1.2.3`) matches the Docker image tag used in deployment manifests and Helm charts
+
 ### Kubernetes Manifests
+
+- **Use Helm charts where applicable** - Prefer Helm charts over raw YAML manifests when suitable charts exist
 - Namespace: `swimto`
 - Resource naming: `swimto-<component>`
-- Separate deployments: `api-deployment.yaml`, `web-deployment.yaml`
+- Separate deployments: `api-deployment.yaml`, `web-deployment.yaml` (or use Helm charts)
 - Use ConfigMaps for non-sensitive config
 - Secrets stored in Vault (see `scripts/setup-vault-secrets.sh`)
 
 ## Common Tasks
 
 ### Adding API Endpoint
+
 1. Create branch: `feature/api/add-endpoint`
 2. Add route in `apps/api/app/routes/`
 3. Add schema in `apps/api/app/schemas.py`
@@ -62,6 +76,7 @@ swimTO/
 5. Update `docs/API.md`
 
 ### Adding Frontend Component
+
 1. Create branch: `feature/web/add-component`
 2. Create component in `apps/web/src/components/`
 3. Add types in `apps/web/src/types/`
@@ -69,20 +84,24 @@ swimTO/
 5. Export from index if reusable
 
 ### Updating Data Pipeline
+
 1. Create branch: `feature/pipeline/update-scraper`
 2. Update scripts in `data-pipeline/`
 3. Test locally with sample data
 4. Update CronJob manifest if schedule changes
 
 ### Kubernetes Deployment
+
 1. Create branch: `infra/k8s/update-deployment`
-2. Update manifests in `k8s/`
-3. Test: `kubectl apply -f k8s/ --dry-run=client`
-4. Update `docs/DEPLOYMENT_PI.md` if needed
+2. **Use Helm charts where applicable** - Prefer Helm charts for deployments
+3. Update manifests in `k8s/` (or Helm charts in `helm/` if using Helm)
+4. Test: `kubectl apply -f k8s/ --dry-run=client` or `helm template` for Helm charts
+5. Update `docs/DEPLOYMENT_PI.md` if needed
 
 ## Development Setup
 
 ### Backend
+
 ```bash
 cd apps/api
 python -m venv venv
@@ -92,6 +111,7 @@ uvicorn app.main:app --reload
 ```
 
 ### Frontend
+
 ```bash
 cd apps/web
 npm install
@@ -99,29 +119,33 @@ npm run dev
 ```
 
 ### Docker Compose
+
 ```bash
 docker compose up
 ```
 
 ## Testing
+
 - Backend: `cd apps/api && make test`
 - Frontend: `cd apps/web && npm test`
 - E2E: Playwright tests in `apps/web/tests/e2e/`
 
 ## Data Sources
+
 - City of Toronto Open Data Portal
 - Daily updates at 3:00 AM via CronJob
 - See `data-pipeline/` for scraping logic
 
 ## Important Notes
+
 - **Proprietary project** - All rights reserved
 - Secrets managed via Vault (not in git)
 - Mobile-first design (test on devices)
 - Runs on Raspberry Pi k3s cluster
 
 ## Documentation
+
 - `docs/LOCAL_DEVELOPMENT.md` - Setup guide
 - `docs/API.md` - API reference
 - `docs/CONTRIBUTING.md` - Development workflow
 - `docs/DEPLOYMENT_PI.md` - Deployment guide
-

@@ -80,7 +80,7 @@ What users pay for:
 
 4. Deploy automatically via a self-hosted GitHub Actions runner.
 
-5. Keep setup simple and low-maintenance — no Helm, no ArgoCD, minimal YAML, update ≈ once per year.
+5. **Use Helm charts where applicable** - Prefer Helm charts for deployments when suitable charts exist. Keep setup simple and low-maintenance — minimal YAML, update ≈ once per year.
 
 ---
 
@@ -249,7 +249,7 @@ services:
 
 ### Overview
 
-SwimTO is deployed to a Raspberry Pi k3s cluster (eldertree) using Kubernetes manifests. **ALL secrets are managed through Vault** and automatically synced to Kubernetes via External Secrets Operator. This ensures no hardcoded secrets in deployment files and centralized secret management.
+SwimTO is deployed to a Raspberry Pi k3s cluster (eldertree) using Kubernetes manifests. **Use Helm charts where applicable** for better maintainability and reusability. When Helm charts are not available or not suitable, use raw YAML manifests. **ALL secrets are managed through Vault** and automatically synced to Kubernetes via External Secrets Operator. This ensures no hardcoded secrets in deployment files and centralized secret management.
 
 ### Prerequisites
 

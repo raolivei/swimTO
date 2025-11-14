@@ -21,7 +21,7 @@ if ! command -v kubectl &> /dev/null; then
 fi
 
 # Check if KUBECONFIG is set or use default
-if [ -z "$KUBECONFIG" ]; then
+if [ -z "${KUBECONFIG:-}" ]; then
     if [ -f ~/.kube/config-eldertree ]; then
         export KUBECONFIG=~/.kube/config-eldertree
         echo -e "${YELLOW}Using KUBECONFIG=~/.kube/config-eldertree${NC}"
