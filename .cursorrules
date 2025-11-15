@@ -20,6 +20,27 @@ SwimTO aggregates and displays indoor community pool drop-in swim schedules for 
 
 **CLUSTER**: Deployed on the **`eldertree`** Raspberry Pi k3s cluster.
 
+## Security Requirements
+
+### ALWAYS USE HTTPS
+
+- ✅ **Production**: ALL external-facing services MUST use HTTPS
+- ✅ **OAuth/Authentication**: Google OAuth REQUIRES HTTPS (blocks private IPs and HTTP)
+- ✅ **Development**:
+  - Use `http://localhost:5173` for local desktop testing
+  - Use ngrok/Cloudflare Tunnel for mobile/external testing: `https://abc123.ngrok-free.app`
+- ✅ **Kubernetes Ingress**: All ingress resources MUST use TLS certificates
+- ❌ **NEVER**: Use `http://192.168.x.x` or `http://10.x.x.x` for OAuth callbacks (Google blocks these)
+- ❌ **NEVER**: Expose authentication endpoints over HTTP in production
+
+**OAuth Redirect URIs**:
+```
+✅ http://localhost:5173/auth/callback        (local dev only)
+✅ https://swimto.example.com/auth/callback   (production)
+✅ https://abc123.ngrok-free.app/auth/callback (mobile testing)
+❌ http://192.168.2.48:5173/auth/callback     (BLOCKED by Google)
+```
+
 ## Project Structure
 
 ```
