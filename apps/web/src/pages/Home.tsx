@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
 import { Map, Calendar, Sparkles, Clock, MapPin } from "lucide-react";
-<<<<<<< HEAD
 import { useQuery } from "@tanstack/react-query";
 import { facilityApi, scheduleApi } from "../lib/api";
 
@@ -30,10 +29,6 @@ export default function Home() {
       return sessionDate >= now && sessionDate <= weekFromNow;
     }).length || 0;
 
-=======
-
-export default function Home() {
->>>>>>> origin/main
   return (
     <div className="min-h-[calc(100vh-8rem)]">
       {/* Hero Section with animated gradient */}
@@ -60,7 +55,6 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl text-primary-100 mb-10 max-w-3xl mx-auto leading-relaxed">
-<<<<<<< HEAD
               Discover indoor pool drop-in swim schedules across Toronto.
               {facilityCount > 0 ? (
                 <>
@@ -71,10 +65,6 @@ export default function Home() {
               ) : (
                 <> Find community centers with lane swim sessions near you.</>
               )}
-=======
-              Discover indoor pool drop-in swim schedules across Toronto. Over
-              50+ community centers with lane swim sessions near you.
->>>>>>> origin/main
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -102,7 +92,6 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             <div className="group hover:scale-105 transition-transform duration-300">
               <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">
-<<<<<<< HEAD
                 {facilitiesLoading ? (
                   <span className="inline-block w-12 h-8 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
                 ) : facilityCount > 0 ? (
@@ -128,29 +117,14 @@ export default function Home() {
               <div className="text-gray-600 dark:text-gray-400 font-medium">
                 Weekly Sessions
               </div>
-=======
-                50+
-              </div>
-              <div className="text-gray-600 dark:text-gray-400 font-medium">Community Centers</div>
-            </div>
-            <div className="group hover:scale-105 transition-transform duration-300">
-              <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">
-                200+
-              </div>
-              <div className="text-gray-600 dark:text-gray-400 font-medium">Weekly Sessions</div>
->>>>>>> origin/main
             </div>
             <div className="group hover:scale-105 transition-transform duration-300">
               <div className="text-4xl font-bold text-primary-600 dark:text-primary-400 mb-2">
                 24/7
               </div>
-<<<<<<< HEAD
               <div className="text-gray-600 dark:text-gray-400 font-medium">
                 Schedule Updates
               </div>
-=======
-              <div className="text-gray-600 dark:text-gray-400 font-medium">Schedule Updates</div>
->>>>>>> origin/main
             </div>
           </div>
         </div>
