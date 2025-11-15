@@ -1,4 +1,4 @@
-name: Deploy to Raspberry Pi k3s
+name: Deploy to Eldertree
 
 on:
   push:

@@ -18,6 +18,8 @@ When starting services locally, always use the assigned ports from `workspace-co
 
 SwimTO aggregates and displays indoor community pool drop-in swim schedules for Toronto. Commercial/proprietary project.
 
+**CLUSTER**: Deployed on the **`eldertree`** Raspberry Pi k3s cluster.
+
 ## Project Structure
 
 ```
