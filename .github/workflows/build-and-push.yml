@@ -130,7 +130,7 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: [self-hosted, linux, arm64]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: false  # Disabled - no self-hosted runners for swimTO; deploy manually or via separate workflow
     permissions:
       contents: read
       packages: read
