@@ -1,0 +1,172 @@
+name: Build and Push Docker Image
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag (e.g., v1.0.0)"
+        required: false
+        default: "latest"
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME_API: ghcr.io/raolivei/swimto-api
+  IMAGE_NAME_WEB: ghcr.io/raolivei/swimto-web
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      api-tags: ${{ steps.meta-api.outputs.tags }}
+      web-tags: ${{ steps.meta-web.outputs.tags }}
+      api-sha-tag: ${{ steps.get-sha-tags.outputs.api_tag }}
+      web-sha-tag: ${{ steps.get-sha-tags.outputs.web_tag }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata for API
+        id: meta-api
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME_API }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
+      
+      - name: Extract metadata for Web
+        id: meta-web
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME_WEB }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
+      
+      - name: Get SHA tags for deployment
+        id: get-sha-tags
+        if: github.event_name != 'pull_request'
+        run: |
+          # Extract SHA tag (format: branch-sha) from tags
+          API_TAG=$(echo "${{ steps.meta-api.outputs.tags }}" | tr ' ' '\n' | grep -E '[a-z]+-[a-f0-9]{7,}' | head -1 || echo "${{ github.sha }}")
+          WEB_TAG=$(echo "${{ steps.meta-web.outputs.tags }}" | tr ' ' '\n' | grep -E '[a-z]+-[a-f0-9]{7,}' | head -1 || echo "${{ github.sha }}")
+          echo "api_tag=${API_TAG}" >> $GITHUB_OUTPUT
+          echo "web_tag=${WEB_TAG}" >> $GITHUB_OUTPUT
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      
+      - name: Build and push API image
+        id: build-api
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/api
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-api.outputs.tags }}
+          labels: ${{ steps.meta-api.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Build and push Web image
+        id: build-web
+        uses: docker/build-push-action@v6
+        with:
+          context: ./apps/web
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-web.outputs.tags }}
+          labels: ${{ steps.meta-web.outputs.labels }}
+          build-args: |
+            VITE_API_URL=${{ secrets.API_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      - name: Output image tags
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "API image tags:"
+          echo "${{ steps.meta-api.outputs.tags }}" | tr ' ' '\n'
+          echo "Web image tags:"
+          echo "${{ steps.meta-web.outputs.tags }}" | tr ' ' '\n'
+
+  deploy:
+    needs: build-and-push
+    runs-on: [self-hosted, linux, arm64]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: read
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set environment based on branch
+        id: set-env
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "ENVIRONMENT=production" >> $GITHUB_OUTPUT
+            echo "NAMESPACE=swimto-prod" >> $GITHUB_OUTPUT
+          else
+            echo "ENVIRONMENT=development" >> $GITHUB_OUTPUT
+            echo "NAMESPACE=swimto-dev" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Pull images into k3s
+        run: |
+          sudo k3s ctr images pull ${{ env.IMAGE_NAME_API }}:${{ needs.build-and-push.outputs.api-sha-tag }}
+          sudo k3s ctr images pull ${{ env.IMAGE_NAME_WEB }}:${{ needs.build-and-push.outputs.web-sha-tag }}
+      
+      - name: Update image tags in k8s manifests
+        run: |
+          sed -i "s|ghcr.io/raolivei/swimto-api:.*|${{ env.IMAGE_NAME_API }}:${{ needs.build-and-push.outputs.api-sha-tag }}|g" k8s/api-deployment.yaml
+          sed -i "s|ghcr.io/raolivei/swimto-web:.*|${{ env.IMAGE_NAME_WEB }}:${{ needs.build-and-push.outputs.web-sha-tag }}|g" k8s/web-deployment.yaml
+      
+      - name: Deploy to k3s
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/ -n ${{ steps.set-env.outputs.NAMESPACE }}
+      
+      - name: Wait for deployments
+        run: |
+          kubectl rollout status deployment/swimto-api -n ${{ steps.set-env.outputs.NAMESPACE }} --timeout=5m
+          kubectl rollout status deployment/swimto-web -n ${{ steps.set-env.outputs.NAMESPACE }} --timeout=5m
+      
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n ${{ steps.set-env.outputs.NAMESPACE }}
+          kubectl get services -n ${{ steps.set-env.outputs.NAMESPACE }}
+      
+      - name: Cleanup old images
+        run: |
+          docker image prune -f --filter "until=168h"
+

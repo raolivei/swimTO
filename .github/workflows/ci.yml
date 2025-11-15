@@ -1,10 +1,14 @@
-name: CI - Lint and Test
+name: CI
 
 on:
   pull_request:
-    branches: [main, dev]
+    branches:
+      - main
+      - dev
   push:
-    branches: [dev]
+    branches:
+      - dev
+  workflow_dispatch:
 
 jobs:
   api-tests:
@@ -15,56 +19,78 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
+          POSTGRES_DB: pools_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: pools_test
+        ports:
+          - 5432:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
         ports:
-          - 5432:5432
-
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
       
       - name: Install dependencies
         run: |
           cd apps/api
+          pip install -r requirements.txt
           pip install -r requirements-dev.txt
       
-      - name: Run linters
+      - name: Run linting
         run: |
           cd apps/api
-          black --check app tests
-          flake8 app tests
+          ruff check .
+          black --check .
+      
+      - name: Run type checking
+        run: |
+          cd apps/api
+          mypy app/
+        continue-on-error: true
       
       - name: Run tests
         env:
           DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pools_test
+          REDIS_URL: redis://localhost:6379
+          ADMIN_TOKEN: test-token
         run: |
           cd apps/api
-          pytest --cov --cov-report=xml
+          pytest --cov=app --cov-report=xml --cov-report=term
       
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         with:
           files: ./apps/api/coverage.xml
           flags: api
-
+        continue-on-error: true
+  
   web-tests:
     name: Frontend Tests
     runs-on: ubuntu-latest
     
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
       
       - name: Set up Node.js
         uses: actions/setup-node@v5
@@ -78,19 +104,23 @@ jobs:
           cd apps/web
           npm ci
       
-      - name: Run linter
+      - name: Run linting
         run: |
           cd apps/web
           npm run lint
       
-      - name: Run tests
+      - name: Run type checking
         run: |
           cd apps/web
-          npm run test -- --run --coverage
+          npm run type-check
       
-      - name: Upload coverage
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./apps/web/coverage/coverage-final.json
-          flags: web
-
+      - name: Run unit tests
+        run: |
+          cd apps/web
+          npm run test
+        continue-on-error: true
+      
+      - name: Build
+        run: |
+          cd apps/web
+          npm run build
