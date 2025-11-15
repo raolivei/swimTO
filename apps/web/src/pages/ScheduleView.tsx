@@ -266,7 +266,7 @@ export default function ScheduleView() {
 
     acc[facilityName].sessions[dayOfWeek].push(session);
     return acc;
-  }, {} as Record<string, { facility: any; sessions: Record<number, SessionWithDistance[]>; distance?: number }>);
+  }, {} as Record<string, { facility: any; sessions: Record<string, SessionWithDistance[]>; distance?: number }>);
 
   // Sort facilities: favorites first, then by distance if enabled
   const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {});
