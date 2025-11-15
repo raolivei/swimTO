@@ -1,5 +1,19 @@
 # SwimTO - Cursor Rules
 
+## Workspace Configuration
+
+**IMPORTANT**: This project is part of the `raolivei` workspace. Workspace-level configuration is managed in the `workspace-config` repository.
+
+- **Port Assignments**: See `../workspace-config/ports/.env.ports` for assigned ports
+  - Web: Port `5173` (Vite default)
+  - API: Port `8000` (assigned to avoid conflicts)
+  - PostgreSQL: Port `5432`, Redis: Port `6379`
+- **Workspace Conventions**: See `../workspace-config/docs/PROJECT_CONVENTIONS.md`
+- **Port Conflict Checker**: Run `../workspace-config/scripts/check-ports.sh` before starting services
+- **Workspace Scripts**: Available in `../workspace-config/scripts/`
+
+When starting services locally, always use the assigned ports from `workspace-config` to prevent conflicts with other projects.
+
 ## Project Overview
 
 SwimTO aggregates and displays indoor community pool drop-in swim schedules for Toronto. Commercial/proprietary project.
@@ -124,34 +138,72 @@ swimTO/
 
 ## Development Setup
 
-### Backend
+### Recommended: Docker Compose (Primary Method)
 
 ```bash
+# Load port assignments
+source ../workspace-config/ports/.env.ports
+
+# Start all services with hot reload
+docker-compose up
+
+# Or start in detached mode
+docker-compose up -d
+```
+
+**Access:**
+- Frontend: http://localhost:5173
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+**Benefits:**
+- Consistent environment (matches production)
+- Hot reload enabled via volume mounts
+- No local Python/Node version conflicts
+- Single command to start everything
+
+See `../workspace-config/docs/DOCKER_COMPOSE_GUIDE.md` for complete guide.
+
+### Alternative: Local Development (Fallback)
+
+```bash
+# Backend
 cd apps/api
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
-```
 
-### Frontend
-
-```bash
+# Frontend
 cd apps/web
 npm install
 npm run dev
 ```
 
-### Docker Compose
+### Testing
 
 ```bash
-docker compose up
+# With docker-compose
+docker-compose exec api make test
+docker-compose exec web npm test
+
+# Or locally
+cd apps/api && make test
+cd apps/web && npm test
 ```
 
 ## Testing
 
-- Backend: `cd apps/api && make test`
-- Frontend: `cd apps/web && npm test`
+```bash
+# With docker-compose (recommended)
+docker-compose exec api make test
+docker-compose exec web npm test
+
+# Or locally
+cd apps/api && make test
+cd apps/web && npm test
+```
+
 - E2E: Playwright tests in `apps/web/tests/e2e/`
 
 ## Data Sources

@@ -38,18 +38,53 @@ swimto/
 
 **Note:** This is a private repository. Access is restricted to authorized developers only.
 
+#### Recommended: Docker Compose (Primary Method)
+
 ```bash
 # If you have access, clone the repository
 git clone git@github.com:raolivei/swimTO.git
 cd swimTO
 
-# Start all services
-docker compose up
+# Load port assignments from workspace-config
+source ../workspace-config/ports/.env.ports
 
-# Access the application
-# Frontend: http://localhost:5173
-# API: http://localhost:8000
-# API Docs: http://localhost:8000/docs
+# Start all services with hot reload
+docker-compose up
+
+# Or start in detached mode
+docker-compose up -d
+```
+
+**Access:**
+- Frontend: http://localhost:5173
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+
+**Benefits:**
+- Consistent environment (matches production)
+- Hot reload enabled via volume mounts
+- No local Python/Node version conflicts
+- Single command to start everything
+
+See `../workspace-config/docs/DOCKER_COMPOSE_GUIDE.md` for complete guide.
+
+#### Alternative: Local Development (Fallback)
+
+```bash
+# Start database and Redis
+docker-compose up -d db redis
+
+# Start API (in one terminal)
+cd apps/api
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+# Start Frontend (in another terminal)
+cd apps/web
+npm install
+npm run dev
 ```
 
 ### Initial Data Load

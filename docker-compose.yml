@@ -9,7 +9,7 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
-      - "5432:5432"
+      - "${SWIMTO_POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     container_name: swimto-redis
     ports:
-      - "6379:6379"
+      - "${SWIMTO_REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -47,7 +47,7 @@ services:
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
       LEONARDO_API_KEY: ${LEONARDO_API_KEY:-}
     ports:
-      - "8000:8000"
+      - "${SWIMTO_API_PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -67,7 +67,7 @@ services:
     environment:
       VITE_API_URL: http://192.168.2.48:8000
     ports:
-      - "5173:5173"
+      - "${SWIMTO_WEB_PORT:-5173}:5173"
     volumes:
       - ./apps/web:/app
       - /app/node_modules
