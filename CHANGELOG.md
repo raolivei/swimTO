@@ -44,12 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Facility Website Links**: Fixed incorrect location IDs using official Toronto Open Data
-  - **CRITICAL FIX**: Corrected 32 facilities with wrong location IDs (e.g., Mary McCormick: 522 → 100)
+- **Facility Website Links**: Fixed all incorrect location IDs using official Toronto Open Data
+  - **CRITICAL FIX**: Corrected 35 facilities with wrong location IDs (e.g., Mary McCormick: 522 → 100)
   - Used Toronto Parks & Recreation Facilities CSV from Open Data as authoritative source
+  - Final 3 manual corrections: Leaside (789), Centennial (537), Scarborough Civic (1099)
   - Merged duplicate Joseph J. Piccininni facility entries
-  - 10 facilities still need manual verification (complex name variations)
-  - All corrected facility names in schedule now link to proper Toronto.ca pages
+  - **All 42 Toronto facilities now have correct website links**
 
 ### Technical
 
