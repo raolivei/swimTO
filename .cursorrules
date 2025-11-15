@@ -34,6 +34,7 @@ SwimTO aggregates and displays indoor community pool drop-in swim schedules for 
 - ❌ **NEVER**: Expose authentication endpoints over HTTP in production
 
 **OAuth Redirect URIs**:
+
 ```
 ✅ http://localhost:5173/auth/callback        (local dev only)
 ✅ https://swimto.example.com/auth/callback   (production)

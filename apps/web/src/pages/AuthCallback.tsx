@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -7,8 +7,13 @@ export default function AuthCallback() {
   const { handleGoogleCallback } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const hasRun = useRef(false);
 
   useEffect(() => {
+    // Prevent double execution (React StrictMode or re-renders)
+    if (hasRun.current) return;
+    hasRun.current = true;
+
     const code = searchParams.get('code');
     const errorParam = searchParams.get('error');
 

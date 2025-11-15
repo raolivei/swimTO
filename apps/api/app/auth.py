@@ -27,10 +27,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
 
 def decode_access_token(token: str) -> Optional[dict]:
     """Decode and verify JWT token."""
+    from loguru import logger
     try:
         payload = jwt.decode(token, settings.secret_key, algorithms=[settings.algorithm])
         return payload
-    except JWTError:
+    except JWTError as e:
+        logger.error(f"JWT decode error: {type(e).__name__}: {str(e)}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error decoding token: {type(e).__name__}: {str(e)}")
         return None
 
 
@@ -39,18 +44,35 @@ async def get_current_user(
     db: Session = Depends(get_db)
 ) -> Optional[User]:
     """Get current user from token."""
+    from loguru import logger
+    
     if not token:
+        logger.info("❌ No token provided in request")
         return None
     
+    logger.info(f"✓ Token received: {token[:30]}...")
     payload = decode_access_token(token)
     if not payload:
+        logger.error(f"❌ Failed to decode token: {token[:30]}...")
         return None
     
-    user_id: int = payload.get("sub")
-    if user_id is None:
+    logger.info(f"✓ Token payload decoded: {payload}")
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
+        logger.error("❌ No user_id (sub) in token payload")
+        return None
+    
+    try:
+        user_id = int(user_id_str)
+    except (ValueError, TypeError) as e:
+        logger.error(f"❌ Invalid user_id in token: {user_id_str}")
         return None
     
     user = db.query(User).filter(User.id == user_id).first()
+    if user:
+        logger.info(f"✓ User authenticated: {user.email}")
+    else:
+        logger.error(f"❌ No user found with id: {user_id}")
     return user
 
 

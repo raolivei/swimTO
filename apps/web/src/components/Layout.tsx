@@ -93,13 +93,22 @@ export default function Layout() {
                       <img
                         src={user.picture}
                         alt={user.name || user.email}
-                        className="w-6 h-6 rounded-full"
+                        className="w-6 h-6 rounded-full object-cover"
+                        onError={(e) => {
+                          // Hide image on error and show User icon instead
+                          e.currentTarget.style.display = "none";
+                          const userIcon = e.currentTarget.nextElementSibling;
+                          if (userIcon) userIcon.classList.remove("hidden");
+                        }}
                       />
-                    ) : (
-                      <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-                    )}
+                    ) : null}
+                    <User
+                      className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${
+                        user?.picture ? "hidden" : ""
+                      }`}
+                    />
                     <span className="text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
-                      {user?.name || user?.email}
+                      {user?.name?.split(" ")[0] || user?.email}
                     </span>
                   </div>
                   <button

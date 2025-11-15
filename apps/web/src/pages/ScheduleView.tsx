@@ -32,25 +32,14 @@ interface SessionWithDistance extends Session {
   distance?: number;
 }
 
-// Helper function to check if a session is the next available one
-const isNextAvailableSession = (
-  session: Session,
-  allSessions: Session[]
-): boolean => {
+// Helper function to check if a session is happening right now
+const isHappeningNow = (session: Session): boolean => {
   const now = new Date();
-  const sessionDateTime = new Date(`${session.date} ${session.start_time}`);
+  const sessionStart = new Date(`${session.date} ${session.start_time}`);
+  const sessionEnd = new Date(`${session.date} ${session.end_time}`);
 
-  if (sessionDateTime < now) return false;
-
-  // Check if this is the earliest upcoming session
-  const earliestUpcoming = allSessions
-    .map((s) => new Date(`${s.date} ${s.start_time}`))
-    .filter((d) => d >= now)
-    .sort((a, b) => a.getTime() - b.getTime())[0];
-
-  return (
-    earliestUpcoming && sessionDateTime.getTime() === earliestUpcoming.getTime()
-  );
+  // Session is happening now if: start_time <= now < end_time
+  return sessionStart <= now && now < sessionEnd;
 };
 
 export default function ScheduleView() {
@@ -456,6 +445,14 @@ export default function ScheduleView() {
                   <span className="hidden sm:inline">Table View</span>
                 </button>
               </div>
+
+              {/* Legend */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-xs">
+                <div className="w-3 h-3 bg-yellow-400 dark:bg-yellow-600 rounded-full ring-2 ring-yellow-400/50"></div>
+                <span className="text-yellow-800 dark:text-yellow-300 font-medium">
+                  Happening now
+                </span>
+              </div>
             </div>
           </div>
 
@@ -532,17 +529,14 @@ export default function ScheduleView() {
                   {/* Sessions */}
                   <div className="divide-y divide-gray-200 dark:divide-gray-700">
                     {dateSessions.map((session) => {
-                      const isNextAvailable = isNextAvailableSession(
-                        session,
-                        filteredSessions
-                      );
+                      const happeningNow = isHappeningNow(session);
 
                       return (
                         <div
                           key={session.id}
                           className={`p-4 md:p-6 rounded-xl border-2 transition-all duration-200 ${
-                            isNextAvailable
-                              ? "bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-300 dark:border-green-700 shadow-lg"
+                            happeningNow
+                              ? "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30 border-yellow-400 dark:border-yellow-600 shadow-lg ring-2 ring-yellow-400/50"
                               : "bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
                           }`}
                         >
@@ -774,17 +768,13 @@ export default function ScheduleView() {
                             {daySessions.length > 0 ? (
                               <div className="space-y-2">
                                 {displaySessions.map((session) => {
-                                  const isNextAvailable =
-                                    isNextAvailableSession(
-                                      session,
-                                      filteredSessions
-                                    );
+                                  const happeningNow = isHappeningNow(session);
 
                                   return (
                                     <div
                                       key={session.id}
                                       className={`text-xs p-2 rounded-lg transition-colors ${
-                                        isNextAvailable
+                                        happeningNow
                                           ? "bg-yellow-200 dark:bg-yellow-900/50 ring-2 ring-yellow-400 dark:ring-yellow-600"
                                           : ""
                                       }`}

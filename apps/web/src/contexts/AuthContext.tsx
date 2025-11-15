@@ -111,9 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleGoogleCallback = async (code: string) => {
     try {
       const response = await authApi.googleCallback(code);
+      
+      // Store token and user
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
       setUser(response.user);
+
+      // Log for debugging
+      console.log('✓ Token stored:', response.access_token.substring(0, 20) + '...');
+      console.log('✓ User stored:', response.user.email);
+
+      // Invalidate auth query to trigger refetch with new token
+      queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
 
       // Sync local favorites to backend
       await syncLocalFavoritesToBackend({

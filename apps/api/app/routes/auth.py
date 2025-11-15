@@ -112,8 +112,8 @@ async def google_callback(
         db.commit()
         db.refresh(user)
     
-    # Create JWT token
-    token = create_access_token(data={"sub": user.id})
+    # Create JWT token (sub must be string)
+    token = create_access_token(data={"sub": str(user.id)})
     
     return TokenResponse(
         access_token=token,
