@@ -100,6 +100,22 @@ swimTO/
 
 - **Any changes to Docker images must always update CHANGELOG.md** - This includes changes to Dockerfiles, base images, image tags in deployment manifests, or any other image-related modifications
 
+**CHANGELOG Requirements:**
+
+**ALWAYS update CHANGELOG.md when:**
+- ✅ Adding new features (user-facing or internal)
+- ✅ Fixing bugs or issues
+- ✅ Changing behavior, UI, or UX
+- ✅ Modifying Docker images, Dockerfiles, or deployment configs
+- ✅ Making breaking changes or deprecations
+- ✅ Updating dependencies that affect functionality
+
+**Format:** Follow [Keep a Changelog](https://keepachangelog.com/) format:
+- Version header: `## [X.Y.Z] - YYYY-MM-DD`
+- Categories: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`
+- Each entry starts with a dash and describes the change clearly
+- Link related PRs/issues when applicable
+
 **Git Command Restrictions:**
 
 - **Never run git commands at workspace root**: Always ensure you are in the project directory (`swimTO/`) before running any git commands. Never run git commands at `/Users/roliveira/WORKSPACE/raolivei`

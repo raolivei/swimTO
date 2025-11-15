@@ -88,12 +88,15 @@ export default function Layout() {
               </nav>
               {isAuthenticated ? (
                 <div className="flex items-center gap-2 ml-2">
-                  <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 text-sm">
+                  <NavLink
+                    to="/profile"
+                    className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 text-sm group"
+                  >
                     {user?.picture ? (
                       <img
                         src={user.picture}
                         alt={user.name || user.email}
-                        className="w-6 h-6 rounded-full object-cover"
+                        className="w-6 h-6 rounded-full object-cover group-hover:scale-110 transition-transform"
                         referrerPolicy="no-referrer"
                         onError={(e) => {
                           // Hide image on error and show User icon instead
@@ -111,14 +114,14 @@ export default function Layout() {
                       />
                     ) : null}
                     <User
-                      className={`w-5 h-5 text-gray-600 dark:text-gray-400 ${
+                      className={`w-5 h-5 text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200 transition-colors ${
                         user?.picture ? "hidden" : ""
                       }`}
                     />
-                    <span className="text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
+                    <span className="text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white max-w-[120px] truncate transition-colors">
                       {user?.name?.split(" ")[0] || user?.email}
                     </span>
-                  </div>
+                  </NavLink>
                   <button
                     onClick={logout}
                     className="p-2 rounded-xl bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-300 hover:scale-110 group"

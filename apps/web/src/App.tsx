@@ -8,6 +8,7 @@ import ScheduleView from "./pages/ScheduleView";
 import About from "./pages/About";
 import RealTimeUpdates from "./pages/RealTimeUpdates";
 import AuthCallback from "./pages/AuthCallback";
+import ProfileView from "./pages/ProfileView";
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
               <Route path="map" element={<MapView />} />
               <Route path="schedule" element={<ScheduleView />} />
               <Route path="about" element={<About />} />
+              <Route path="profile" element={<ProfileView />} />
               <Route path="real-time-updates" element={<RealTimeUpdates />} />
             </Route>
             <Route path="/auth/callback" element={<AuthCallback />} />

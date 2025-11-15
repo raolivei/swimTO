@@ -14,6 +14,45 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2025-11-15
+
+### Added
+
+- **"Happening Now" Filter**: New interactive filter to show only currently active swim sessions
+  - Converted yellow legend into clickable button with visual feedback
+  - Active state shows enhanced border and shadow
+  - Filters sessions in real-time to show only those in progress
+  - Combines with favorites and distance sorting hierarchies
+  - Works in both list and table view modes
+
+### Changed
+
+- **Automatic Distance Sorting**: Location-based sorting now happens automatically when available
+  - Removed manual "Sort by distance" button for cleaner UX
+  - Distance calculation and sorting happens automatically on location access
+  - Displays "Sorted by distance" indicator when location is active
+  - Maintains sorting hierarchy: Favorites → Distance → Chronological
+  - Simpler interface without toggle buttons
+- **Profile Page Banner**: Redesigned with artistic swimming pool theme
+  - Added water-inspired gradient (cyan to blue)
+  - Swimming pool lane dividers with dashed markers
+  - Animated water bubbles (large and small) with pulse effects
+  - Flowing water wave animations at multiple speeds
+  - Caustic light effects mimicking underwater light patterns
+  - Removed redundant logout button (already in header)
+  - Enhanced visual appeal and thematic consistency
+
+### Technical
+
+- Added `prioritizeHappeningNow` state for filter functionality
+- Updated session filtering logic to support "happening now" mode
+- Removed `sortByDistance` state in favor of automatic behavior
+- Simplified location control UI components
+- Added wave animation keyframes to `index.css`
+- Updated facility and session sorting functions for cleaner logic
+
+---
+
 ## [0.3.0] - 2025-11-15
 
 ### Fixed
