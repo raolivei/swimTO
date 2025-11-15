@@ -4,8 +4,12 @@
 
 ### ✅ Completed Features
 - **Real-time Schedule Data**: Automated data pipeline fetching Toronto pool schedules
-- **Interactive Map**: Geolocation-based facility discovery with favorites
-- **Responsive UI**: Mobile-first design with PWA capabilities
+- **Interactive Map**: Geolocation-based facility discovery with distance calculation
+- **Favorites System**: Full-featured favorites with localStorage (guest) + backend sync (authenticated)
+- **User Authentication**: Google OAuth integration with session management
+- **Dark Mode**: System-aware theme with manual toggle and localStorage persistence
+- **PWA Foundation**: Manifest configured for "Add to Home Screen" support
+- **Responsive UI**: Mobile-first design with Playwright mobile tests
 - **Smart Filtering**: By swim type, facility, distance, and availability
 - **Data Pipeline**: Automated daily refresh via CronJob
 - **Production Deployment**: Running on k3s with GitOps (Flux CD)
@@ -38,21 +42,24 @@
 ### User Experience Enhancements
 - [ ] **Push Notifications**: Alert users when favorite pools open sessions
 - [ ] **Session Reminders**: Calendar integration for scheduled swims
-- [ ] **User Accounts**: Save preferences across devices
-- [ ] **Dark Mode**: System-aware theme switching
 - [ ] **Offline Mode**: Service worker for cached schedule access
+- [ ] **Share Schedules**: Deep linking to specific facilities/sessions
+- [ ] **Accessibility Audit**: WCAG 2.1 AA compliance review
 
 ### Data Improvements
-- [ ] **Historical Data**: Track session availability trends
+- [ ] **Historical Data**: Track session availability trends over time
 - [ ] **Crowd Predictions**: ML-based busy time forecasts
-- [ ] **Price Information**: Include drop-in fees and pass options
-- [ ] **Amenities Data**: Pool features (length, temperature, accessible)
+- [ ] **Price Information**: Drop-in fees, monthly passes, and family rates
+- [ ] **Amenities Data**: Pool length, lane count, temperature, accessibility features
+- [ ] **Program Details**: Lessons, aquafit, swim clubs information
 
 ### Technical Debt
-- [ ] **Comprehensive Testing**: E2E tests with Playwright
+- [x] **Mobile Testing**: Playwright mobile test suite ✅
+- [ ] **Desktop E2E Tests**: Complete Playwright coverage
 - [ ] **Performance Monitoring**: Prometheus + Grafana dashboards
 - [ ] **Error Tracking**: Sentry integration
 - [ ] **API Rate Limiting**: Protect against abuse
+- [ ] **Service Worker**: Enable offline capabilities
 
 ---
 
