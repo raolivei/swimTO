@@ -126,4 +126,3 @@ jobs:
           echo "${{ steps.meta-api.outputs.tags }}" | tr ' ' '\n'
           echo "Web image tags:"
           echo "${{ steps.meta-web.outputs.tags }}" | tr ' ' '\n'
-
