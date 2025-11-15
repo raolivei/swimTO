@@ -143,13 +143,18 @@ export default function ScheduleView() {
 
   // Get dates for the selected week (Sunday to Saturday)
   const getWeekDates = (offset: number = 0) => {
+    // Get today at midnight to avoid timezone issues
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
     const weekDates: Date[] = [];
 
     // Calculate the start of the week (Sunday) with offset
     const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - currentDay + offset * 7);
+    const daysToSunday = currentDay; // Days since last Sunday
+    const offsetDays = offset * 7; // Weeks to offset
+    weekStart.setDate(today.getDate() - daysToSunday + offsetDays);
 
     // Calculate dates for each day of the week
     for (let i = 0; i < 7; i++) {
@@ -170,6 +175,26 @@ export default function ScheduleView() {
     const sessionDate = new Date(year, month - 1, day);
     const weekStart = weekDates[0];
     const weekEnd = weekDates[6];
+
+    // Debug: Log Norseman Sunday filtering
+    if (
+      session.facility?.name?.includes("Norseman") &&
+      session.date === "2025-11-16"
+    ) {
+      console.log("🔍 Filtering Norseman Sunday:", {
+        date: session.date,
+        sessionDate: sessionDate.toISOString(),
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+        weekOffset,
+        isInRange: sessionDate >= weekStart && sessionDate <= weekEnd,
+        comparison: {
+          greaterThanStart: sessionDate >= weekStart,
+          lessThanEnd: sessionDate <= weekEnd,
+        },
+      });
+    }
+
     return sessionDate >= weekStart && sessionDate <= weekEnd;
   });
 
@@ -246,6 +271,18 @@ export default function ScheduleView() {
     const [year, month, day] = session.date.split("-").map(Number);
     const dayOfWeek = new Date(year, month - 1, day).getDay();
 
+    // Debug: Log Norseman Sunday grouping
+    if (facilityName.includes("Norseman") && session.date === "2025-11-16") {
+      console.log("🔧 Grouping Norseman Sunday session:", {
+        date: session.date,
+        facilityName,
+        dayOfWeek,
+        dayOfWeekType: typeof dayOfWeek,
+        time: `${session.start_time}-${session.end_time}`,
+        swimType: session.swim_type,
+      });
+    }
+
     if (!acc[facilityName]) {
       acc[facilityName] = {
         facility: session.facility,
@@ -259,6 +296,15 @@ export default function ScheduleView() {
     }
 
     acc[facilityName].sessions[dayOfWeek].push(session);
+
+    // Debug: Verify it was added
+    if (facilityName.includes("Norseman") && session.date === "2025-11-16") {
+      console.log(
+        "✅ Added to sessions[" + dayOfWeek + "], current count:",
+        acc[facilityName].sessions[dayOfWeek].length
+      );
+    }
+
     return acc;
   }, {} as Record<string, { facility: any; sessions: Record<number, SessionWithDistance[]>; distance?: number }>);
 
@@ -751,7 +797,9 @@ export default function ScheduleView() {
                         </div>
                       </td>
                       {weekdays.map((_, dayIndex) => {
-                        const daySessions = data.sessions[dayIndex] || [];
+                        // Fix: Convert dayIndex to string to match object keys
+                        const daySessions =
+                          data.sessions[String(dayIndex)] || [];
                         const cellKey = `${facilityName}-${dayIndex}`;
                         const isExpanded = expandedCells.has(cellKey);
                         const displaySessions = isExpanded
