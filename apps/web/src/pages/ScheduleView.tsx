@@ -173,28 +173,9 @@ export default function ScheduleView() {
     // Parse date string as local date to avoid timezone issues
     const [year, month, day] = session.date.split("-").map(Number);
     const sessionDate = new Date(year, month - 1, day);
+    sessionDate.setHours(0, 0, 0, 0); // Normalize to midnight
     const weekStart = weekDates[0];
     const weekEnd = weekDates[6];
-
-    // Debug: Log Norseman Sunday filtering
-    if (
-      session.facility?.name?.includes("Norseman") &&
-      session.date === "2025-11-16"
-    ) {
-      console.log("🔍 Filtering Norseman Sunday:", {
-        date: session.date,
-        sessionDate: sessionDate.toISOString(),
-        weekStart: weekStart.toISOString(),
-        weekEnd: weekEnd.toISOString(),
-        weekOffset,
-        isInRange: sessionDate >= weekStart && sessionDate <= weekEnd,
-        comparison: {
-          greaterThanStart: sessionDate >= weekStart,
-          lessThanEnd: sessionDate <= weekEnd,
-        },
-      });
-    }
-
     return sessionDate >= weekStart && sessionDate <= weekEnd;
   });
 
@@ -271,18 +252,6 @@ export default function ScheduleView() {
     const [year, month, day] = session.date.split("-").map(Number);
     const dayOfWeek = new Date(year, month - 1, day).getDay();
 
-    // Debug: Log Norseman Sunday grouping
-    if (facilityName.includes("Norseman") && session.date === "2025-11-16") {
-      console.log("🔧 Grouping Norseman Sunday session:", {
-        date: session.date,
-        facilityName,
-        dayOfWeek,
-        dayOfWeekType: typeof dayOfWeek,
-        time: `${session.start_time}-${session.end_time}`,
-        swimType: session.swim_type,
-      });
-    }
-
     if (!acc[facilityName]) {
       acc[facilityName] = {
         facility: session.facility,
@@ -296,15 +265,6 @@ export default function ScheduleView() {
     }
 
     acc[facilityName].sessions[dayOfWeek].push(session);
-
-    // Debug: Verify it was added
-    if (facilityName.includes("Norseman") && session.date === "2025-11-16") {
-      console.log(
-        "✅ Added to sessions[" + dayOfWeek + "], current count:",
-        acc[facilityName].sessions[dayOfWeek].length
-      );
-    }
-
     return acc;
   }, {} as Record<string, { facility: any; sessions: Record<number, SessionWithDistance[]>; distance?: number }>);
 
