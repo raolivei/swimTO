@@ -1,19 +1,27 @@
+# DISABLED: Requires self-hosted runner on Raspberry Pi
+# Uncomment and configure self-hosted runner when ready to deploy
+# This workflow is kept for reference but will not run
+
 name: Deploy to Eldertree
 
+# Workflow disabled - uncomment when self-hosted runner is configured
 on:
-  push:
-    branches:
-      - main
-      - dev
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger only - workflow won't auto-run
+  # push:
+  #   branches:
+  #     - main
+  #     - dev
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ghcr.io/raolivei
 
 jobs:
+  # DISABLED: Requires self-hosted runner
+  # Uncomment when self-hosted runner is configured
   build-and-deploy:
     runs-on: [self-hosted, linux, arm64]
+    if: false  # Disabled - no self-hosted runner configured
     permissions:
       contents: read
       packages: write
