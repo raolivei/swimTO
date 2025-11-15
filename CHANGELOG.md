@@ -5,9 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Versioning
+
+**Current Status**: Pre-release (0.x.x versions)
+
+- **0.x.x**: Development versions - API may change, features are stabilizing
+- **1.0.0**: First production-ready release - will be tagged when ready for public use
+
 ---
 
-## [2.0.1] - 2025-11-15
+## [0.3.0] - 2025-11-15
 
 ### Fixed
 
@@ -29,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.5.0] - 2025-01-XX
+## [0.1.5] - 2025-01-XX
 
 ### Added
 - Kubernetes ingress configuration for external access
@@ -142,12 +149,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [2.0.0] - 2025-11-05
+## [0.2.0] - 2025-11-05
 
 ### Changed
 
 - **Commercial Release**: Project transitioned to fully proprietary license
-- Updated version to 2.0.0 to reflect commercial nature
+- Updated version to 0.2.0 (pre-release, not yet production-ready)
 - Made GitHub repository private
 - Added comprehensive licensing documentation
 
@@ -164,7 +171,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - README.md to reflect commercial status and private repository
 - MASTER_PROMPT.md with updated licensing information
-- All version references to 2.0.0
+- All version references to 0.2.0
 - Documentation to note private/commercial nature
 
 ## [Unreleased]
@@ -246,7 +253,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Responsive navigation with better touch targets
 - Map interaction improved for touch devices
 
-## [0.2.1] - 2025-11-05
+## [0.1.2] - 2025-11-05
 
 ### Fixed
 
@@ -260,7 +267,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive CHANGELOG.md for version tracking
 - Detailed error messages with expandable technical details
 
-## [0.2.0] - 2025-11-05
+## [0.1.0] - 2025-11-05
 
 ### Added
 
@@ -270,7 +277,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Infrastructure**: Kubernetes manifests, Docker Compose, CI/CD pipelines
 - **Documentation**: API reference, deployment guides, architecture docs
 
-## [0.1.0] - 2025-11-05
+## [0.0.1] - 2025-11-05
 
 ### Added
 
