@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [2.0.1] - 2025-11-15
+
+### Fixed
+
+- **Docker Network Connectivity**: Fixed frontend unable to connect to backend API in Docker environment
+  - Fixed `.env` file with hardcoded network IP causing connection failures
+  - Updated `api.ts` to properly handle empty `VITE_API_URL` environment variable with `.trim()` fallback
+  - Enhanced Vite proxy configuration to automatically add trailing slashes to API paths
+  - Configured `docker-compose.yml` to explicitly unset `VITE_API_URL` for web service
+  - Resolved FastAPI 307 redirects by ensuring proper trailing slash handling in proxy
+  - App now correctly uses Docker internal networking (`/api` → `http://api:8000`)
+  - Fixes both local Docker development and mobile device access on same network
+
+### Technical
+
+- Added `configure` handler in `vite.config.ts` to intercept proxy requests and add trailing slashes
+- Proxy now automatically transforms `/schedule?params` to `/schedule/?params` for FastAPI compatibility
+- Environment variable handling improved to treat empty strings as unset values
+- All API requests now return `200 OK` instead of `307 Temporary Redirect`
+
+---
+
 ## [0.5.0] - 2025-01-XX
 
 ### Added

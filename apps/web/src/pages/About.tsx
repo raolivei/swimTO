@@ -1,4 +1,4 @@
-import { ExternalLink, Github } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 
 export default function About() {
   return (
@@ -11,9 +11,10 @@ export default function About() {
 
           <div className="prose prose-blue dark:prose-invert max-w-none">
             <p className="text-lg text-gray-700 dark:text-gray-300 mb-6">
-              SwimTO is an open-source application that aggregates and displays indoor community pool 
-              drop-in swim schedules for the City of Toronto. Our goal is to make it easier for Toronto 
-              residents to find convenient swimming times at community centers near them.
+              SwimTO aggregates and displays indoor community pool drop-in swim
+              schedules for the City of Toronto. Our goal is to make it easier
+              for Toronto residents to find convenient swimming times at
+              community centers near them.
             </p>
 
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4">
@@ -98,25 +99,11 @@ export default function About() {
               </div>
             </div>
 
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4">Open Source</h2>
-            <p className="text-gray-700 dark:text-gray-300 mb-4">
-              SwimTO is open source and available on GitHub. Contributions are welcome!
-            </p>
-            <a
-              href="https://github.com/raolivei/swimTO"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-gray-900 dark:bg-gray-700 text-white px-6 py-3 rounded-lg hover:bg-gray-800 dark:hover:bg-gray-600 transition-colors"
-            >
-              <Github className="w-5 h-5" />
-              View on GitHub
-            </a>
-
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-8 mb-4">
               Contact
             </h2>
             <p className="text-gray-700 dark:text-gray-300">
-              For questions, issues, or suggestions, please open an issue on GitHub or contact the maintainer.
+              For questions, issues, or suggestions, please contact the maintainer.
             </p>
           </div>
         </div>

@@ -64,8 +64,14 @@ services:
       dockerfile: Dockerfile
       target: development
     container_name: swimto-web
+    # Don't set VITE_API_URL - let it default to /api so Vite proxy is used
+    # The Vite proxy will connect to the 'api' service using docker network
     environment:
-      VITE_API_URL: http://192.168.2.48:8000
+      # Explicitly unset VITE_API_URL to ensure /api proxy is used
+      VITE_API_URL: ""
+    depends_on:
+      api:
+        condition: service_started
     ports:
       - "${SWIMTO_WEB_PORT:-5173}:5173"
     volumes:

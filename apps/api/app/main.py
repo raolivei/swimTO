@@ -8,7 +8,7 @@ import sys
 from app.config import settings
 from app.database import engine
 from app.models import Base
-from app.routes import facilities, schedule, update, health, auth, favorites, logo
+from app.routes import facilities, schedule, update, health, auth, favorites
 
 # Configure logging
 logger.remove()
@@ -46,7 +46,6 @@ app.include_router(favorites.router, tags=["favorites"])
 app.include_router(facilities.router, prefix="/facilities", tags=["facilities"])
 app.include_router(schedule.router, prefix="/schedule", tags=["schedule"])
 app.include_router(update.router, prefix="/update", tags=["update"])
-app.include_router(logo.router, prefix="/logo", tags=["logo"])
 
 
 @app.exception_handler(Exception)

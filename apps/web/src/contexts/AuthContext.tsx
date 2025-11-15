@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import {
   authApi,
   type User,
@@ -76,14 +77,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginError(null);
     try {
       const { auth_url } = await authApi.getGoogleAuthUrl();
+      if (!auth_url) {
+        throw new Error("No authentication URL received from server");
+      }
       // Redirect to Google OAuth
       window.location.href = auth_url;
+      // Note: setIsLoggingIn(false) is not called here because we're redirecting
     } catch (error) {
       console.error("Failed to get Google auth URL:", error);
       const errorInfo = getApiErrorMessage(error);
-      setLoginError(
-        errorInfo.message || "Failed to initiate login. Please try again."
-      );
+      // Provide more detailed error message
+      let errorMessage = errorInfo.message || "Failed to initiate login. Please try again.";
+      
+      // Check if it's a network error
+      if (errorInfo.title === "Network Connection Failed" || errorInfo.title === "Server Unavailable") {
+        errorMessage = "Unable to connect to the authentication server. Please check your connection and try again.";
+      }
+      
+      // Check if OAuth is not configured
+      if (axios.isAxiosError(error) && error.response?.status === 503) {
+        errorMessage = "Google authentication is not configured on the server. Please contact support.";
+      }
+      
+      setLoginError(errorMessage);
       setIsLoggingIn(false);
     }
   };
