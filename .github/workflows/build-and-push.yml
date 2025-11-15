@@ -38,6 +38,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Extract version
+        id: version
+        run: |
+          VERSION=$(cat VERSION | tr -d '[:space:]')
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: v$VERSION"
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -51,10 +58,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME_API }}
           tags: |
+            type=semver,pattern=v{{version}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{major}},value=v${{ steps.version.outputs.version }}
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
@@ -65,10 +73,11 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME_WEB }}
           tags: |
+            type=semver,pattern=v{{version}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{major}},value=v${{ steps.version.outputs.version }}
             type=ref,event=branch
             type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
