@@ -44,12 +44,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Facility Website Links**: All 42 Toronto facilities now have correct, clickable website links
-  - Updated 39 facilities with correct Toronto.ca location URLs
-  - Fixed 3 facilities using old `/complex/` format to new `/location/?id=...` format
+- **Facility Website Links**: Fixed incorrect location IDs using official Toronto Open Data
+  - **CRITICAL FIX**: Corrected 32 facilities with wrong location IDs (e.g., Mary McCormick: 522 → 100)
+  - Used Toronto Parks & Recreation Facilities CSV from Open Data as authoritative source
   - Merged duplicate Joseph J. Piccininni facility entries
-  - Created automated web scraper for future URL maintenance
-  - All facility names in schedule are now properly linked to official Toronto.ca pages
+  - 10 facilities still need manual verification (complex name variations)
+  - All corrected facility names in schedule now link to proper Toronto.ca pages
 
 ### Technical
 
@@ -57,9 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated session filtering logic to support "happening now" mode
 - Removed `sortByDistance` state in favor of automatic behavior
 - Simplified location control UI components
-- Created `fix_all_facility_urls.py` script for automated facility URL maintenance
+- Rewrote `fix_all_facility_urls.py` to use Toronto Open Data Parks & Recreation Facilities CSV
 - Implemented fuzzy name matching algorithm for facility data reconciliation
-- Added manual facility ID mapping for 42 Toronto recreation facilities
+- Integrated Toronto Open Data API (CKAN) as authoritative source for location IDs
 - Added wave animation keyframes to `index.css`
 - Updated facility and session sorting functions for cleaner logic
 

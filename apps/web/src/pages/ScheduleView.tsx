@@ -120,12 +120,12 @@ export default function ScheduleView() {
 
   // Always sort sessions by distance when location is available
   const sortedSessions = userLocation
-    ? [...sessionsWithDistance].sort((a, b) => {
-        if (a.distance === undefined) return 1;
-        if (b.distance === undefined) return -1;
-        return a.distance - b.distance;
-      })
-    : sessionsWithDistance;
+      ? [...sessionsWithDistance].sort((a, b) => {
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        })
+      : sessionsWithDistance;
 
   // Get dates for the selected week (Sunday to Saturday)
   const getWeekDates = (offset: number = 0) => {
@@ -385,9 +385,9 @@ export default function ScheduleView() {
                   <Navigation className={`w-4 h-4 text-green-600 dark:text-green-400 ${isLoadingLocation ? "animate-pulse" : ""}`} />
                   <span className="text-green-800 dark:text-green-300 font-medium">
                     {isLoadingLocation ? "Getting location..." : "Sorted by distance"}
-                  </span>
-                </div>
-              )}
+                    </span>
+                  </div>
+                )}
 
               {/* View Mode Toggle */}
               <div className="flex gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 ml-auto">

@@ -103,6 +103,7 @@ swimTO/
 **CHANGELOG Requirements:**
 
 **ALWAYS update CHANGELOG.md when:**
+
 - ✅ Adding new features (user-facing or internal)
 - ✅ Fixing bugs or issues
 - ✅ Changing behavior, UI, or UX
@@ -111,6 +112,7 @@ swimTO/
 - ✅ Updating dependencies that affect functionality
 
 **Format:** Follow [Keep a Changelog](https://keepachangelog.com/) format:
+
 - Version header: `## [X.Y.Z] - YYYY-MM-DD`
 - Categories: `Added`, `Changed`, `Fixed`, `Removed`, `Deprecated`, `Security`
 - Each entry starts with a dash and describes the change clearly
