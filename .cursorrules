@@ -154,11 +154,13 @@ docker-compose up -d
 ```
 
 **Access:**
+
 - Frontend: http://localhost:5173
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 
 **Benefits:**
+
 - Consistent environment (matches production)
 - Hot reload enabled via volume mounts
 - No local Python/Node version conflicts
@@ -250,6 +252,7 @@ curl http://localhost:5173
 ### Common Issues & Solutions
 
 **Port conflicts:**
+
 ```bash
 # Find what's using a port
 lsof -i :<PORT>
@@ -259,6 +262,7 @@ kill -9 <PID>
 ```
 
 **Container won't start:**
+
 ```bash
 # Rebuild containers
 docker-compose build --no-cache
@@ -268,6 +272,7 @@ docker-compose logs [service-name]
 ```
 
 **Database connection issues:**
+
 ```bash
 # Wait for health checks
 docker-compose ps  # Check health status
@@ -277,6 +282,7 @@ docker-compose restart [service-name]
 ```
 
 **Hot reload not working:**
+
 - Verify volume mounts in docker-compose.yml
 - Check file permissions
 - Ensure source code directory matches volume path
