@@ -42,12 +42,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed redundant logout button (already in header)
   - Enhanced visual appeal and thematic consistency
 
+### Fixed
+
+- **Facility Website Links**: All 42 Toronto facilities now have correct, clickable website links
+  - Updated 39 facilities with correct Toronto.ca location URLs
+  - Fixed 3 facilities using old `/complex/` format to new `/location/?id=...` format
+  - Merged duplicate Joseph J. Piccininni facility entries
+  - Created automated web scraper for future URL maintenance
+  - All facility names in schedule are now properly linked to official Toronto.ca pages
+
 ### Technical
 
 - Added `prioritizeHappeningNow` state for filter functionality
 - Updated session filtering logic to support "happening now" mode
 - Removed `sortByDistance` state in favor of automatic behavior
 - Simplified location control UI components
+- Created `fix_all_facility_urls.py` script for automated facility URL maintenance
+- Implemented fuzzy name matching algorithm for facility data reconciliation
+- Added manual facility ID mapping for 42 Toronto recreation facilities
 - Added wave animation keyframes to `index.css`
 - Updated facility and session sorting functions for cleaner logic
 
@@ -78,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.5] - 2025-01-XX
 
 ### Added
+
 - Kubernetes ingress configuration for external access
 - Build and deployment documentation (BUILD_AND_DEPLOY.md)
 - Quick build script (QUICK_BUILD.sh)
@@ -94,6 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Test API keys creation script (create-test-api-keys.sh)
 
 ### Changed
+
 - Updated GitHub Actions workflow for Pi deployment
 - Updated MASTER_PROMPT.md with project documentation
 - Updated API Dockerfile and configuration

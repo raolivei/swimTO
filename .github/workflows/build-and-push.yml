@@ -39,7 +39,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Extract version
-        id: version
+        id: package-version
         run: |
           VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -50,7 +50,7 @@ jobs:
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
-          password: ${{ secrets.CR_PAT }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract metadata for API
         id: meta-api
@@ -58,9 +58,9 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME_API }}
           tags: |
-            type=semver,pattern=v{{version}},value=v${{ steps.version.outputs.version }}
-            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
-            type=semver,pattern=v{{major}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{version}},value=v${{ steps.package-version.outputs.version }}
+            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.package-version.outputs.version }}
+            type=semver,pattern=v{{major}},value=v${{ steps.package-version.outputs.version }}
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
@@ -73,9 +73,9 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME_WEB }}
           tags: |
-            type=semver,pattern=v{{version}},value=v${{ steps.version.outputs.version }}
-            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.version.outputs.version }}
-            type=semver,pattern=v{{major}},value=v${{ steps.version.outputs.version }}
+            type=semver,pattern=v{{version}},value=v${{ steps.package-version.outputs.version }}
+            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.package-version.outputs.version }}
+            type=semver,pattern=v{{major}},value=v${{ steps.package-version.outputs.version }}
             type=ref,event=branch
             type=ref,event=pr
             type=sha,prefix={{branch}}-
@@ -100,24 +100,28 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./apps/api
+          file: ./apps/api/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-api.outputs.tags }}
           labels: ${{ steps.meta-api.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
       - name: Build and push Web image
         id: build-web
         uses: docker/build-push-action@v5
         with:
           context: ./apps/web
+          file: ./apps/web/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-web.outputs.tags }}
           labels: ${{ steps.meta-web.outputs.labels }}
           build-args: |
             VITE_API_URL=${{ secrets.API_URL }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+
+      - name: Image digest
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "API image pushed with digest ${{ steps.build-api.outputs.digest }}"
+          echo "Web image pushed with digest ${{ steps.build-web.outputs.digest }}"
 
       - name: Output image tags
         if: github.event_name != 'pull_request'
