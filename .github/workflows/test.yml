@@ -1,0 +1,125 @@
+name: Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+      - dev
+  push:
+    branches:
+      - dev
+  workflow_dispatch:
+
+jobs:
+  api-tests:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: pools_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd apps/api
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+      
+      - name: Run linting
+        run: |
+          cd apps/api
+          ruff check .
+          black --check .
+      
+      - name: Run type checking
+        run: |
+          cd apps/api
+          mypy app/
+        continue-on-error: true
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/pools_test
+          REDIS_URL: redis://localhost:6379
+          ADMIN_TOKEN: test-token
+        run: |
+          cd apps/api
+          pytest --cov=app --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./apps/api/coverage.xml
+          flags: api
+        continue-on-error: true
+  
+  web-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd apps/web
+          npm ci
+      
+      - name: Run linting
+        run: |
+          cd apps/web
+          npm run lint
+      
+      - name: Run type checking
+        run: |
+          cd apps/web
+          npm run type-check
+      
+      - name: Run unit tests
+        run: |
+          cd apps/web
+          npm run test
+        continue-on-error: true
+      
+      - name: Build
+        run: |
+          cd apps/web
+          npm run build
+

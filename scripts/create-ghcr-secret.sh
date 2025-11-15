@@ -53,4 +53,7 @@ kubectl rollout restart deployment/swimto-web -n swimto
 echo -e "${GREEN}✅ Done! Check pods with: kubectl get pods -n swimto${NC}"
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main

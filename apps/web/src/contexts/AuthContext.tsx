@@ -1,11 +1,15 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+<<<<<<< HEAD
 import {
   authApi,
   type User,
   favoritesApi,
   getApiErrorMessage,
 } from "@/lib/api";
+=======
+import { authApi, type User, favoritesApi } from "@/lib/api";
+>>>>>>> origin/main
 import { useNavigate, useLocation } from "react-router-dom";
 import { syncLocalFavoritesToBackend } from "@/lib/utils";
 
@@ -13,10 +17,14 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+<<<<<<< HEAD
   loginError: string | null;
   isLoggingIn: boolean;
   login: () => Promise<void>;
   clearLoginError: () => void;
+=======
+  login: () => Promise<void>;
+>>>>>>> origin/main
   logout: () => void;
   handleGoogleCallback: (code: string) => Promise<void>;
 };
@@ -39,8 +47,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     return null;
   });
+<<<<<<< HEAD
   const [loginError, setLoginError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+=======
+>>>>>>> origin/main
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -72,14 +83,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const login = async () => {
+<<<<<<< HEAD
     setIsLoggingIn(true);
     setLoginError(null);
+=======
+>>>>>>> origin/main
     try {
       const { auth_url } = await authApi.getGoogleAuthUrl();
       // Redirect to Google OAuth
       window.location.href = auth_url;
     } catch (error) {
       console.error("Failed to get Google auth URL:", error);
+<<<<<<< HEAD
       const errorInfo = getApiErrorMessage(error);
       setLoginError(
         errorInfo.message || "Failed to initiate login. Please try again."
@@ -92,6 +107,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoginError(null);
   };
 
+=======
+      throw error;
+    }
+  };
+
+>>>>>>> origin/main
   const handleGoogleCallback = async (code: string) => {
     try {
       const response = await authApi.googleCallback(code);
@@ -137,10 +158,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+<<<<<<< HEAD
         loginError,
         isLoggingIn,
         login,
         clearLoginError,
+=======
+        login,
+>>>>>>> origin/main
         logout,
         handleGoogleCallback,
       }}
