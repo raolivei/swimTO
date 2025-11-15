@@ -94,12 +94,20 @@ export default function Layout() {
                         src={user.picture}
                         alt={user.name || user.email}
                         className="w-6 h-6 rounded-full object-cover"
+                        referrerPolicy="no-referrer"
                         onError={(e) => {
                           // Hide image on error and show User icon instead
+                          console.error(
+                            "Profile picture failed to load:",
+                            user.picture
+                          );
                           e.currentTarget.style.display = "none";
                           const userIcon = e.currentTarget.nextElementSibling;
                           if (userIcon) userIcon.classList.remove("hidden");
                         }}
+                        onLoad={() =>
+                          console.log("Profile picture loaded successfully")
+                        }
                       />
                     ) : null}
                     <User
