@@ -7,7 +7,6 @@ import MapView from "./pages/MapView";
 import ScheduleView from "./pages/ScheduleView";
 import About from "./pages/About";
 import RealTimeUpdates from "./pages/RealTimeUpdates";
-import LogoEvolution from "./pages/LogoEvolution";
 import AuthCallback from "./pages/AuthCallback";
 
 function App() {
@@ -22,7 +21,6 @@ function App() {
               <Route path="schedule" element={<ScheduleView />} />
               <Route path="about" element={<About />} />
               <Route path="real-time-updates" element={<RealTimeUpdates />} />
-              <Route path="logo-picker" element={<LogoEvolution />} />
             </Route>
             <Route path="/auth/callback" element={<AuthCallback />} />
           </Routes>

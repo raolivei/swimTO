@@ -183,18 +183,6 @@ npm run dev
 ### Testing
 
 ```bash
-# With docker-compose
-docker-compose exec api make test
-docker-compose exec web npm test
-
-# Or locally
-cd apps/api && make test
-cd apps/web && npm test
-```
-
-## Testing
-
-```bash
 # With docker-compose (recommended)
 docker-compose exec api make test
 docker-compose exec web npm test
@@ -205,6 +193,135 @@ cd apps/web && npm test
 ```
 
 - E2E: Playwright tests in `apps/web/tests/e2e/`
+
+## Testing Locally
+
+### Pre-flight Checks
+
+```bash
+# 1. Check for port conflicts
+../workspace-config/scripts/check-ports.sh
+
+# 2. Ensure Docker is running
+docker ps
+
+# 3. Load port assignments
+source ../workspace-config/ports/.env.ports
+```
+
+### Starting Services
+
+```bash
+# Start all services
+docker-compose up
+
+# Start in detached mode (background)
+docker-compose up -d
+
+# Start specific services only
+docker-compose up db redis api
+```
+
+### Verifying Services
+
+```bash
+# Check running containers
+docker-compose ps
+
+# View logs
+docker-compose logs -f [service-name]
+
+# Test API health endpoint
+curl http://localhost:8000/health
+
+# Test frontend
+curl http://localhost:5173
+```
+
+### Hot Reload Verification
+
+1. Make a small code change (e.g., add a comment)
+2. Save the file
+3. Check docker-compose logs - should see reload message
+4. Refresh browser - changes should appear
+
+### Common Issues & Solutions
+
+**Port conflicts:**
+```bash
+# Find what's using a port
+lsof -i :<PORT>
+
+# Kill process if needed
+kill -9 <PID>
+```
+
+**Container won't start:**
+```bash
+# Rebuild containers
+docker-compose build --no-cache
+
+# Check logs
+docker-compose logs [service-name]
+```
+
+**Database connection issues:**
+```bash
+# Wait for health checks
+docker-compose ps  # Check health status
+
+# Restart services
+docker-compose restart [service-name]
+```
+
+**Hot reload not working:**
+- Verify volume mounts in docker-compose.yml
+- Check file permissions
+- Ensure source code directory matches volume path
+
+## Environment Variables
+
+### Required for Docker Compose
+
+Always source port assignments before running docker-compose:
+
+```bash
+# From project root
+source ../workspace-config/ports/.env.ports
+
+# Or set WORKSPACE_CONFIG variable
+export WORKSPACE_CONFIG="$HOME/WORKSPACE/raolivei/workspace-config"
+source "$WORKSPACE_CONFIG/ports/.env.ports"
+```
+
+### Project-Specific Variables
+
+See `.env.example` files in `apps/api/` and `apps/web/` for required variables.
+
+## Database Migrations
+
+### With Docker Compose
+
+```bash
+# Run migrations
+docker-compose exec api alembic upgrade head
+
+# Create new migration
+docker-compose exec api alembic revision --autogenerate -m "description"
+
+# Rollback
+docker-compose exec api alembic downgrade -1
+```
+
+### Accessing Database
+
+```bash
+# PostgreSQL shell
+docker-compose exec db psql -U postgres -d pools
+
+# Redis CLI
+docker-compose exec redis redis-cli
+```
 
 ## Data Sources
 

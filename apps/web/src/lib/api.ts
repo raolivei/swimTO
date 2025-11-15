@@ -1,7 +1,9 @@
 import axios from "axios";
 import type { Facility, SessionWithFacility, ScheduleFilters } from "../types";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+// Use VITE_API_URL if set (for direct API access), otherwise use relative /api path (for Vite proxy in dev or nginx proxy in production)
+// Empty string should also default to /api
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || "/api";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -129,33 +131,6 @@ export const favoritesApi = {
   },
 };
 
-export interface GeneratedLogo {
-  image_url: string;
-  image_data: string;
-  model: string;
-  prompt: string;
-}
-
-export interface LogoGenerationResponse {
-  logos: GeneratedLogo[];
-  model: string;
-}
-
-export const logoApi = {
-  generate: async (
-    prompt: string,
-    model: "dalle-3" | "leonardo" = "dalle-3",
-    n: number = 1
-  ): Promise<LogoGenerationResponse> => {
-    const { data } = await api.post("/logo/generate", {
-      prompt,
-      model,
-      n,
-      size: "1024x1024",
-    });
-    return data;
-  },
-};
 
 /**
  * Get a user-friendly error message from an API error
@@ -173,7 +148,7 @@ export function getApiErrorMessage(error: unknown): {
       return {
         title: "Network Connection Failed",
         message: "Unable to connect to the SwimTO server.",
-        details: `Error: ${error.message}`,
+        details: `Error: ${error.message}. Attempted URL: ${error.config?.baseURL || API_BASE_URL}${error.config?.url || ""}`,
         suggestions: [
           "Check that you are connected to WiFi or cellular data",
           "Try disabling any VPN or proxy connections",
@@ -263,7 +238,7 @@ export function getApiErrorMessage(error: unknown): {
       return {
         title: "Server Unavailable",
         message: "The SwimTO server is not accepting connections.",
-        details: `Connection refused to ${API_BASE_URL}`,
+        details: `Connection refused to ${API_BASE_URL}. API endpoint: ${error.config?.url || "unknown"}`,
         suggestions: [
           "The server may be down for maintenance",
           "Try again in a few minutes",
