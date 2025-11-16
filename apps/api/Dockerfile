@@ -9,11 +9,18 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install
-COPY requirements.txt .
+COPY apps/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy data-pipeline requirements and install
+COPY data-pipeline/requirements.txt /data-pipeline/requirements.txt
+RUN pip install --no-cache-dir -r /data-pipeline/requirements.txt
+
 # Copy application code
-COPY . .
+COPY apps/api/ .
+
+# Copy data-pipeline
+COPY data-pipeline /data-pipeline
 
 # Create logs directory
 RUN mkdir -p logs
