@@ -68,6 +68,9 @@ logs/
 htmlcov/
 .pytest_cache/
 coverage/
+playwright-report/
+playwright-report-mobile/
+test-results/
 
 # k8s secrets
 k8s/secret.yaml
