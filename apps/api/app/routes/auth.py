@@ -7,7 +7,7 @@ import httpx
 from app.config import settings
 from app.database import get_db
 from app.models import User
-from app.schemas import TokenResponse, UserResponse, UserCreate
+from app.schemas import TokenResponse, UserResponse
 from app.auth import create_access_token, get_current_user
 
 router = APIRouter()

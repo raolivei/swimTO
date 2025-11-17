@@ -138,7 +138,7 @@ def cache_response(prefix: str, ttl: int = None):
             # Extract only serializable kwargs for cache key
             cache_kwargs = {
                 k: v for k, v in kwargs.items()
-                if not k in ['db', 'token'] and v is not None
+                if k not in ['db', 'token'] and v is not None
             }
             
             cache_key = cache_manager._generate_cache_key(prefix, **cache_kwargs)

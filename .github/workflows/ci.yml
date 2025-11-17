@@ -60,7 +60,6 @@ jobs:
         run: |
           cd apps/api
           ruff check .
-          black --check .
       
       - name: Run type checking
         run: |

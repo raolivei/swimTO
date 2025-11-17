@@ -64,7 +64,7 @@ async def get_current_user(
     
     try:
         user_id = int(user_id_str)
-    except (ValueError, TypeError) as e:
+    except (ValueError, TypeError):
         logger.error(f"❌ Invalid user_id in token: {user_id_str}")
         return None
     

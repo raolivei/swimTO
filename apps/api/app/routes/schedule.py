@@ -2,7 +2,7 @@
 from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, or_
+from sqlalchemy import and_
 from datetime import date as date_type, time as time_type
 from typing import Optional
 

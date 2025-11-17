@@ -1,18 +1,19 @@
 -r requirements.txt
 
 # Testing
-pytest==7.4.3
-pytest-asyncio==0.21.1
-pytest-cov==4.1.0
-pytest-env==1.1.3
-httpx==0.26.0
+pytest==8.3.3
+pytest-asyncio==0.24.0
+pytest-cov==6.0.0
+pytest-env==1.1.5
+httpx==0.27.2
 
 # Linting & Formatting
-black==23.12.1
-flake8==7.0.0
-mypy==1.8.0
+ruff==0.7.4
+black==24.10.0
+flake8==7.1.1
+mypy==1.13.0
 isort==5.13.2
 
 # Development
-ipython==8.19.0
+ipython==8.29.0
 
