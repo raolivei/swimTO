@@ -166,9 +166,9 @@ test.describe("Mobile Map View", () => {
     const mapContainer = page.locator('.leaflet-container');
     
     // Get initial map center
-    const getMapCenter = () => page.evaluate(() => {
-      const map = (window as any).map || (window as any).__map;
-      return map ? map.getCenter() : null;
+    await page.evaluate(() => {
+      const map = (window as Record<string, unknown>).map || (window as Record<string, unknown>).__map;
+      return map ? (map as { getCenter: () => unknown }).getCenter() : null;
     });
     
     // Try to pan the map with touch gesture (simulated as drag)

@@ -24,7 +24,7 @@ async def get_facilities(
     try:
         logger.info(f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim})")
         
-        query = db.query(Facility).filter(Facility.is_indoor == True)
+        query = db.query(Facility).filter(Facility.is_indoor.is_(True))
         
         if district:
             query = query.filter(Facility.district.ilike(f"%{district}%"))
