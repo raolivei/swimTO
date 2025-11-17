@@ -17,6 +17,7 @@ This update **fixes 3 critical issues** by enabling HTTPS:
 **Branch**: `feature/enable-swimto-https`
 
 #### 1. Updated Ingress Configuration
+
 - **File**: `clusters/eldertree/swimto/ingress.yaml`
 - Added TLS/HTTPS support with cert-manager
 - Configured automatic HTTP to HTTPS redirect
@@ -24,10 +25,12 @@ This update **fixes 3 critical issues** by enabling HTTPS:
 - Certificate stored in secret: `swimto-tls`
 
 #### 2. Updated ConfigMap
+
 - **File**: `clusters/eldertree/swimto/configmap.yaml`
 - Added `GOOGLE_REDIRECT_URI: "https://swimto.eldertree.local/auth/callback"`
 
 #### 3. Infrastructure Components (Already Enabled)
+
 - ✅ cert-manager (TLS certificate management)
 - ✅ issuers (ClusterIssuer for self-signed certificates)
 - ✅ Traefik (Ingress controller with websecure entrypoint)
@@ -37,6 +40,7 @@ This update **fixes 3 critical issues** by enabling HTTPS:
 **Branch**: `feature/enable-https-and-fix-auth`
 
 #### Updated Documentation
+
 - **File**: `CHANGELOG.md`
 - Documented HTTPS fixes and their impact on OAuth and Geolocation
 
@@ -139,10 +143,12 @@ After deployment, verify these fixes:
 ### Middleware Chain
 
 **API Ingress** (`/api/*`):
+
 1. `redirect-https` → Forces HTTPS
 2. `api-path-rewrite` → Strips `/api` prefix and adds trailing slash
 
 **Web Ingress** (`/*`):
+
 1. `redirect-https` → Forces HTTPS
 
 ### TLS Configuration
@@ -156,12 +162,14 @@ After deployment, verify these fixes:
 ### Why Self-Signed?
 
 For internal cluster access (`.eldertree.local`), self-signed certificates are appropriate:
+
 - ✅ Encrypts traffic (TLS)
 - ✅ Enables secure context for OAuth and Geolocation
 - ✅ No external CA required (Let's Encrypt doesn't support internal domains)
 - ✅ Auto-renewed by cert-manager
 
 For **production with public domain**, you would use Let's Encrypt:
+
 - Change issuer to `letsencrypt-prod` (ACME)
 - Use public DNS domain
 - Automatic browser-trusted certificates
@@ -200,4 +208,3 @@ For public deployment with a real domain (e.g., `swimto.com`):
 - [cert-manager Documentation](https://cert-manager.io/docs/)
 - [Google OAuth 2.0 Best Practices](https://developers.google.com/identity/protocols/oauth2)
 - [Geolocation API Security](https://developer.mozilla.org/en-US/docs/Web/API/Geolocation_API#security_considerations)
-
