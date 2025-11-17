@@ -24,14 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Fixes Google OAuth login** (requires secure context)
   - **Fixes Geolocation API** (requires HTTPS in browsers)
   - Updated OAuth redirect URI to use `https://swimto.eldertree.local/auth/callback`
-- **📱 Mobile View Optimization**: Improved table view for smaller screens
-  - Reduced font sizes and padding for mobile devices
-  - Compact facility names and session times
-  - Responsive column widths and cell spacing
-  - Smaller icon sizes on mobile
-  - Hidden address details on mobile to reduce clutter
-  - Optimized button sizes in toolbar
-  - Better readability for touch interfaces
+- **📱 Mobile View Optimization**: Perfected mobile experience
+  - **Smart default**: List view automatically selected on mobile (< 768px)
+  - **Removed clutter**: Hidden view toggle buttons on mobile - list view is optimal
+  - Table view reserved for desktop where horizontal space is abundant
+  - Clean, card-based layout perfect for vertical scrolling
+  - No more horizontal scrolling or cut-off text
+  - Touch-optimized buttons and spacing
+  - Steve Jobs-level attention to mobile UX
 
 ### Added
 

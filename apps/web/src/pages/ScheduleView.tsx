@@ -46,7 +46,10 @@ export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
   const [showFilters, setShowFilters] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  // Default to list view on mobile (< 768px), table view on desktop
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    typeof window !== "undefined" && window.innerWidth < 768 ? "list" : "table"
+  );
   const [userLocation, setUserLocation] = useState<UserLocation | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [prioritizeHappeningNow, setPrioritizeHappeningNow] = useState(false);
@@ -412,29 +415,29 @@ export default function ScheduleView() {
                 </button>
               )}
 
-              {/* View Mode Toggle */}
-              <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
+              {/* View Mode Toggle - Hidden on mobile since list view is optimal */}
+              <div className="hidden md:flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md font-medium transition-all duration-300 text-xs sm:text-sm ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
                     viewMode === "list"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <List className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden sm:inline">List View</span>
+                  <List className="w-5 h-5" />
+                  <span>List View</span>
                 </button>
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`flex items-center gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md font-medium transition-all duration-300 text-xs sm:text-sm ${
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
                     viewMode === "table"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <Table2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span className="hidden sm:inline">Table View</span>
+                  <Table2 className="w-5 h-5" />
+                  <span>Table View</span>
                 </button>
               </div>
 
