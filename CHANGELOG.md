@@ -14,6 +14,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.0] - 2025-11-17
+
+### Added
+
+- **Location Request Button**: New "Enable Location" button for easier geolocation access
+  - Appears in Schedule view toolbar when location is not enabled
+  - Added to Map view with clear call-to-action
+  - Replaces automatic location request on page load
+  - Users can now control when to grant location permission
+  - Includes refresh button when location is already active
+
+### Changed
+
+- **Improved Subtitle**: Changed to "Find drop-in swim times at Toronto's community pools"
+  - More concise and action-oriented
+  - Clearer description of app functionality
+  - Better keyword placement for discoverability
+
+### Technical
+
+- **Docker Workflow Refactor**: Split CI/CD into separate build and push jobs
+  - `build` job: Validates images build successfully (runs on all events)
+  - `push` job: Pushes to GHCR only on non-PR events (depends on build)
+  - Improved GitHub Actions cache utilization for faster builds
+  - Better separation of concerns and visibility in Actions UI
+  - Pull requests now only build (no registry push)
+
+---
+
 ## [0.4.0] - 2025-11-15
 
 ### Added

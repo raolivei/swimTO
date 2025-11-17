@@ -645,24 +645,7 @@ export default function MapView() {
         <div className="absolute bottom-4 left-4 right-4 md:right-auto md:w-96 space-y-2">
           {/* Location controls */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4">
-            {!userLocation && !isLoadingLocation && locationError ? (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-1">
-                  <AlertCircle className="w-4 h-4" />
-                  <span className="text-sm font-semibold">Location Access</span>
-                </div>
-                <p className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                  {locationError}. You can still browse all pools.
-                </p>
-                <button
-                  onClick={handleGetLocation}
-                  className="flex items-center justify-center gap-2 bg-primary-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors text-sm"
-                >
-                  <Navigation className="w-4 h-4" />
-                  Try Again
-                </button>
-              </div>
-            ) : !userLocation ? (
+            {isLoadingLocation ? (
               <div className="flex items-center justify-center gap-2">
                 <div className="animate-pulse flex items-center gap-2 text-primary-600 dark:text-primary-400">
                   <Navigation className="w-4 h-4 animate-spin" />
@@ -671,7 +654,7 @@ export default function MapView() {
                   </span>
                 </div>
               </div>
-            ) : (
+            ) : userLocation ? (
               <div className="flex flex-col gap-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
@@ -702,6 +685,27 @@ export default function MapView() {
                     Disable
                   </button>
                 </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {locationError ? (
+                  <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 mb-2">
+                    <AlertCircle className="w-4 h-4" />
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      {locationError}
+                    </p>
+                  </div>
+                ) : null}
+                <button
+                  onClick={handleGetLocation}
+                  className="flex items-center justify-center gap-2 bg-primary-500 dark:bg-primary-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-primary-600 dark:hover:bg-primary-700 transition-colors text-sm"
+                >
+                  <Navigation className="w-4 h-4" />
+                  Enable Location
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                  Enable location to see pools near you
+                </p>
               </div>
             )}
           </div>
