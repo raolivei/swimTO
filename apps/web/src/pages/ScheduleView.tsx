@@ -120,12 +120,12 @@ export default function ScheduleView() {
 
   // Always sort sessions by distance when location is available
   const sortedSessions = userLocation
-      ? [...sessionsWithDistance].sort((a, b) => {
-          if (a.distance === undefined) return 1;
-          if (b.distance === undefined) return -1;
-          return a.distance - b.distance;
-        })
-      : sessionsWithDistance;
+    ? [...sessionsWithDistance].sort((a, b) => {
+        if (a.distance === undefined) return 1;
+        if (b.distance === undefined) return -1;
+        return a.distance - b.distance;
+      })
+    : sessionsWithDistance;
 
   // Get dates for the selected week (Sunday to Saturday)
   const getWeekDates = (offset: number = 0) => {
@@ -163,12 +163,12 @@ export default function ScheduleView() {
     const weekStart = weekDates[0];
     const weekEnd = weekDates[6];
     const isInWeek = sessionDate >= weekStart && sessionDate <= weekEnd;
-    
+
     // If "happening now" filter is active, only show sessions happening right now
     if (prioritizeHappeningNow) {
       return isInWeek && isHappeningNow(session);
     }
-    
+
     return isInWeek;
   });
 
@@ -318,9 +318,9 @@ export default function ScheduleView() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-3">
             Swim Schedule
           </h1>
-            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-              Find drop-in swim times at Toronto's community pools
-            </p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
+            Find drop-in swim times at Toronto's community pools
+          </p>
 
           {/* Week Navigation */}
           <div className="flex items-center justify-center gap-4 mt-6">
@@ -413,34 +413,36 @@ export default function ScheduleView() {
               )}
 
               {/* View Mode Toggle */}
-              <div className="flex gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 ml-auto">
+              <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                  className={`flex items-center gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md font-medium transition-all duration-300 text-xs sm:text-sm ${
                     viewMode === "list"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <List className="w-5 h-5" />
+                  <List className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="hidden sm:inline">List View</span>
                 </button>
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-300 ${
+                  className={`flex items-center gap-1.5 px-2 sm:px-4 py-1.5 sm:py-2 rounded-md font-medium transition-all duration-300 text-xs sm:text-sm ${
                     viewMode === "table"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
                   }`}
                 >
-                  <Table2 className="w-5 h-5" />
+                  <Table2 className="w-4 h-4 sm:w-5 sm:h-5" />
                   <span className="hidden sm:inline">Table View</span>
                 </button>
               </div>
 
               {/* Happening Now Filter Button (styled as legend) */}
               <button
-                onClick={() => setPrioritizeHappeningNow(!prioritizeHappeningNow)}
+                onClick={() =>
+                  setPrioritizeHappeningNow(!prioritizeHappeningNow)
+                }
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 cursor-pointer ${
                   prioritizeHappeningNow
                     ? "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
@@ -457,14 +459,14 @@ export default function ScheduleView() {
 
           {locationError && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">
+              <p className="text-xs sm:text-sm text-red-600 dark:text-red-400">
                 {locationError}
               </p>
             </div>
           )}
 
           <div className={`${showFilters ? "block" : "hidden"} md:block`}>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-1.5 sm:gap-2">
               {[
                 "ALL",
                 "LANE_SWIM",
@@ -475,7 +477,7 @@ export default function ScheduleView() {
                 <button
                   key={type}
                   onClick={() => setSwimType(type as SwimType | "ALL")}
-                  className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 transform hover:scale-105 ${
+                  className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
                     swimType === type
                       ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
                       : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
@@ -681,20 +683,21 @@ export default function ScheduleView() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20 shadow-md">
                   <tr>
-                    <th className="px-6 py-4 text-left text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-30 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
-                      Community Center
+                    <th className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 text-left text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-wider sticky left-0 bg-primary-500 dark:bg-primary-600 z-30 shadow-[2px_0_4px_rgba(0,0,0,0.1)]">
+                      <span className="hidden sm:inline">Community Center</span>
+                      <span className="sm:hidden">Pool</span>
                     </th>
                     {weekDates.map((date, index) => {
                       const formatted = formatWeekdayHeader(date);
                       return (
                         <th
                           key={index}
-                          className="px-4 py-5 text-center min-w-[120px]"
+                          className="px-1 sm:px-2 md:px-4 py-2 sm:py-3 md:py-5 text-center min-w-[60px] sm:min-w-[80px] md:min-w-[120px]"
                         >
-                          <div className="text-lg font-extrabold uppercase tracking-wide">
+                          <div className="text-[10px] sm:text-sm md:text-lg font-extrabold uppercase tracking-wide">
                             {formatted.weekday}
                           </div>
-                          <div className="text-sm font-semibold text-primary-100 mt-1">
+                          <div className="text-[8px] sm:text-xs md:text-sm font-semibold text-primary-100 mt-0.5 sm:mt-1">
                             {formatted.date}
                           </div>
                         </th>
@@ -708,8 +711,8 @@ export default function ScheduleView() {
                       key={facilityName}
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
-                      <td className="px-6 py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-2">
+                      <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center gap-1 sm:gap-2">
                           <button
                             onClick={() =>
                               handleToggleFavorite(data.facility?.facility_id)
@@ -727,15 +730,15 @@ export default function ScheduleView() {
                             }
                           >
                             <Star
-                              className={`w-5 h-5 ${
+                              className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 ${
                                 isFavorite(data.facility?.facility_id || "")
                                   ? "fill-yellow-400 text-yellow-400"
                                   : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
                               }`}
                             />
                           </button>
-                          <div className="flex-1">
-                            <div className="font-bold text-gray-900 dark:text-gray-100">
+                          <div className="flex-1 min-w-0">
+                            <div className="font-bold text-[10px] sm:text-xs md:text-sm text-gray-900 dark:text-gray-100 truncate">
                               {data.facility?.website ? (
                                 <a
                                   href={data.facility.website}
@@ -756,7 +759,7 @@ export default function ScheduleView() {
                                         data.facility!.address!
                                       )
                                     }
-                                    className="ml-2 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
+                                    className="ml-1 text-[9px] sm:text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors whitespace-nowrap"
                                     title="Open in maps"
                                   >
                                     ({formatDistance(data.distance)})
@@ -764,8 +767,8 @@ export default function ScheduleView() {
                                 )}
                             </div>
                             {data.facility?.address && (
-                              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-start gap-1">
-                                <MapPin className="w-3 h-3 flex-shrink-0 mt-0.5" />
+                              <div className="hidden sm:flex text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1 items-start gap-1">
+                                <MapPin className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0 mt-0.5" />
                                 <span className="line-clamp-1">
                                   {data.facility.address}
                                 </span>
@@ -787,30 +790,30 @@ export default function ScheduleView() {
                         return (
                           <td
                             key={dayIndex}
-                            className="px-4 py-4 text-center align-top"
+                            className="px-1 sm:px-2 md:px-4 py-2 sm:py-3 md:py-4 text-center align-top"
                           >
                             {daySessions.length > 0 ? (
-                              <div className="space-y-2">
+                              <div className="space-y-1 sm:space-y-2">
                                 {displaySessions.map((session) => {
                                   const happeningNow = isHappeningNow(session);
 
                                   return (
                                     <div
                                       key={session.id}
-                                      className={`text-xs p-2 rounded-lg transition-colors ${
+                                      className={`text-[9px] sm:text-xs p-1 sm:p-2 rounded-md sm:rounded-lg transition-colors ${
                                         happeningNow
-                                          ? "bg-yellow-200 dark:bg-yellow-900/50 ring-2 ring-yellow-400 dark:ring-yellow-600"
+                                          ? "bg-yellow-200 dark:bg-yellow-900/50 ring-1 sm:ring-2 ring-yellow-400 dark:ring-yellow-600"
                                           : ""
                                       }`}
                                     >
-                                      <div className="font-semibold text-gray-900 dark:text-gray-100">
+                                      <div className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
                                         {formatTimeRange(
                                           session.start_time,
                                           session.end_time
                                         )}
                                       </div>
                                       <span
-                                        className={`inline-block mt-1 px-2 py-1 rounded-lg text-[10px] font-bold ${getSwimTypeColor(
+                                        className={`inline-block mt-0.5 sm:mt-1 px-1 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-bold ${getSwimTypeColor(
                                           session.swim_type
                                         )}`}
                                       >
@@ -832,16 +835,16 @@ export default function ScheduleView() {
                                       }
                                       setExpandedCells(newExpanded);
                                     }}
-                                    className="text-xs text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors cursor-pointer"
+                                    className="text-[9px] sm:text-xs text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors cursor-pointer"
                                   >
                                     {isExpanded
                                       ? "Show less"
-                                      : `+${daySessions.length - 3} more`}
+                                      : `+${daySessions.length - 3}`}
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-600 text-xs">
+                              <span className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs">
                                 —
                               </span>
                             )}

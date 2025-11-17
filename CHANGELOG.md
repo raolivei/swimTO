@@ -16,6 +16,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2025-11-17
 
+### Fixed
+
+- **🔐 HTTPS/TLS Support**: Enabled secure HTTPS for all connections
+  - Implemented self-signed certificate management with cert-manager
+  - Configured automatic HTTP to HTTPS redirect
+  - **Fixes Google OAuth login** (requires secure context)
+  - **Fixes Geolocation API** (requires HTTPS in browsers)
+  - Updated OAuth redirect URI to use `https://swimto.eldertree.local/auth/callback`
+- **📱 Mobile View Optimization**: Improved table view for smaller screens
+  - Reduced font sizes and padding for mobile devices
+  - Compact facility names and session times
+  - Responsive column widths and cell spacing
+  - Smaller icon sizes on mobile
+  - Hidden address details on mobile to reduce clutter
+  - Optimized button sizes in toolbar
+  - Better readability for touch interfaces
+
 ### Added
 
 - **Location Request Button**: New "Enable Location" button for easier geolocation access
@@ -24,6 +41,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Replaces automatic location request on page load
   - Users can now control when to grant location permission
   - Includes refresh button when location is already active
+- **HTTP-only Ingress for WireGuard Access**: Added IP-based access for mobile VPN users
+  - Allows direct IP access (192.168.2.83) via WireGuard VPN
+  - HTTP-only ingress rules for IP-based access
+  - Hostname access (swimto.eldertree.local) uses HTTPS with TLS
 
 ### Changed
 
@@ -34,9 +55,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Technical
 
-- **Docker Workflow Refactor**: Split CI/CD into separate build and push jobs
-  - `build` job: Validates images build successfully (runs on all events)
-  - `push` job: Pushes to GHCR only on non-PR events (depends on build)
+- **Docker Workflow Refactor**: Optimized to single build-and-push job
+  - Builds multi-platform images once (linux/amd64, linux/arm64)
+  - Conditionally pushes based on event type
   - Improved GitHub Actions cache utilization for faster builds
   - Better separation of concerns and visibility in Actions UI
   - Pull requests now only build (no registry push)
