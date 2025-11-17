@@ -379,15 +379,38 @@ export default function ScheduleView() {
             </button>
 
             <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              {/* Location indicator (read-only) */}
-              {(isLoadingLocation || userLocation) && (
+              {/* Location button/indicator */}
+              {isLoadingLocation ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
-                  <Navigation className={`w-4 h-4 text-green-600 dark:text-green-400 ${isLoadingLocation ? "animate-pulse" : ""}`} />
+                  <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
                   <span className="text-green-800 dark:text-green-300 font-medium">
-                    {isLoadingLocation ? "Getting location..." : "Sorted by distance"}
-                    </span>
-                  </div>
-                )}
+                    Getting location...
+                  </span>
+                </div>
+              ) : userLocation ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
+                  <Navigation className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  <span className="text-green-800 dark:text-green-300 font-medium">
+                    Sorted by distance
+                  </span>
+                  <button
+                    onClick={handleGetLocation}
+                    className="ml-1 text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors"
+                    title="Refresh location"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleGetLocation}
+                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  title="Enable location to sort by distance"
+                >
+                  <Navigation className="w-4 h-4" />
+                  <span>Enable Location</span>
+                </button>
+              )}
 
               {/* View Mode Toggle */}
               <div className="flex gap-2 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 ml-auto">
