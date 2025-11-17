@@ -318,9 +318,9 @@ export default function ScheduleView() {
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-3">
             Swim Schedule
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-            Browse upcoming swim sessions across Toronto
-          </p>
+            <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
+              Find drop-in swim times at Toronto's community pools
+            </p>
 
           {/* Week Navigation */}
           <div className="flex items-center justify-center gap-4 mt-6">
