@@ -14,6 +14,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **🌐 Public Domain Support**: Configured `swimto.eldertree.xyz` with Cloudflare Origin Certificates
+  - Added public domain ingress resources with Cloudflare Origin Certificate TLS
+  - Updated OAuth redirect URI to use `https://swimto.eldertree.xyz/auth/callback`
+  - Added new domain to CORS origins for API access
+  - Uses Cloudflare Origin Certificates (free, no port forwarding required, 15-year validity)
+  - Enables trusted HTTPS for mobile browsers (required for geolocation services)
+  - No ACME challenges or port forwarding needed
+  - **Infrastructure as Code**: Certificate management via Terraform (automated setup)
+
+### Changed
+
+- Updated Google OAuth redirect URI to use public domain (`swimto.eldertree.xyz`)
+- Added `swimto.eldertree.xyz` to CORS allowed origins
+- Added `swimto.eldertree.xyz` to Vite preview allowed hosts
+- Switched from Let's Encrypt to Cloudflare Origin Certificates for simpler setup
+- **⚡ CI/CD Performance Improvements**:
+  - Parallelized Docker image builds (API and Web now build simultaneously)
+  - Optimized PR builds to use single platform (`linux/amd64`) for faster feedback
+  - Added 30-minute timeout to prevent infinite hangs
+  - PR builds now complete in ~2-3 minutes instead of potentially hanging
+
+### Fixed
+
+- **🔒 Mixed Content Security**: Fixed API calls using HTTP on HTTPS pages
+  - API client now detects HTTPS pages and uses absolute HTTPS URLs
+  - Prevents browser mixed content errors blocking API requests
+  - Fixes Google OAuth login failure on production site (`swimto.eldertree.xyz`)
+- **🌐 Vite Host Checking**: Disabled strict host checking for production
+  - Set `strictHost: false` in Vite preview config
+  - Allows requests from any host (security handled by Kubernetes ingress/TLS)
+  - Fixes "host not allowed" error for `swimto.eldertree.xyz`
+
+---
+
 ## [0.5.0] - 2025-11-17
 
 ### Fixed
