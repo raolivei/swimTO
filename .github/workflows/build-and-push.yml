@@ -33,18 +33,19 @@ env:
   IMAGE_NAME_WEB: ghcr.io/raolivei/swimto-web
 
 jobs:
-  build-and-push:
-    name: Build and Push Images
+  prepare:
+    name: Prepare Build Metadata
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     outputs:
+      version: ${{ steps.package-version.outputs.version }}
       api-tags: ${{ steps.meta-api.outputs.tags }}
+      api-labels: ${{ steps.meta-api.outputs.labels }}
       web-tags: ${{ steps.meta-web.outputs.tags }}
+      web-labels: ${{ steps.meta-web.outputs.labels }}
       api-sha-tag: ${{ steps.get-sha-tags.outputs.api_tag }}
       web-sha-tag: ${{ steps.get-sha-tags.outputs.web_tag }}
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -55,14 +56,6 @@ jobs:
           VERSION=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: v$VERSION"
-
-      - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
 
       - name: Extract metadata for API
         id: meta-api
@@ -104,6 +97,25 @@ jobs:
           echo "api_tag=${API_TAG}" >> $GITHUB_OUTPUT
           echo "web_tag=${WEB_TAG}" >> $GITHUB_OUTPUT
 
+  build-api:
+    name: Build and Push API Image
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -115,10 +127,39 @@ jobs:
           file: ./apps/api/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-api.outputs.tags }}
-          labels: ${{ steps.meta-api.outputs.labels }}
+          tags: ${{ needs.prepare.outputs.api-tags }}
+          labels: ${{ needs.prepare.outputs.api-labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Output image info
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "API image pushed with digest ${{ steps.build-api.outputs.digest }}"
+          echo "API image tags:"
+          echo "${{ needs.prepare.outputs.api-tags }}" | tr ' ' '\n'
+
+  build-web:
+    name: Build and Push Web Image
+    runs-on: ubuntu-latest
+    needs: prepare
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push Web image
         id: build-web
@@ -128,24 +169,16 @@ jobs:
           file: ./apps/web/Dockerfile
           platforms: linux/amd64,linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta-web.outputs.tags }}
-          labels: ${{ steps.meta-web.outputs.labels }}
+          tags: ${{ needs.prepare.outputs.web-tags }}
+          labels: ${{ needs.prepare.outputs.web-labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_URL=${{ secrets.API_URL }}
 
-      - name: Image digest
+      - name: Output image info
         if: github.event_name != 'pull_request'
         run: |
-          echo "API image pushed with digest ${{ steps.build-api.outputs.digest }}"
           echo "Web image pushed with digest ${{ steps.build-web.outputs.digest }}"
-
-      - name: Output image tags
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "API image tags:"
-          echo "${{ steps.meta-api.outputs.tags }}" | tr ' ' '\n'
-          echo ""
           echo "Web image tags:"
-          echo "${{ steps.meta-web.outputs.tags }}" | tr ' ' '\n'
+          echo "${{ needs.prepare.outputs.web-tags }}" | tr ' ' '\n'
