@@ -3,7 +3,18 @@ import type { Facility, SessionWithFacility, ScheduleFilters } from "../types";
 
 // Use VITE_API_URL if set (for direct API access), otherwise use relative /api path (for Vite proxy in dev or nginx proxy in production)
 // Empty string should also default to /api
-const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || "/api";
+// In production, ensure we use HTTPS if the page is HTTPS (prevent mixed content errors)
+let apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || "/api";
+if (!apiBaseUrl.startsWith("http")) {
+  // Relative URL - ensure it uses the same protocol as the current page
+  // If page is HTTPS, use HTTPS; if HTTP, use HTTP
+  if (typeof window !== "undefined" && window.location.protocol === "https:") {
+    // For relative URLs on HTTPS pages, they automatically use HTTPS
+    // But we can also construct an absolute URL to be explicit
+    apiBaseUrl = `${window.location.protocol}//${window.location.host}${apiBaseUrl}`;
+  }
+}
+const API_BASE_URL = apiBaseUrl;
 
 const api = axios.create({
   baseURL: API_BASE_URL,
