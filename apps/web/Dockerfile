@@ -44,5 +44,7 @@ USER 1000
 EXPOSE 3000
 
 # Run vite preview to serve the built static files
+# Note: allowedHosts is configured in vite.config.ts
+# For production, we disable strict host checking to allow any host (security handled by ingress/TLS)
 CMD ["npx", "vite", "preview", "--host", "0.0.0.0", "--port", "3000"]
 
