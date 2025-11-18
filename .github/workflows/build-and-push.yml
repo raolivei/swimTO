@@ -7,9 +7,19 @@ on:
       - dev
     tags:
       - "v*"
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "VERSION"
+      - ".github/workflows/build-and-push.yml"
   pull_request:
     branches:
       - main
+    paths:
+      - "apps/api/**"
+      - "apps/web/**"
+      - "VERSION"
+      - ".github/workflows/build-and-push.yml"
   workflow_dispatch:
     inputs:
       tag:

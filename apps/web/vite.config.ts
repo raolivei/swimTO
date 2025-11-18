@@ -25,12 +25,12 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on("proxyReq", (proxyReq, req, _res) => {
             // Add trailing slash to paths that need it (FastAPI routes)
-            const url = req.url || '';
+            const url = req.url || "";
             if (url.match(/^\/(schedule|facilities)(\?.*)?$/)) {
-              const [path, query] = url.split('?');
-              proxyReq.path = path + '/' + (query ? '?' + query : '');
+              const [path, query] = url.split("?");
+              proxyReq.path = path + "/" + (query ? "?" + query : "");
             }
           });
         },
@@ -41,6 +41,14 @@ export default defineConfig({
     host: true,
     port: 3000,
     strictPort: false,
-    allowedHosts: ["swimto.eldertree.local", "swimto.local", "localhost"],
+    // Disable strict host checking for production (behind reverse proxy/ingress)
+    // Security is handled by Kubernetes ingress/TLS, not by Vite
+    strictHost: false,
+    allowedHosts: [
+      "swimto.eldertree.local",
+      "swimto.eldertree.xyz",
+      "swimto.local",
+      "localhost",
+    ],
   },
 });
