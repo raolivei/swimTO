@@ -52,15 +52,15 @@ const isHappeningNow = (session: Session): boolean => {
 const compareSessions = (
   a: SessionWithDistance,
   b: SessionWithDistance,
-  sortByDistance: boolean,
+  sortMode: 'distance' | 'favorites' | null,
   userLocation: UserLocation | null,
   isFavorite: (facilityId: string) => boolean
 ): number => {
   const isFavA = a.facility?.facility_id ? isFavorite(a.facility.facility_id) : false;
   const isFavB = b.facility?.facility_id ? isFavorite(b.facility.facility_id) : false;
 
-  // If location is enabled and sorting by distance (button ON), sort by distance only
-  if (sortByDistance && userLocation) {
+  // Sort by distance mode: pure distance sorting (no favorites priority)
+  if (sortMode === 'distance' && userLocation) {
     const distA = a.distance;
     const distB = b.distance;
     if (distA === undefined) return 1;
@@ -68,8 +68,8 @@ const compareSessions = (
     return distA - distB;
   }
 
-  // When button is OFF: favorites first (sorted by location), then non-favorites (sorted by location)
-  if (userLocation) {
+  // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
+  if (sortMode === 'favorites' && userLocation) {
     // Favorites come first
     if (isFavA && !isFavB) return -1;
     if (!isFavA && isFavB) return 1;
@@ -82,7 +82,7 @@ const compareSessions = (
     return distA - distB;
   }
 
-  // If no location: favorites first, then chronological order
+  // Default: favorites first, then chronological order
   if (isFavA && !isFavB) return -1;
   if (!isFavA && isFavB) return 1;
 
@@ -107,7 +107,7 @@ export default function ScheduleView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [prioritizeHappeningNow, setPrioritizeHappeningNow] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [sortByDistance, setSortByDistance] = useState(false);
+  const [sortMode, setSortMode] = useState<'distance' | 'favorites' | null>(null);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
@@ -177,7 +177,7 @@ export default function ScheduleView() {
 
   // Sort sessions using helper function
   const sortedSessions = [...sessionsWithDistance].sort((a, b) =>
-    compareSessions(a, b, sortByDistance, userLocation, isFavorite)
+    compareSessions(a, b, sortMode, userLocation, isFavorite)
   );
 
   // Get dates for the selected week (Sunday to Saturday)
@@ -322,8 +322,8 @@ export default function ScheduleView() {
     const isFavA = facilityA?.facility_id ? isFavorite(facilityA.facility_id) : false;
     const isFavB = facilityB?.facility_id ? isFavorite(facilityB.facility_id) : false;
 
-    // If location is enabled and sorting by distance (button ON), sort by distance only
-    if (sortByDistance && userLocation) {
+    // Sort by distance mode: pure distance sorting (no favorites priority)
+    if (sortMode === 'distance' && userLocation) {
       const distA = a[1].distance;
       const distB = b[1].distance;
       if (distA === undefined) return 1;
@@ -331,8 +331,8 @@ export default function ScheduleView() {
       return distA - distB;
     }
 
-    // When button is OFF: favorites first (sorted by location), then non-favorites (sorted by location)
-    if (userLocation) {
+    // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
+    if (sortMode === 'favorites' && userLocation) {
       // Favorites come first
       if (isFavA && !isFavB) return -1;
       if (!isFavA && isFavB) return 1;
@@ -345,7 +345,7 @@ export default function ScheduleView() {
       return distA - distB;
     }
 
-    // If no location: favorites first, then alphabetical order
+    // Default: favorites first, then alphabetical order
     if (isFavA && !isFavB) return -1;
     if (!isFavA && isFavB) return 1;
 
@@ -444,7 +444,7 @@ export default function ScheduleView() {
             </button>
 
             <div className="flex flex-col sm:flex-row gap-3 flex-1">
-              {/* Location button/indicator - also acts as sort toggle when location is enabled */}
+              {/* Location loading indicator */}
               {isLoadingLocation ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
                   <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
@@ -453,32 +453,55 @@ export default function ScheduleView() {
                   </span>
                 </div>
               ) : userLocation ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSortByDistance(prev => !prev);
-                  }}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 cursor-pointer ${
-                    sortByDistance
-                      ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
-                      : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
-                  }`}
-                  title={
-                    sortByDistance
-                      ? "Currently sorting by distance - Click to sort favorites first"
-                      : "Currently sorting favorites first - Click to sort by distance"
-                  }
-                >
-                  <div className={`w-3 h-3 rounded-full ring-2 ${
-                    sortByDistance
-                      ? "bg-green-500 dark:bg-green-600 ring-green-400/50"
-                      : "bg-transparent ring-green-400 dark:ring-green-500 ring-2"
-                  }`}></div>
-                  <Navigation className="w-4 h-4 text-green-600 dark:text-green-400" />
-                  <span className="text-green-800 dark:text-green-300 font-medium">
-                    Sort by location
-                  </span>
-                </button>
+                <>
+                  {/* Sort by location button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortMode(sortMode === 'distance' ? null : 'distance');
+                    }}
+                    className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer ${
+                      sortMode === 'distance'
+                        ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
+                        : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
+                    }`}
+                    title="Sort by location (distance only)"
+                  >
+                    <div className={`w-2 h-2 rounded-full ring-1.5 ${
+                      sortMode === 'distance'
+                        ? "bg-green-500 dark:bg-green-600 ring-green-400/50"
+                        : "bg-transparent ring-green-400 dark:ring-green-500"
+                    }`}></div>
+                    <Navigation className="w-3 h-3 text-green-600 dark:text-green-400" />
+                    <span className="text-green-800 dark:text-green-300">
+                      Location
+                    </span>
+                  </button>
+
+                  {/* Favorites first button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSortMode(sortMode === 'favorites' ? null : 'favorites');
+                    }}
+                    className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer ${
+                      sortMode === 'favorites'
+                        ? "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
+                        : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
+                    }`}
+                    title="Favorites first, sorted by location"
+                  >
+                    <div className={`w-2 h-2 rounded-full ring-1.5 ${
+                      sortMode === 'favorites'
+                        ? "bg-yellow-500 dark:bg-yellow-600 ring-yellow-400/50"
+                        : "bg-transparent ring-yellow-400 dark:ring-yellow-500"
+                    }`}></div>
+                    <Star className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
+                    <span className="text-yellow-800 dark:text-yellow-300">
+                      Favorites
+                    </span>
+                  </button>
+                </>
               ) : (
                 <button
                   onClick={handleGetLocation}
@@ -497,16 +520,16 @@ export default function ScheduleView() {
                 }
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 cursor-pointer ${
                   prioritizeHappeningNow
-                    ? "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
-                    : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
+                    ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
+                    : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                 }`}
               >
                 <div className={`w-3 h-3 rounded-full ring-2 ${
                   prioritizeHappeningNow
-                    ? "bg-yellow-400 dark:bg-yellow-600 ring-yellow-400/50"
-                    : "bg-transparent ring-yellow-400 dark:ring-yellow-500"
+                    ? "bg-blue-400 dark:bg-blue-600 ring-blue-400/50"
+                    : "bg-transparent ring-blue-400 dark:ring-blue-500"
                 }`}></div>
-                <span className="text-yellow-800 dark:text-yellow-300">
+                <span className="text-blue-800 dark:text-blue-300">
                   Happening now
                 </span>
               </button>
@@ -599,7 +622,7 @@ export default function ScheduleView() {
 
               // Sort sessions within each date using helper function
               dateSessions = [...dateSessions].sort((a, b) =>
-                compareSessions(a, b, sortByDistance, userLocation, isFavorite)
+                compareSessions(a, b, sortMode, userLocation, isFavorite)
               );
               return (
                 <div
