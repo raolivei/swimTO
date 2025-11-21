@@ -23,6 +23,7 @@ import {
   Navigation,
   Star,
   ArrowUpDown,
+  Waves,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -82,7 +83,21 @@ const compareSessions = (
     return distA - distB;
   }
 
-  // Default: favorites first, then chronological order
+  // Default when location is available: favorites first, then by distance
+  if (userLocation) {
+    // Favorites come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // Within favorites and non-favorites, sort by distance
+    const distA = a.distance;
+    const distB = b.distance;
+    if (distA === undefined) return 1;
+    if (distB === undefined) return -1;
+    return distA - distB;
+  }
+
+  // Fallback when no location: favorites first, then chronological order
   if (isFavA && !isFavB) return -1;
   if (!isFavA && isFavB) return 1;
 
@@ -108,6 +123,7 @@ export default function ScheduleView() {
   const [prioritizeHappeningNow, setPrioritizeHappeningNow] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [sortMode, setSortMode] = useState<'distance' | 'favorites' | null>(null);
+  const [iconJump, setIconJump] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
@@ -139,6 +155,15 @@ export default function ScheduleView() {
   useEffect(() => {
     handleGetLocation();
   }, []);
+
+  // Trigger icon jump animation when sortMode changes
+  useEffect(() => {
+    if (sortMode !== null) {
+      setIconJump(true);
+      const timer = setTimeout(() => setIconJump(false), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [sortMode]);
 
   // Handle getting user location
   const handleGetLocation = async () => {
@@ -206,6 +231,18 @@ export default function ScheduleView() {
   };
 
   const weekDates = getWeekDates(weekOffset);
+
+  // Show today plus next 6 days (7 days total)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const endDate = new Date(today);
+  endDate.setDate(endDate.getDate() + 6); // Today + 6 more days = 7 days total
+  
+  const visibleWeekDates = weekDates.filter(date => {
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+    return dateOnly >= today && dateOnly <= endDate;
+  });
 
   // Filter sessions to only show those in the selected week, and optionally only happening now
   const filteredSessions = sortedSessions.filter((session) => {
@@ -345,7 +382,21 @@ export default function ScheduleView() {
       return distA - distB;
     }
 
-    // Default: favorites first, then alphabetical order
+    // Default when location is available: favorites first, then by distance
+    if (userLocation) {
+      // Favorites come first
+      if (isFavA && !isFavB) return -1;
+      if (!isFavA && isFavB) return 1;
+
+      // Within favorites and non-favorites, sort by distance
+      const distA = a[1].distance;
+      const distB = b[1].distance;
+      if (distA === undefined) return 1;
+      if (distB === undefined) return -1;
+      return distA - distB;
+    }
+
+    // Fallback when no location: favorites first, then alphabetical order
     if (isFavA && !isFavB) return -1;
     if (!isFavA && isFavB) return 1;
 
@@ -443,7 +494,7 @@ export default function ScheduleView() {
               Filters
             </button>
 
-            <div className="flex flex-col sm:flex-row gap-3 flex-1">
+            <div className="flex flex-col sm:flex-row gap-4 flex-1">
               {/* Location loading indicator */}
               {isLoadingLocation ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
@@ -460,22 +511,18 @@ export default function ScheduleView() {
                     onClick={() => {
                       setSortMode(sortMode === 'distance' ? null : 'distance');
                     }}
-                    className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer ${
+                    className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
                       sortMode === 'distance'
                         ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
                         : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
                     }`}
                     title="Sort by location (distance only)"
                   >
-                    <div className={`w-2 h-2 rounded-full ring-1.5 ${
+                    <Navigation className={`w-5 h-5 transition-all duration-300 ${
                       sortMode === 'distance'
-                        ? "bg-green-500 dark:bg-green-600 ring-green-400/50"
-                        : "bg-transparent ring-green-400 dark:ring-green-500"
-                    }`}></div>
-                    <Navigation className="w-3 h-3 text-green-600 dark:text-green-400" />
-                    <span className="text-green-800 dark:text-green-300">
-                      Location
-                    </span>
+                        ? "text-green-600 dark:text-green-400 fill-green-600 dark:fill-green-400"
+                        : "text-green-600 dark:text-green-400"
+                    }`} />
                   </button>
 
                   {/* Favorites first button */}
@@ -484,22 +531,18 @@ export default function ScheduleView() {
                     onClick={() => {
                       setSortMode(sortMode === 'favorites' ? null : 'favorites');
                     }}
-                    className={`flex items-center gap-1 px-1.5 py-1 rounded-md text-xs font-medium transition-all duration-300 cursor-pointer ${
+                    className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
                       sortMode === 'favorites'
                         ? "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
                         : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
                     }`}
                     title="Favorites first, sorted by location"
                   >
-                    <div className={`w-2 h-2 rounded-full ring-1.5 ${
+                    <Star className={`w-5 h-5 transition-all duration-300 ${
                       sortMode === 'favorites'
-                        ? "bg-yellow-500 dark:bg-yellow-600 ring-yellow-400/50"
-                        : "bg-transparent ring-yellow-400 dark:ring-yellow-500"
-                    }`}></div>
-                    <Star className="w-3 h-3 text-yellow-600 dark:text-yellow-400" />
-                    <span className="text-yellow-800 dark:text-yellow-300">
-                      Favorites
-                    </span>
+                        ? "text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400"
+                        : "text-yellow-600 dark:text-yellow-400"
+                    }`} />
                   </button>
                 </>
               ) : (
@@ -518,19 +561,19 @@ export default function ScheduleView() {
                 onClick={() =>
                   setPrioritizeHappeningNow(!prioritizeHappeningNow)
                 }
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-300 cursor-pointer ${
+                className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
                   prioritizeHappeningNow
                     ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
                     : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                 }`}
               >
-                <div className={`w-3 h-3 rounded-full ring-2 ${
+                <Waves className={`w-5 h-5 transition-all duration-300 ${
                   prioritizeHappeningNow
-                    ? "bg-blue-400 dark:bg-blue-600 ring-blue-400/50"
-                    : "bg-transparent ring-blue-400 dark:ring-blue-500"
-                }`}></div>
-                <span className="text-blue-800 dark:text-blue-300">
-                  Happening now
+                    ? "text-blue-600 dark:text-blue-400 animate-pulse"
+                    : "text-blue-500 dark:text-blue-500 opacity-70"
+                }`} />
+                <span className="text-blue-800 dark:text-blue-300 ml-2">
+                  Happening now!
                 </span>
               </button>
 
@@ -768,27 +811,66 @@ export default function ScheduleView() {
               <table className="w-full">
                 <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20 shadow-md">
                   <tr>
-                    <th className="px-2 sm:px-3 py-1.5 sm:py-2 text-left sticky left-0 bg-primary-500 dark:bg-primary-600 z-30 shadow-[2px_0_4px_rgba(0,0,0,0.1)] border-r border-primary-400/30">
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-primary-100 flex-shrink-0" />
-                        <span className="text-[9px] sm:text-[10px] font-semibold uppercase tracking-wider text-primary-100 leading-tight">
-                          <span className="hidden sm:inline">Community Center</span>
-                          <span className="sm:hidden">Pool</span>
-                        </span>
+                    <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-7 text-left sticky left-0 bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 z-30 shadow-[2px_0_8px_rgba(0,0,0,0.15)] border-r-2 border-primary-400/40">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg border border-white/20">
+                          {sortMode === 'favorites' ? (
+                            <Star className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 fill-white ${
+                              iconJump ? 'animate-bounce' : ''
+                            }`} />
+                          ) : sortMode === 'distance' ? (
+                            <Navigation className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 ${
+                              iconJump ? 'animate-bounce' : ''
+                            }`} />
+                          ) : (
+                            <MapPin className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 ${
+                              iconJump ? 'animate-bounce' : ''
+                            }`} />
+                          )}
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs sm:text-sm md:text-base font-black uppercase tracking-wider text-white leading-tight">
+                            <span className="hidden sm:inline">Community Center</span>
+                            <span className="sm:hidden">Pool</span>
+                          </span>
+                          <span className="text-[10px] sm:text-xs text-primary-100/80 mt-0.5 font-medium">
+                            {sortMode === 'distance' 
+                              ? 'Sorted by Location'
+                              : sortMode === 'favorites'
+                              ? 'Sorted by Favorites'
+                              : 'Location & Distance'}
+                          </span>
+                        </div>
                       </div>
                     </th>
-                    {weekDates.map((date, index) => {
+                    {visibleWeekDates.map((date, index) => {
                       const formatted = formatWeekdayHeader(date);
+                      const isToday = new Date(date).toDateString() === new Date().toDateString();
                       return (
                         <th
                           key={index}
-                          className="px-1 sm:px-2 md:px-4 py-2 sm:py-3 md:py-5 text-center min-w-[60px] sm:min-w-[80px] md:min-w-[120px]"
+                          className={`px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-7 text-center min-w-[100px] sm:min-w-[120px] md:min-w-[160px] transition-all relative ${
+                            isToday
+                              ? "bg-gradient-to-b from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 ring-2 ring-yellow-400 dark:ring-yellow-500 ring-inset shadow-lg"
+                              : "bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700"
+                          }`}
                         >
-                          <div className="text-[10px] sm:text-sm md:text-lg font-extrabold uppercase tracking-wide">
-                            {formatted.weekday}
-                          </div>
-                          <div className="text-[8px] sm:text-xs md:text-sm font-semibold text-primary-100 mt-0.5 sm:mt-1">
-                            {formatted.date}
+                          <div className="flex flex-col items-center justify-center gap-1.5 sm:gap-2">
+                            <div className={`text-sm sm:text-base md:text-xl font-black uppercase tracking-wider ${
+                              isToday ? "text-yellow-100 drop-shadow-lg" : "text-white"
+                            }`}>
+                              {formatted.weekday}
+                            </div>
+                            <div className={`text-xs sm:text-sm md:text-base font-bold px-2 py-1 rounded-md ${
+                              isToday 
+                                ? "bg-yellow-400/20 text-yellow-100 border border-yellow-300/30" 
+                                : "bg-white/10 text-primary-50 border border-white/20"
+                            }`}>
+                              {formatted.date}
+                            </div>
+                            {isToday && (
+                              <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                            )}
                           </div>
                         </th>
                       );
@@ -801,13 +883,13 @@ export default function ScheduleView() {
                       key={facilityName}
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
-                      <td className="px-2 sm:px-4 md:px-6 py-2 sm:py-3 md:py-4 sticky left-0 bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm z-10 border-r border-gray-200 dark:border-gray-700">
-                        <div className="flex items-center gap-1 sm:gap-2">
+                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 sticky left-0 bg-white/98 dark:bg-gray-800/98 backdrop-blur-md z-10 border-r-2 border-gray-300 dark:border-gray-600 shadow-[2px_0_8px_rgba(0,0,0,0.05)] min-w-[200px] sm:min-w-[250px] md:min-w-[300px]">
+                        <div className="flex items-start gap-3 sm:gap-4">
                           <button
                             onClick={() =>
                               handleToggleFavorite(data.facility?.facility_id)
                             }
-                            className="flex-shrink-0 hover:scale-110 transition-transform duration-200"
+                            className="flex-shrink-0 mt-1 hover:scale-110 transition-transform duration-200 p-1.5 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
                             aria-label={
                               isFavorite(data.facility?.facility_id || "")
                                 ? "Remove from favorites"
@@ -820,15 +902,15 @@ export default function ScheduleView() {
                             }
                           >
                             <Star
-                              className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 ${
+                              className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-200 ${
                                 isFavorite(data.facility?.facility_id || "")
-                                  ? "fill-yellow-400 text-yellow-400"
+                                  ? "fill-yellow-400 text-yellow-400 scale-110"
                                   : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
                               }`}
                             />
                           </button>
                           <div className="flex-1 min-w-0">
-                            <div className="font-bold text-[10px] sm:text-xs md:text-sm text-gray-900 dark:text-gray-100 truncate">
+                            <div className="font-bold text-sm sm:text-base md:text-lg text-gray-900 dark:text-gray-100 leading-tight mb-2">
                               {data.facility?.website ? (
                                 <a
                                   href={data.facility.website}
@@ -841,25 +923,26 @@ export default function ScheduleView() {
                               ) : (
                                 facilityName
                               )}
-                              {data.distance !== undefined &&
-                                data.facility?.address && (
-                                  <button
-                                    onClick={() =>
-                                      setMapsModalAddress(
-                                        data.facility!.address!
-                                      )
-                                    }
-                                    className="ml-1 text-[9px] sm:text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors whitespace-nowrap"
-                                    title="Open in maps"
-                                  >
-                                    ({formatDistance(data.distance)})
-                                  </button>
-                                )}
                             </div>
+                            {data.distance !== undefined &&
+                              data.facility?.address && (
+                                <button
+                                  onClick={() =>
+                                    setMapsModalAddress(
+                                      data.facility!.address!
+                                    )
+                                  }
+                                  className="mb-2 px-2 py-1 text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-300 cursor-pointer transition-all duration-200 flex items-center gap-1.5"
+                                  title="Open in maps"
+                                >
+                                  <Navigation className="w-4 h-4" />
+                                  {formatDistance(data.distance)}
+                                </button>
+                              )}
                             {data.facility?.address && (
-                              <div className="hidden sm:flex text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 sm:mt-1 items-start gap-1">
-                                <MapPin className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0 mt-0.5" />
-                                <span className="line-clamp-1">
+                              <div className="hidden sm:flex text-sm text-gray-600 dark:text-gray-400 items-start gap-2 leading-relaxed">
+                                <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5 text-gray-400 dark:text-gray-500" />
+                                <span className="line-clamp-2">
                                   {data.facility.address}
                                 </span>
                               </div>
@@ -867,43 +950,53 @@ export default function ScheduleView() {
                           </div>
                         </div>
                       </td>
-                      {weekdays.map((_, dayIndex) => {
-                        // Fix: Convert dayIndex to string to match object keys
+                      {visibleWeekDates.map((currentDate, index) => {
+                        // Get day of week (0 = Sunday, 1 = Monday, etc.)
+                        const dayOfWeek = currentDate.getDay();
                         const daySessions =
-                          data.sessions[String(dayIndex)] || [];
-                        const cellKey = `${facilityName}-${dayIndex}`;
+                          data.sessions[String(dayOfWeek)] || [];
+                        const cellKey = `${facilityName}-${dayOfWeek}-${currentDate.toISOString()}`;
                         const isExpanded = expandedCells.has(cellKey);
                         const displaySessions = isExpanded
                           ? daySessions
                           : daySessions.slice(0, 3);
+                        const isToday = new Date(currentDate).toDateString() === new Date().toDateString();
 
                         return (
                           <td
-                            key={dayIndex}
-                            className="px-1 sm:px-2 md:px-4 py-2 sm:py-3 md:py-4 text-center align-top"
+                            key={index}
+                            className={`px-2 sm:px-3 md:px-4 py-3 sm:py-4 md:py-5 text-center align-top transition-colors ${
+                              isToday
+                                ? "bg-primary-50/30 dark:bg-primary-900/10 border-l-2 border-r-2 border-primary-300 dark:border-primary-700"
+                                : ""
+                            }`}
                           >
                             {daySessions.length > 0 ? (
-                              <div className="space-y-1 sm:space-y-2">
+                              <div className="space-y-2 sm:space-y-2.5">
                                 {displaySessions.map((session) => {
                                   const happeningNow = isHappeningNow(session);
 
                                   return (
                                     <div
                                       key={session.id}
-                                      className={`text-[9px] sm:text-xs p-1 sm:p-2 rounded-md sm:rounded-lg transition-colors ${
+                                      className={`group relative p-2 sm:p-2.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
                                         happeningNow
-                                          ? "bg-yellow-200 dark:bg-yellow-900/50 ring-1 sm:ring-2 ring-yellow-400 dark:ring-yellow-600"
-                                          : ""
+                                          ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
+                                          : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
-                                      <div className="font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap">
+                                      <div className={`text-xs sm:text-sm font-bold whitespace-nowrap mb-1.5 ${
+                                        happeningNow
+                                          ? "text-yellow-900 dark:text-yellow-100"
+                                          : "text-gray-900 dark:text-gray-100"
+                                      }`}>
                                         {formatTimeRange(
                                           session.start_time,
                                           session.end_time
                                         )}
                                       </div>
                                       <span
-                                        className={`inline-block mt-0.5 sm:mt-1 px-1 sm:px-2 py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[8px] sm:text-[10px] font-bold ${getSwimTypeColor(
+                                        className={`inline-block px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold shadow-sm ${getSwimTypeColor(
                                           session.swim_type
                                         )}`}
                                       >
@@ -925,18 +1018,20 @@ export default function ScheduleView() {
                                       }
                                       setExpandedCells(newExpanded);
                                     }}
-                                    className="text-[9px] sm:text-xs text-primary-600 dark:text-primary-400 font-semibold hover:text-primary-700 dark:hover:text-primary-300 hover:underline transition-colors cursor-pointer"
+                                    className="w-full mt-2 px-2 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-all duration-200"
                                   >
                                     {isExpanded
                                       ? "Show less"
-                                      : `+${daySessions.length - 3}`}
+                                      : `+${daySessions.length - 3} more`}
                                   </button>
                                 )}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-600 text-[10px] sm:text-xs">
-                                —
-                              </span>
+                              <div className="py-4">
+                                <span className="text-gray-300 dark:text-gray-700 text-xs">
+                                  —
+                                </span>
+                              </div>
                             )}
                           </td>
                         );
