@@ -82,3 +82,5 @@ echo "💡 To check logs:"
 echo "    kubectl logs -n $NAMESPACE -l app=swimto-api"
 echo "    kubectl logs -n $NAMESPACE -l app=swimto-web"
 
+
+
