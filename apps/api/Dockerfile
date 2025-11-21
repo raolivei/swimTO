@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r /data-pipeline/requirements.txt
 # Copy application code
 COPY apps/api/ .
 
-# Copy data-pipeline (if exists)
+# Copy data-pipeline
 COPY data-pipeline /data-pipeline
 
 # Create logs directory

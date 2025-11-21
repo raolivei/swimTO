@@ -48,7 +48,6 @@ const isHappeningNow = (session: Session): boolean => {
   return travelWindowStart <= now && now < sessionEnd;
 };
 
-
 // Helper function to compare sessions for sorting
 const compareSessions = (
   a: SessionWithDistance,
