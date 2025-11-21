@@ -43,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Mobile Logo**: Reduced spacing, smaller icon (32px), hidden tagline
 - **Error Messages**: Improved with troubleshooting steps and iPhone-specific suggestions
 
-### Improved
+### Changed
 
 - **Data Quality**: Removed 1,904 demo sessions, verified 2,325 real sessions
 - Enhanced accessibility, error handling, responsive navigation
@@ -52,60 +52,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2025-11-20
 
+### Added
+
+- **🔄 Sort Toggle**: Button toggles between favorites-first and distance-only sorting modes
+- **⏰ Travel Time Window**: "Happening Now" filter includes sessions starting within 30 minutes (travel time consideration)
+- **🎨 Enhanced UI**: Improved sorting button design with visual feedback
+  - Location button cycles between distance-only and favorites-first sorting
+  - Circle indicators: outlined when off, filled when on
+  - Community Center header cell made more compact with icon
+  - Dynamic header subtitle based on active sort mode
+
 ### Fixed
 
 - **🕐 Timezone**: API now uses Toronto timezone (`America/Toronto`) to determine "today"
 - **🔒 Mixed Content**: API client detects HTTPS pages and uses absolute HTTPS URLs
 - **🌐 Vite Host**: Disabled strict host checking for production
-- **📅 Date Display**: Fixed today's and yesterday's sessions not appearing
+- **📅 Date Display**: Fixed today's and yesterday's sessions not appearing in schedule
   - Added explicit date range requests (yesterday to 7 days ahead)
-  - Improved date matching with fallback logic
-  - Enhanced visual highlighting for yesterday and today
-
-### Added
-
-- **⏰ Travel Time Window**: "Happening Now" filter includes sessions starting within 30 minutes
-- **🔄 Sort Toggle**: Button toggles between favorites-first and distance-only sorting
+  - Improved date matching with fallback logic for format inconsistencies
+  - Enhanced visual highlighting for yesterday and today with emphasized time display
 
 ### Changed
 
 - Updated OAuth redirect URI to `swimto.eldertree.xyz`
 - Added domain to CORS origins and Vite preview allowed hosts
-- Switched to Cloudflare Origin Certificates
-- **🎨 UI/UX**: Enhanced sorting and button design
-  - Location button toggles between distance-only and favorites-first sorting
-  - Circle indicators: outlined when off, filled when on
-  - Styled to match "Happening now" button aesthetic
-  - Community Center header cell made more compact with icon
-- **⚡ CI/CD**: Parallelized Docker builds, optimized PR builds (~2-3 min), added 30-min timeout
+- Switched from Let's Encrypt to Cloudflare Origin Certificates
+- **⚡ CI/CD Performance**: Parallelized Docker builds, optimized PR builds (~2-3 min), added 30-min timeout
 
-### Improved
+### Changed (Technical)
 
-- **🔧 Code**: Refactored sorting logic with reusable `compareSessions` helper
+- **🔧 Code Refactoring**: Refactored sorting logic with reusable `compareSessions` helper function
 - **🌐 Infrastructure**: Added Cloudflare Origin Certificate TLS for public domain
   - Certificate management via Terraform
+  - Updated OAuth redirect URI to `https://swimto.eldertree.xyz/auth/callback`
 
 ---
 
 ## [0.4.0] - 2025-11-17
 
-### Fixed
-
-- **🔐 HTTPS/TLS**: Enabled secure HTTPS with cert-manager, fixes OAuth and Geolocation API
-- **📱 Mobile**: List view auto-selected on mobile (< 768px), hidden view toggle, touch-optimized
-
 ### Added
 
-- **Location Request Button**: "Enable Location" button replaces automatic request
-- **WireGuard Access**: HTTP-only ingress for IP-based VPN access
+- **Location Request Button**: "Enable Location" button replaces automatic location request on page load
+- **WireGuard Access**: HTTP-only ingress for IP-based VPN access (allows direct IP access via WireGuard VPN)
+
+### Fixed
+
+- **🔐 HTTPS/TLS**: Enabled secure HTTPS with cert-manager, fixes OAuth login and Geolocation API requirements
+- **📱 Mobile UX**: List view auto-selected on mobile (< 768px), hidden view toggle buttons, touch-optimized interface
 
 ### Changed
 
-- Subtitle: "Find drop-in swim times at Toronto's community pools"
+- Subtitle updated to: "Find drop-in swim times at Toronto's community pools"
 
-### Technical
+### Changed (Technical)
 
-- **Docker Workflow**: Single build-and-push job, multi-platform builds, PR builds only (no push)
+- **Docker Workflow**: Refactored to single build-and-push job, multi-platform builds (linux/amd64, linux/arm64), PR builds only (no registry push)
 
 ---
 
@@ -113,20 +114,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **"Happening Now" Filter**: Interactive filter showing only currently active sessions
+- **"Happening Now" Filter**: Interactive filter button showing only currently active swim sessions
+- **Profile Banner Redesign**: Artistic swimming pool theme with water-inspired gradients, animated bubbles, wave animations, and caustic light effects
 
 ### Changed
 
-- **Distance Sorting**: Automatic when location available, removed manual button
-- **Profile Banner**: Redesigned with water theme, gradients, bubbles, wave animations
+- **Distance Sorting**: Automatic when location available, removed manual "Sort by distance" button for cleaner UX
+- **Sorting Hierarchy**: Maintains favorites → distance → chronological order automatically
 
 ### Fixed
 
-- **Facility Links**: Fixed 35 incorrect location IDs using Toronto Open Data (all 42 facilities correct)
+- **Facility Links**: Fixed 35 incorrect location IDs using Toronto Open Data (all 42 facilities now have correct website links)
+- **Google OAuth**: Fixed profile picture CORS issue and login flow
+- **Schedule Highlighting**: Fixed session highlighting issues
 
-### Technical
+### Changed (Technical)
 
-- Added `prioritizeHappeningNow` state, removed `sortByDistance`, fuzzy name matching for facilities
+- Added `prioritizeHappeningNow` state for filter functionality
+- Removed `sortByDistance` state in favor of automatic behavior
+- Implemented fuzzy name matching algorithm for facility data reconciliation
+- Updated session filtering logic to support "happening now" mode
 
 ---
 
@@ -134,11 +141,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Docker Network**: Fixed frontend API connectivity, resolved FastAPI 307 redirects with trailing slash handling
+- **Docker Network Connectivity**: Fixed frontend unable to connect to backend API in Docker environment
+- **FastAPI Redirects**: Resolved 307 redirects by ensuring proper trailing slash handling in Vite proxy
+- **Environment Variables**: Fixed `.env` file with hardcoded network IP causing connection failures
 
-### Technical
+### Changed (Technical)
 
-- Added Vite proxy handler for trailing slashes, improved env variable handling
+- Added Vite proxy handler to automatically add trailing slashes to API paths
+- Enhanced `api.ts` to properly handle empty `VITE_API_URL` environment variable
+- Configured `docker-compose.yml` to explicitly unset `VITE_API_URL` for web service
+- Improved environment variable handling to treat empty strings as unset values
+- All API requests now return `200 OK` instead of `307 Temporary Redirect`
 
 ---
 
@@ -146,21 +159,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Commercial Release**: Transitioned to proprietary license, made repo private
+- **Commercial Release**: Project transitioned to fully proprietary license, made GitHub repository private
 
 ### Added
 
-- PROJECT_STRATEGY.md, COPYRIGHT, LICENSE files
-- GitHub Actions workflows, enhanced Kubernetes security contexts
-- CHANGELOG.md, detailed error messages with expandable technical details
+- PROJECT_STRATEGY.md documenting business model and go-to-market strategy
+- COPYRIGHT file with proprietary notice
+- LICENSE file with commercial terms
+- CHANGELOG.md for version tracking
+- GitHub Actions workflows for deployment and testing
+- Enhanced security contexts in Kubernetes manifests
+- Detailed error messages with expandable technical details
 
 ### Fixed
 
-- Enhanced error handling UI, NavLink active states, exponential backoff (2 retries)
+- Enhanced error handling UI with styled components and retry functionality
+- Fixed navigation using NavLink with proper active states
+- Added exponential backoff for failed API calls (2 retries)
 
-### Updated
+### Changed (Technical)
 
-- README.md, MASTER_PROMPT.md, all version references to 0.2.0
+- Updated README.md to reflect commercial status and private repository
+- Updated MASTER_PROMPT.md with updated licensing information
+- Updated all version references to 0.2.0
 
 ---
 
@@ -168,8 +189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Frontend**: React app with Leaflet map, schedule view, routing
-- **Backend**: FastAPI, PostgreSQL, Redis caching
+- **Frontend**: React app with interactive map (Leaflet), schedule view, routing
+- **Backend**: FastAPI with REST endpoints, PostgreSQL database, Redis caching
 - **Data Pipeline**: Toronto Open Data ingestion, XML parser, web scraper
 - **Infrastructure**: Kubernetes manifests, Docker Compose, CI/CD pipelines
 - **Documentation**: API reference, deployment guides, architecture docs
