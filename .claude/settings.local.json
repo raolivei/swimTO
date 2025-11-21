@@ -1,0 +1,37 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(kubectl describe:*)",
+      "Bash(kubectl get:*)",
+      "Bash(gh run list:*)",
+      "Bash(flux get sources git:*)",
+      "Bash(flux get:*)",
+      "Bash(flux reconcile source git:*)",
+      "Bash(kubectl apply:*)",
+      "Bash(kubectl api-resources:*)",
+      "Bash(kubectl delete:*)",
+      "Bash(git remote get-url:*)",
+      "Bash(python3:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nchore: upgrade Flux image automation to v1 API\n\n- Upgrade ImageRepository from v1beta2 to v1\n- Upgrade ImagePolicy from v1beta2 to v1  \n- Upgrade ImageUpdateAutomation from v1beta1 to v1\n- Change policy from alphabetical to semver for proper versioning\n- Reduce interval from 5m to 1m for faster updates\n- Add explicit path for image updates\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git rev-parse:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)",
+      "Bash(git reset:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(kubectl exec:*)",
+      "Bash(kubectl logs:*)",
+      "Bash(git pull:*)",
+      "Bash(git commit:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh auth:*)",
+      "Bash(kubectl create secret generic:*)",
+      "Bash(kubectl patch:*)",
+      "Bash(git fetch:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

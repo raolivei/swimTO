@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         return userData;
-      } catch (_error) {
+      } catch {
         // Token is invalid, clear it
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
@@ -87,18 +87,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error("Failed to get Google auth URL:", error);
       const errorInfo = getApiErrorMessage(error);
       // Provide more detailed error message
-      let errorMessage = errorInfo.message || "Failed to initiate login. Please try again.";
-      
+      let errorMessage =
+        errorInfo.message || "Failed to initiate login. Please try again.";
+
       // Check if it's a network error
-      if (errorInfo.title === "Network Connection Failed" || errorInfo.title === "Server Unavailable") {
-        errorMessage = "Unable to connect to the authentication server. Please check your connection and try again.";
+      if (
+        errorInfo.title === "Network Connection Failed" ||
+        errorInfo.title === "Server Unavailable"
+      ) {
+        errorMessage =
+          "Unable to connect to the authentication server. Please check your connection and try again.";
       }
-      
+
       // Check if OAuth is not configured
       if (axios.isAxiosError(error) && error.response?.status === 503) {
-        errorMessage = "Google authentication is not configured on the server. Please contact support.";
+        errorMessage =
+          "Google authentication is not configured on the server. Please contact support.";
       }
-      
+
       setLoginError(errorMessage);
       setIsLoggingIn(false);
     }
@@ -111,15 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleGoogleCallback = async (code: string) => {
     try {
       const response = await authApi.googleCallback(code);
-      
+
       // Store token and user
       localStorage.setItem(AUTH_TOKEN_KEY, response.access_token);
       localStorage.setItem(USER_KEY, JSON.stringify(response.user));
       setUser(response.user);
 
       // Log for debugging
-      console.log('✓ Token stored:', response.access_token.substring(0, 20) + '...');
-      console.log('✓ User stored:', response.user.email);
+      console.log(
+        "✓ Token stored:",
+        response.access_token.substring(0, 20) + "..."
+      );
+      console.log("✓ User stored:", response.user.email);
 
       // Invalidate auth query to trigger refetch with new token
       queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
