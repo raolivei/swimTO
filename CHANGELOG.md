@@ -19,6 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🌐 Public Domain Support**: Configured `swimto.eldertree.xyz` with Cloudflare Origin Certificates
+  - Added public domain ingress resources with Cloudflare Origin Certificate TLS
+  - Updated OAuth redirect URI to use `https://swimto.eldertree.xyz/auth/callback`
+  - Added new domain to CORS origins for API access
+  - Uses Cloudflare Origin Certificates (free, no port forwarding required, 15-year validity)
+  - Enables trusted HTTPS for mobile browsers (required for geolocation services)
+  - No ACME challenges or port forwarding needed
+  - **Infrastructure as Code**: Certificate management via Terraform (automated setup)
 - **Favorites**: Star icon to favorite facilities, persists via localStorage, gold map markers
 - **Real-Time Updates Page**: Explains daily refresh process and data sources
 - **Clickable Widgets**: Homepage cards link to respective pages
@@ -45,6 +52,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Updated Google OAuth redirect URI to use public domain (`swimto.eldertree.xyz`)
+- Added `swimto.eldertree.xyz` to CORS allowed origins
+- Added `swimto.eldertree.xyz` to Vite preview allowed hosts
+- Switched from Let's Encrypt to Cloudflare Origin Certificates for simpler setup
+- **⚡ CI/CD Performance Improvements**:
+  - Parallelized Docker image builds (API and Web now build simultaneously)
+  - Optimized PR builds to use single platform (`linux/amd64`) for faster feedback
+  - Added 30-minute timeout to prevent infinite hangs
+  - PR builds now complete in ~2-3 minutes instead of potentially hanging
 - **Data Quality**: Removed 1,904 demo sessions, verified 2,325 real sessions
 - Enhanced accessibility, error handling, responsive navigation
 
@@ -98,7 +114,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **🔐 HTTPS/TLS**: Enabled secure HTTPS with cert-manager, fixes OAuth login and Geolocation API requirements
+  - Implemented self-signed certificate management with cert-manager
+  - Configured automatic HTTP to HTTPS redirect
+  - **Fixes Google OAuth login** (requires secure context)
+  - **Fixes Geolocation API** (requires HTTPS in browsers)
+  - Updated OAuth redirect URI to use `https://swimto.eldertree.local/auth/callback`
 - **📱 Mobile UX**: List view auto-selected on mobile (< 768px), hidden view toggle buttons, touch-optimized interface
+  - **Smart default**: List view automatically selected on mobile (< 768px)
+  - **Removed clutter**: Hidden view toggle buttons on mobile - list view is optimal
+  - Table view reserved for desktop where horizontal space is abundant
+  - Clean, card-based layout perfect for vertical scrolling
+  - No more horizontal scrolling or cut-off text
+  - Touch-optimized buttons and spacing
 
 ### Changed
 
