@@ -24,6 +24,8 @@ import {
   Star,
   ArrowUpDown,
   Waves,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -40,7 +42,7 @@ const isHappeningNow = (session: Session): boolean => {
   const now = new Date();
   const sessionStart = new Date(`${session.date} ${session.start_time}`);
   const sessionEnd = new Date(`${session.date} ${session.end_time}`);
-  
+
   // Subtract 30 minutes from start time for travel window
   const travelWindowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000);
 
@@ -49,19 +51,48 @@ const isHappeningNow = (session: Session): boolean => {
   return travelWindowStart <= now && now < sessionEnd;
 };
 
+// Helper function to find the index of the next or current session
+const findNextOrCurrentSessionIndex = (sessions: Session[]): number => {
+  if (sessions.length === 0) return 0;
+
+  const now = new Date();
+
+  for (let i = 0; i < sessions.length; i++) {
+    const session = sessions[i];
+    const sessionStart = new Date(`${session.date} ${session.start_time}`);
+    const travelWindowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000);
+    const sessionEnd = new Date(`${session.date} ${session.end_time}`);
+
+    // If session is happening now or upcoming, return its index
+    if (travelWindowStart <= now && now < sessionEnd) {
+      return i; // Current session
+    }
+    if (sessionStart > now) {
+      return i; // Next upcoming session
+    }
+  }
+
+  // If no upcoming session, return the last session
+  return sessions.length - 1;
+};
+
 // Helper function to compare sessions for sorting
 const compareSessions = (
   a: SessionWithDistance,
   b: SessionWithDistance,
-  sortMode: 'distance' | 'favorites' | null,
+  sortMode: "distance" | "favorites",
   userLocation: UserLocation | null,
   isFavorite: (facilityId: string) => boolean
 ): number => {
-  const isFavA = a.facility?.facility_id ? isFavorite(a.facility.facility_id) : false;
-  const isFavB = b.facility?.facility_id ? isFavorite(b.facility.facility_id) : false;
+  const isFavA = a.facility?.facility_id
+    ? isFavorite(a.facility.facility_id)
+    : false;
+  const isFavB = b.facility?.facility_id
+    ? isFavorite(b.facility.facility_id)
+    : false;
 
   // Sort by distance mode: pure distance sorting (no favorites priority)
-  if (sortMode === 'distance' && userLocation) {
+  if (sortMode === "distance" && userLocation) {
     const distA = a.distance;
     const distB = b.distance;
     if (distA === undefined) return 1;
@@ -70,7 +101,7 @@ const compareSessions = (
   }
 
   // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
-  if (sortMode === 'favorites' && userLocation) {
+  if (sortMode === "favorites" && userLocation) {
     // Favorites come first
     if (isFavA && !isFavB) return -1;
     if (!isFavA && isFavB) return 1;
@@ -122,11 +153,24 @@ export default function ScheduleView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [prioritizeHappeningNow, setPrioritizeHappeningNow] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
-  const [sortMode, setSortMode] = useState<'distance' | 'favorites' | null>(null);
+  const [sortMode, setSortMode] = useState<"distance" | "favorites">(
+    "distance"
+  );
   const [iconJump, setIconJump] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
+  const [sessionIndices, setSessionIndices] = useState<Record<string, number>>(
+    {}
+  ); // Track current session index for each facility/date cell
+
+  // Calculate date range to request from API (yesterday to 7 days ahead)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const weekAhead = new Date(today);
+  weekAhead.setDate(today.getDate() + 7);
 
   const {
     data: sessions,
@@ -139,6 +183,8 @@ export default function ScheduleView() {
     queryFn: () =>
       scheduleApi.getSchedule({
         swim_type: swimType === "ALL" ? undefined : swimType,
+        date_from: yesterday.toISOString().split("T")[0], // Request from yesterday
+        date_to: weekAhead.toISOString().split("T")[0], // Request up to a week ahead
         limit: 1000, // Fetch enough sessions to cover multiple weeks
       }),
     retry: 2,
@@ -205,61 +251,60 @@ export default function ScheduleView() {
     compareSessions(a, b, sortMode, userLocation, isFavorite)
   );
 
-  // Get dates for the selected week (Sunday to Saturday)
-  const getWeekDates = (offset: number = 0) => {
-    // Get today at midnight to avoid timezone issues
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+  // Generate dates starting from yesterday + next 5 days (6 days total)
+  // Apply weekOffset to shift the window forward/backward by weeks
+  // Recalculate today and yesterday to ensure they're current
+  const currentToday = new Date();
+  currentToday.setHours(0, 0, 0, 0);
+  const currentYesterday = new Date(currentToday);
+  currentYesterday.setDate(currentToday.getDate() - 1);
 
-    const currentDay = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const weekDates: Date[] = [];
+  // Apply week offset (each offset shifts by 6 days)
+  const startDate = new Date(currentYesterday);
+  startDate.setDate(currentYesterday.getDate() + weekOffset * 6);
+  startDate.setHours(0, 0, 0, 0);
 
-    // Calculate the start of the week (Sunday) with offset
-    const weekStart = new Date(today);
-    const daysToSunday = currentDay; // Days since last Sunday
-    const offsetDays = offset * 7; // Weeks to offset
-    weekStart.setDate(today.getDate() - daysToSunday + offsetDays);
+  const visibleWeekDates: Date[] = [];
+  for (let i = 0; i < 6; i++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + i);
+    date.setHours(0, 0, 0, 0); // Normalize to midnight
+    visibleWeekDates.push(date);
+  }
 
-    // Calculate dates for each day of the week
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(weekStart);
-      date.setDate(weekStart.getDate() + i);
-      weekDates.push(date);
-    }
-
-    return weekDates;
-  };
-
-  const weekDates = getWeekDates(weekOffset);
-
-  // Show today plus next 6 days (7 days total)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const endDate = new Date(today);
-  endDate.setDate(endDate.getDate() + 6); // Today + 6 more days = 7 days total
-  
-  const visibleWeekDates = weekDates.filter(date => {
-    const dateOnly = new Date(date);
-    dateOnly.setHours(0, 0, 0, 0);
-    return dateOnly >= today && dateOnly <= endDate;
+  // Pre-compute visible date strings once for efficiency
+  const visibleDateStrings = visibleWeekDates.map((d) => {
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const dDay = d.getDate();
+    return `${y}-${String(m).padStart(2, "0")}-${String(dDay).padStart(
+      2,
+      "0"
+    )}`;
   });
 
-  // Filter sessions to only show those in the selected week, and optionally only happening now
+  // Filter sessions to only show those in the visible date range, and optionally only happening now
   const filteredSessions = sortedSessions.filter((session) => {
     // Parse date string as local date to avoid timezone issues
     const [year, month, day] = session.date.split("-").map(Number);
     const sessionDate = new Date(year, month - 1, day);
     sessionDate.setHours(0, 0, 0, 0); // Normalize to midnight
-    const weekStart = weekDates[0];
-    const weekEnd = weekDates[6];
-    const isInWeek = sessionDate >= weekStart && sessionDate <= weekEnd;
+
+    // Create date strings for comparison - normalize session date string
+    const sessionDateString = `${year}-${String(month).padStart(
+      2,
+      "0"
+    )}-${String(day).padStart(2, "0")}`;
+
+    // Check if session date string is in the visible dates (using pre-computed array)
+    const isInRange = visibleDateStrings.includes(sessionDateString);
 
     // If "happening now" filter is active, only show sessions happening right now
     if (prioritizeHappeningNow) {
-      return isInWeek && isHappeningNow(session);
+      return isInRange && isHappeningNow(session);
     }
 
-    return isInWeek;
+    return isInRange;
   });
 
   // Group sessions by date
@@ -328,12 +373,20 @@ export default function ScheduleView() {
     );
   }
 
-  // Group sessions by facility and weekday for table view
+  // Group sessions by facility and date for table view
   const sessionsByFacilityAndDay = filteredSessions.reduce((acc, session) => {
     const facilityName = session.facility?.name || "Unknown";
-    // Parse date string as local date to avoid timezone issues
+    // Normalize date string to ensure consistent format (YYYY-MM-DD)
     const [year, month, day] = session.date.split("-").map(Number);
-    const dayOfWeek = new Date(year, month - 1, day).getDay();
+    const normalizedDateString = `${year}-${String(month).padStart(
+      2,
+      "0"
+    )}-${String(day).padStart(2, "0")}`;
+
+    // Only include sessions for visible dates
+    if (!visibleDateStrings.includes(normalizedDateString)) {
+      return acc;
+    }
 
     if (!acc[facilityName]) {
       acc[facilityName] = {
@@ -343,11 +396,11 @@ export default function ScheduleView() {
       };
     }
 
-    if (!acc[facilityName].sessions[dayOfWeek]) {
-      acc[facilityName].sessions[dayOfWeek] = [];
+    if (!acc[facilityName].sessions[normalizedDateString]) {
+      acc[facilityName].sessions[normalizedDateString] = [];
     }
 
-    acc[facilityName].sessions[dayOfWeek].push(session);
+    acc[facilityName].sessions[normalizedDateString].push(session);
     return acc;
   }, {} as Record<string, { facility: Session["facility"]; sessions: Record<string, SessionWithDistance[]>; distance?: number }>);
 
@@ -356,11 +409,15 @@ export default function ScheduleView() {
   sortedFacilityEntries.sort((a, b) => {
     const facilityA = a[1].facility;
     const facilityB = b[1].facility;
-    const isFavA = facilityA?.facility_id ? isFavorite(facilityA.facility_id) : false;
-    const isFavB = facilityB?.facility_id ? isFavorite(facilityB.facility_id) : false;
+    const isFavA = facilityA?.facility_id
+      ? isFavorite(facilityA.facility_id)
+      : false;
+    const isFavB = facilityB?.facility_id
+      ? isFavorite(facilityB.facility_id)
+      : false;
 
     // Sort by distance mode: pure distance sorting (no favorites priority)
-    if (sortMode === 'distance' && userLocation) {
+    if (sortMode === "distance" && userLocation) {
       const distA = a[1].distance;
       const distB = b[1].distance;
       if (distA === undefined) return 1;
@@ -369,7 +426,7 @@ export default function ScheduleView() {
     }
 
     // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
-    if (sortMode === 'favorites' && userLocation) {
+    if (sortMode === "favorites" && userLocation) {
       // Favorites come first
       if (isFavA && !isFavB) return -1;
       if (!isFavA && isFavB) return 1;
@@ -442,31 +499,28 @@ export default function ScheduleView() {
           <div className="flex items-center justify-center gap-4 mt-6">
             <button
               onClick={() => setWeekOffset(weekOffset - 1)}
-              className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm"
+              className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
             >
-              ← Previous Week
+              ← Prev
             </button>
 
-            <div className="text-center px-6 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="font-semibold text-gray-900 dark:text-gray-100">
+            <div className="text-center px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
                 {weekOffset === 0
                   ? "This Week"
-                  : weekOffset === 1
-                  ? "Next Week"
-                  : weekOffset === -1
-                  ? "Last Week"
-                  : `Week of ${weekDates[0].toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })}`}
+                  : weekOffset > 0
+                  ? `+${weekOffset} Week${weekOffset > 1 ? "s" : ""}`
+                  : `${weekOffset} Week${weekOffset < -1 ? "s" : ""}`}
               </div>
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {weekDates[0].toLocaleDateString("en-US", {
+                {visibleWeekDates[0].toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}{" "}
                 -{" "}
-                {weekDates[6].toLocaleDateString("en-US", {
+                {visibleWeekDates[
+                  visibleWeekDates.length - 1
+                ].toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
@@ -476,10 +530,20 @@ export default function ScheduleView() {
 
             <button
               onClick={() => setWeekOffset(weekOffset + 1)}
-              className="px-4 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm"
+              className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
             >
-              Next Week →
+              Next →
             </button>
+
+            {weekOffset !== 0 && (
+              <button
+                onClick={() => setWeekOffset(0)}
+                className="px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
+                title="Go to today"
+              >
+                Today
+              </button>
+            )}
           </div>
         </div>
 
@@ -505,44 +569,31 @@ export default function ScheduleView() {
                 </div>
               ) : userLocation ? (
                 <>
-                  {/* Sort by location button */}
+                  {/* Combined Location/Favorites button - toggles between distance and favorites */}
                   <button
                     type="button"
                     onClick={() => {
-                      setSortMode(sortMode === 'distance' ? null : 'distance');
+                      // Toggle between distance and favorites
+                      setSortMode(
+                        sortMode === "distance" ? "favorites" : "distance"
+                      );
                     }}
                     className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
-                      sortMode === 'distance'
+                      sortMode === "distance"
                         ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
-                        : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 hover:bg-green-100 dark:hover:bg-green-900/30"
+                        : "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
                     }`}
-                    title="Sort by location (distance only)"
+                    title={
+                      sortMode === "distance"
+                        ? "Sort by location (distance only)"
+                        : "Favorites first, sorted by location"
+                    }
                   >
-                    <Navigation className={`w-5 h-5 transition-all duration-300 ${
-                      sortMode === 'distance'
-                        ? "text-green-600 dark:text-green-400 fill-green-600 dark:fill-green-400"
-                        : "text-green-600 dark:text-green-400"
-                    }`} />
-                  </button>
-
-                  {/* Favorites first button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSortMode(sortMode === 'favorites' ? null : 'favorites');
-                    }}
-                    className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
-                      sortMode === 'favorites'
-                        ? "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
-                        : "bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 hover:bg-yellow-100 dark:hover:bg-yellow-900/30"
-                    }`}
-                    title="Favorites first, sorted by location"
-                  >
-                    <Star className={`w-5 h-5 transition-all duration-300 ${
-                      sortMode === 'favorites'
-                        ? "text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400"
-                        : "text-yellow-600 dark:text-yellow-400"
-                    }`} />
+                    {sortMode === "favorites" ? (
+                      <Star className="w-5 h-5 transition-all duration-300 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400" />
+                    ) : (
+                      <Navigation className="w-5 h-5 transition-all duration-300 text-green-600 dark:text-green-400 fill-green-600 dark:fill-green-400" />
+                    )}
                   </button>
                 </>
               ) : (
@@ -567,13 +618,15 @@ export default function ScheduleView() {
                     : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                 }`}
               >
-                <Waves className={`w-5 h-5 transition-all duration-300 ${
-                  prioritizeHappeningNow
-                    ? "text-blue-600 dark:text-blue-400 animate-pulse"
-                    : "text-blue-500 dark:text-blue-500 opacity-70"
-                }`} />
+                <Waves
+                  className={`w-5 h-5 transition-all duration-300 ${
+                    prioritizeHappeningNow
+                      ? "text-blue-600 dark:text-blue-400 animate-pulse"
+                      : "text-blue-500 dark:text-blue-500 opacity-70"
+                  }`}
+                />
                 <span className="text-blue-800 dark:text-blue-300 ml-2">
-                  Happening now!
+                  Happening now
                 </span>
               </button>
 
@@ -806,66 +859,90 @@ export default function ScheduleView() {
           </div>
         ) : (
           /* Table View */
-          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg overflow-hidden border border-gray-200/50 dark:border-gray-700/50">
-            <div className="overflow-x-auto max-h-[calc(100vh-20rem)] overflow-y-auto">
-              <table className="w-full">
+          <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
+            <div className="overflow-y-auto max-h-[calc(100vh-20rem)] overflow-x-hidden">
+              <table
+                className="w-full table-fixed"
+                style={{ tableLayout: "fixed", width: "100%" }}
+              >
                 <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20 shadow-md">
                   <tr>
-                    <th className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-7 text-left sticky left-0 bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 z-30 shadow-[2px_0_8px_rgba(0,0,0,0.15)] border-r-2 border-primary-400/40">
+                    <th
+                      className="px-3 sm:px-4 py-3 sm:py-4 text-left sticky left-0 bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 z-30 shadow-[2px_0_8px_rgba(0,0,0,0.15)] border-r-2 border-primary-400/40"
+                      style={{
+                        width: "280px",
+                        minWidth: "280px",
+                        maxWidth: "280px",
+                      }}
+                    >
                       <div className="flex items-center gap-2 sm:gap-3">
                         <div className="p-1.5 sm:p-2 bg-white/10 rounded-lg border border-white/20">
-                          {sortMode === 'favorites' ? (
-                            <Star className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 fill-white ${
-                              iconJump ? 'animate-bounce' : ''
-                            }`} />
-                          ) : sortMode === 'distance' ? (
-                            <Navigation className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 ${
-                              iconJump ? 'animate-bounce' : ''
-                            }`} />
+                          {sortMode === "favorites" ? (
+                            <Star
+                              className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 fill-white ${
+                                iconJump ? "animate-bounce" : ""
+                              }`}
+                            />
+                          ) : sortMode === "distance" ? (
+                            <Navigation
+                              className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 fill-white ${
+                                iconJump ? "animate-bounce" : ""
+                              }`}
+                            />
                           ) : (
-                            <MapPin className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 ${
-                              iconJump ? 'animate-bounce' : ''
-                            }`} />
+                            <MapPin
+                              className={`w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-white flex-shrink-0 transition-transform duration-300 ${
+                                iconJump ? "animate-bounce" : ""
+                              }`}
+                            />
                           )}
                         </div>
                         <div className="flex flex-col">
                           <span className="text-xs sm:text-sm md:text-base font-black uppercase tracking-wider text-white leading-tight">
-                            <span className="hidden sm:inline">Community Center</span>
+                            <span className="hidden sm:inline">
+                              Community Centre
+                            </span>
                             <span className="sm:hidden">Pool</span>
                           </span>
                           <span className="text-[10px] sm:text-xs text-primary-100/80 mt-0.5 font-medium">
-                            {sortMode === 'distance' 
-                              ? 'Sorted by Location'
-                              : sortMode === 'favorites'
-                              ? 'Sorted by Favorites'
-                              : 'Location & Distance'}
+                            {sortMode === "distance"
+                              ? "Sorted by Location"
+                              : "Sorted by Favorites"}
                           </span>
                         </div>
                       </div>
                     </th>
                     {visibleWeekDates.map((date, index) => {
                       const formatted = formatWeekdayHeader(date);
-                      const isToday = new Date(date).toDateString() === new Date().toDateString();
+                      const isToday =
+                        new Date(date).toDateString() ===
+                        new Date().toDateString();
                       return (
                         <th
                           key={index}
-                          className={`px-3 sm:px-4 md:px-6 py-4 sm:py-5 md:py-7 text-center min-w-[100px] sm:min-w-[120px] md:min-w-[160px] transition-all relative ${
+                          className={`px-1.5 sm:px-2 py-3 sm:py-4 text-center transition-all relative ${
                             isToday
                               ? "bg-gradient-to-b from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 ring-2 ring-yellow-400 dark:ring-yellow-500 ring-inset shadow-lg"
                               : "bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700"
                           }`}
                         >
-                          <div className="flex flex-col items-center justify-center gap-1.5 sm:gap-2">
-                            <div className={`text-sm sm:text-base md:text-xl font-black uppercase tracking-wider ${
-                              isToday ? "text-yellow-100 drop-shadow-lg" : "text-white"
-                            }`}>
+                          <div className="flex flex-col items-center justify-center gap-1">
+                            <div
+                              className={`text-xs sm:text-sm font-black uppercase tracking-wider ${
+                                isToday
+                                  ? "text-yellow-100 drop-shadow-lg"
+                                  : "text-white"
+                              }`}
+                            >
                               {formatted.weekday}
                             </div>
-                            <div className={`text-xs sm:text-sm md:text-base font-bold px-2 py-1 rounded-md ${
-                              isToday 
-                                ? "bg-yellow-400/20 text-yellow-100 border border-yellow-300/30" 
-                                : "bg-white/10 text-primary-50 border border-white/20"
-                            }`}>
+                            <div
+                              className={`text-[10px] sm:text-xs font-bold px-1.5 py-0.5 rounded-md ${
+                                isToday
+                                  ? "bg-yellow-400/20 text-yellow-100 border border-yellow-300/30"
+                                  : "bg-white/10 text-primary-50 border border-white/20"
+                              }`}
+                            >
                               {formatted.date}
                             </div>
                             {isToday && (
@@ -883,7 +960,14 @@ export default function ScheduleView() {
                       key={facilityName}
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
-                      <td className="px-4 sm:px-6 md:px-8 py-4 sm:py-5 md:py-6 sticky left-0 bg-white/98 dark:bg-gray-800/98 backdrop-blur-md z-10 border-r-2 border-gray-300 dark:border-gray-600 shadow-[2px_0_8px_rgba(0,0,0,0.05)] min-w-[200px] sm:min-w-[250px] md:min-w-[300px]">
+                      <td
+                        className="px-3 sm:px-4 py-2 sm:py-3 sticky left-0 bg-white/98 dark:bg-gray-800/98 backdrop-blur-md z-10 border-r-2 border-gray-300 dark:border-gray-600 shadow-[2px_0_8px_rgba(0,0,0,0.05)]"
+                        style={{
+                          width: "280px",
+                          minWidth: "280px",
+                          maxWidth: "280px",
+                        }}
+                      >
                         <div className="flex items-start gap-3 sm:gap-4">
                           <button
                             onClick={() =>
@@ -928,9 +1012,7 @@ export default function ScheduleView() {
                               data.facility?.address && (
                                 <button
                                   onClick={() =>
-                                    setMapsModalAddress(
-                                      data.facility!.address!
-                                    )
+                                    setMapsModalAddress(data.facility!.address!)
                                   }
                                   className="mb-2 px-2 py-1 text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-300 cursor-pointer transition-all duration-200 flex items-center gap-1.5"
                                   title="Open in maps"
@@ -951,52 +1033,124 @@ export default function ScheduleView() {
                         </div>
                       </td>
                       {visibleWeekDates.map((currentDate, index) => {
-                        // Get day of week (0 = Sunday, 1 = Monday, etc.)
-                        const dayOfWeek = currentDate.getDay();
-                        const daySessions =
-                          data.sessions[String(dayOfWeek)] || [];
-                        const cellKey = `${facilityName}-${dayOfWeek}-${currentDate.toISOString()}`;
+                        // Format date to match session date format (YYYY-MM-DD) using local timezone
+                        // Use the date object directly to avoid timezone conversion issues
+                        // Normalize current date for comparisons
+                        const currentDateNormalized = new Date(currentDate);
+                        currentDateNormalized.setHours(0, 0, 0, 0);
+
+                        const year = currentDate.getFullYear();
+                        const month = currentDate.getMonth() + 1;
+                        const day = currentDate.getDate();
+                        const dateString = `${year}-${String(month).padStart(
+                          2,
+                          "0"
+                        )}-${String(day).padStart(2, "0")}`;
+
+                        // Look up sessions for this date - try exact match first
+                        let daySessions = data.sessions[dateString] || [];
+
+                        // If no sessions found, check all session keys to find matching date
+                        // This handles any date format inconsistencies
+                        if (
+                          daySessions.length === 0 &&
+                          Object.keys(data.sessions).length > 0
+                        ) {
+                          // Try to find sessions by comparing date values
+                          const matchingKey = Object.keys(data.sessions).find(
+                            (key) => {
+                              try {
+                                const [keyYear, keyMonth, keyDay] = key
+                                  .split("-")
+                                  .map(Number);
+                                const keyDate = new Date(
+                                  keyYear,
+                                  keyMonth - 1,
+                                  keyDay
+                                );
+                                keyDate.setHours(0, 0, 0, 0);
+                                return (
+                                  keyDate.getTime() ===
+                                  currentDateNormalized.getTime()
+                                );
+                              } catch {
+                                return false;
+                              }
+                            }
+                          );
+                          if (matchingKey) {
+                            daySessions = data.sessions[matchingKey] || [];
+                          }
+                        }
+
+                        const cellKey = `${facilityName}-${dateString}`;
                         const isExpanded = expandedCells.has(cellKey);
                         const displaySessions = isExpanded
                           ? daySessions
                           : daySessions.slice(0, 3);
-                        const isToday = new Date(currentDate).toDateString() === new Date().toDateString();
+
+                        // Check if this date is today - use normalized dates for accurate comparison
+                        const todayNormalized = new Date();
+                        todayNormalized.setHours(0, 0, 0, 0);
+                        const isToday =
+                          currentDateNormalized.getTime() ===
+                          todayNormalized.getTime();
+
+                        // Check if this date is yesterday
+                        const yesterdayNormalized = new Date(todayNormalized);
+                        yesterdayNormalized.setDate(
+                          todayNormalized.getDate() - 1
+                        );
+                        const isYesterday =
+                          currentDateNormalized.getTime() ===
+                          yesterdayNormalized.getTime();
 
                         return (
                           <td
                             key={index}
-                            className={`px-2 sm:px-3 md:px-4 py-3 sm:py-4 md:py-5 text-center align-top transition-colors ${
+                            className={`px-1 sm:px-1.5 py-2 text-center align-top transition-colors overflow-hidden ${
                               isToday
                                 ? "bg-primary-50/30 dark:bg-primary-900/10 border-l-2 border-r-2 border-primary-300 dark:border-primary-700"
+                                : isYesterday
+                                ? "bg-gray-50/50 dark:bg-gray-800/30 border-l border-r border-gray-200 dark:border-gray-700"
                                 : ""
                             }`}
+                            style={{
+                              width: `calc((100% - 280px) / 6)`,
+                              minWidth: "100px",
+                              maxWidth: "120px",
+                            }}
                           >
                             {daySessions.length > 0 ? (
-                              <div className="space-y-2 sm:space-y-2.5">
+                              <div className="space-y-1.5 sm:space-y-2">
                                 {displaySessions.map((session) => {
                                   const happeningNow = isHappeningNow(session);
 
                                   return (
                                     <div
                                       key={session.id}
-                                      className={`group relative p-2 sm:p-2.5 rounded-lg transition-all duration-200 hover:scale-[1.02] hover:shadow-md ${
+                                      className={`group relative p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md overflow-hidden ${
                                         happeningNow
                                           ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
                                           : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
-                                      <div className={`text-xs sm:text-sm font-bold whitespace-nowrap mb-1.5 ${
-                                        happeningNow
-                                          ? "text-yellow-900 dark:text-yellow-100"
-                                          : "text-gray-900 dark:text-gray-100"
-                                      }`}>
+                                      <div
+                                        className={`text-[10px] sm:text-xs font-bold mb-1 break-words leading-tight ${
+                                          happeningNow
+                                            ? "text-yellow-900 dark:text-yellow-100"
+                                            : isToday || isYesterday
+                                            ? "text-primary-700 dark:text-primary-300 font-semibold"
+                                            : "text-gray-900 dark:text-gray-100"
+                                        }`}
+                                      >
                                         {formatTimeRange(
                                           session.start_time,
                                           session.end_time
                                         )}
                                       </div>
                                       <span
-                                        className={`inline-block px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold shadow-sm ${getSwimTypeColor(
+                                        className={`inline-block px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold shadow-sm break-words ${getSwimTypeColor(
                                           session.swim_type
                                         )}`}
                                       >

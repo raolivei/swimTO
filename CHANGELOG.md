@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.2] - 2025-11-20
 
+### Fixed
+
+- **📅 Date Display Fix**: Fixed today's and yesterday's sessions not appearing in schedule
+  - Added explicit date range requests to API (yesterday to 7 days ahead)
+  - Improved date matching with fallback logic for format inconsistencies
+  - Enhanced visual highlighting for yesterday and today with emphasized time display
+
 ### Changed
 
 - **🎨 UI/UX Improvements**: Enhanced sorting and button design
@@ -65,6 +72,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **⏰ Travel Time Window**: Enhanced "Happening Now" filter with 30-minute travel window
+
   - Sessions starting within 30 minutes are now included (travel time consideration)
   - Makes the filter more useful for finding sessions you can still make it to
   - Shows sessions from (start_time - 30 min) to end_time
