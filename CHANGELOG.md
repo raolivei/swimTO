@@ -19,6 +19,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🌐 Public Domain Support**: Configured `swimto.eldertree.xyz` with Cloudflare Origin Certificates
+
+---
+
+## [0.5.2] - 2025-11-20
+
+### Changed
+
+- **🎨 UI/UX Improvements**: Enhanced sorting and button design
+  - "Location enabled" button now acts as sort toggle with beautiful styling
+  - Button shows "Sort by location" and toggles between two modes:
+    - **OFF (unpressed)**: Favorites first, sorted by location/distance
+    - **ON (pressed)**: Pure distance sorting (no favorites priority)
+  - Circle indicators: outlined when off, filled when on (better visual feedback)
+  - Styled to match "Happening now" button aesthetic (green theme)
+  - "Happening now" button moved next to location button for better grouping
+  - Community Center header cell made more compact and beautiful with icon
+
+### Improved
+
+- **🔧 Code Simplification**: Refactored sorting logic
+  - Created reusable `compareSessions` helper function
+  - Eliminated code duplication across multiple sorting locations
+  - Cleaner, more maintainable codebase
   - Added public domain ingress resources with Cloudflare Origin Certificate TLS
   - Updated OAuth redirect URI to use `https://swimto.eldertree.xyz/auth/callback`
   - Added new domain to CORS origins for API access
