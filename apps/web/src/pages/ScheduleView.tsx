@@ -22,10 +22,7 @@ import {
   Table2,
   Navigation,
   Star,
-  ArrowUpDown,
   Waves,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -51,30 +48,6 @@ const isHappeningNow = (session: Session): boolean => {
   return travelWindowStart <= now && now < sessionEnd;
 };
 
-// Helper function to find the index of the next or current session
-const findNextOrCurrentSessionIndex = (sessions: Session[]): number => {
-  if (sessions.length === 0) return 0;
-
-  const now = new Date();
-
-  for (let i = 0; i < sessions.length; i++) {
-    const session = sessions[i];
-    const sessionStart = new Date(`${session.date} ${session.start_time}`);
-    const travelWindowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000);
-    const sessionEnd = new Date(`${session.date} ${session.end_time}`);
-
-    // If session is happening now or upcoming, return its index
-    if (travelWindowStart <= now && now < sessionEnd) {
-      return i; // Current session
-    }
-    if (sessionStart > now) {
-      return i; // Next upcoming session
-    }
-  }
-
-  // If no upcoming session, return the last session
-  return sessions.length - 1;
-};
 
 // Helper function to compare sessions for sorting
 const compareSessions = (
@@ -160,9 +133,6 @@ export default function ScheduleView() {
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
-  const [sessionIndices, setSessionIndices] = useState<Record<string, number>>(
-    {}
-  ); // Track current session index for each facility/date cell
 
   // Calculate date range to request from API (yesterday to 7 days ahead)
   const today = new Date();

@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(userData);
         localStorage.setItem(USER_KEY, JSON.stringify(userData));
         return userData;
-      } catch (_error) {
+      } catch {
         // Token is invalid, clear it
         localStorage.removeItem(AUTH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
