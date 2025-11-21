@@ -19,10 +19,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - **🌐 Public Domain Support**: Configured `swimto.eldertree.xyz` with Cloudflare Origin Certificates
+- **Favorites**: Star icon to favorite facilities, persists via localStorage, gold map markers
+- **Real-Time Updates Page**: Explains daily refresh process and data sources
+- **Clickable Widgets**: Homepage cards link to respective pages
+- **Clickable Facility Names**: Link to official websites
+- **Maps Modal**: Choose Google Maps or Apple Maps when clicking distance
+- **Map Search**: Search facilities by name, address, or district
+- **Dark Mode**: Auto-detection, manual toggle, dark map tiles, WCAG AA compliant
+- **Mobile Testing**: Playwright tests for network, schedule, map (5 device types)
+- **PWA Support**: Web manifest, iOS meta tags, theme colors
+- **Mobile UI**: Full-width sidebar, 44x44px touch targets, safe area insets
+- **CSS**: Mobile styles, prevent zoom on input, touch-action support
+- **Dev Tools**: `npm run dev:mobile` and `npm run test:mobile` commands
+
+### Fixed
+
+- **Schedule Rendering**: Fixed `filteredSessions` used before definition
+- **Date Timezone**: Fixed off-by-one day error, dates parse as local time
+- **Mobile Network**: Fixed API connectivity, updated docker-compose to use network IP
+- **Facility Coordinates**: Geocoded 47 facilities using Nominatim API
+- **Website URLs**: Updated 2 facilities to new Toronto.ca format, removed 40 broken links
+- **Schedule Table**: "+X more" buttons now expandable
+- **Mobile Logo**: Reduced spacing, smaller icon (32px), hidden tagline
+- **Error Messages**: Improved with troubleshooting steps and iPhone-specific suggestions
+
+### Improved
+
+- **Data Quality**: Removed 1,904 demo sessions, verified 2,325 real sessions
+- Enhanced accessibility, error handling, responsive navigation
 
 ---
 
-## [0.5.1] - 2025-11-20
+## [0.6.0] - 2025-11-13
 
 ### Fixed
 
@@ -55,8 +83,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **🔧 Code**: Refactored sorting logic with reusable `compareSessions` helper
 - **🌐 Infrastructure**: Added Cloudflare Origin Certificate TLS for public domain
-  - Updated OAuth redirect URI to `https://swimto.eldertree.xyz/auth/callback`
-  - Added domain to CORS origins
   - Certificate management via Terraform
 
 ---
@@ -104,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.3.0] - 2025-11-15
+## [0.2.2] - 2025-11-04
 
 ### Fixed
 
@@ -116,43 +142,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.1.5] - 2025-01-XX
-
-### Added
-
-- Kubernetes ingress, build/deployment docs, GHCR/Vault secret management scripts
-
-### Changed
-
-- Updated GitHub Actions, Dockerfiles, Kubernetes manifests, frontend components
-
-## [Unreleased]
-
-### Added
-
-- **Favorites**: Star icon to favorite facilities, persists via localStorage, gold map markers
-- **Real-Time Updates Page**: Explains daily refresh process and data sources
-- **Clickable Widgets**: Homepage cards link to respective pages
-- **Clickable Facility Names**: Link to official websites
-- **Maps Modal**: Choose Google Maps or Apple Maps when clicking distance
-- **Map Search**: Search facilities by name, address, or district
-- **Dark Mode**: Auto-detection, manual toggle, dark map tiles, WCAG AA compliant
+## [0.2.1] - 2025-11-04
 
 ### Fixed
 
-- **Facility Coordinates**: Geocoded 47 facilities using Nominatim API
-- **Website URLs**: Updated 2 facilities to new Toronto.ca format, removed 40 broken links
-- **Schedule Table**: "+X more" buttons now expandable
-- **Mobile Logo**: Reduced spacing, smaller icon (32px), hidden tagline
-- **Error Messages**: Improved with troubleshooting steps and iPhone-specific suggestions
+- Enhanced error handling UI, NavLink active states, exponential backoff (2 retries)
 
-### Technical
+### Added
 
-- Updated ScheduleView to request 1000 sessions, added favorites utilities, error classification
+- CHANGELOG.md, detailed error messages with expandable technical details
 
 ---
 
-## [0.2.0] - 2025-11-05
+## [0.2.0] - 2025-11-04
 
 ### Changed
 
@@ -167,38 +169,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - README.md, MASTER_PROMPT.md, all version references to 0.2.0
 
-## [Unreleased]
+---
 
-### Fixed
-
-- **Schedule Rendering**: Fixed `filteredSessions` used before definition
-- **Date Timezone**: Fixed off-by-one day error, dates parse as local time
-- **Mobile Network**: Fixed API connectivity, updated docker-compose to use network IP
-
-### Added
-
-- **Mobile Testing**: Playwright tests for network, schedule, map (5 device types)
-- **PWA Support**: Web manifest, iOS meta tags, theme colors
-- **Mobile UI**: Full-width sidebar, 44x44px touch targets, safe area insets
-- **CSS**: Mobile styles, prevent zoom on input, touch-action support
-- **Dev Tools**: `npm run dev:mobile` and `npm run test:mobile` commands
-
-### Improved
-
-- **Data Quality**: Removed 1,904 demo sessions, verified 2,325 real sessions
-- Enhanced accessibility, error handling, responsive navigation
-
-## [0.1.2] - 2025-11-05
-
-### Fixed
-
-- Enhanced error handling UI, NavLink active states, exponential backoff (2 retries)
-
-### Added
-
-- CHANGELOG.md, detailed error messages with expandable technical details
-
-## [0.1.0] - 2025-11-05
+## [0.1.0] - 2025-11-04
 
 ### Added
 
@@ -207,12 +180,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Data Pipeline**: Toronto Open Data ingestion, XML parser, web scraper
 - **Infrastructure**: Kubernetes manifests, Docker Compose, CI/CD pipelines
 - **Documentation**: API reference, deployment guides, architecture docs
-
-## [0.0.1] - 2025-11-05
-
-### Added
-
-- Initial project structure, Git setup, basic documentation, license and environment config
 
 ---
 
