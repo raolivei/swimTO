@@ -22,6 +22,7 @@ import {
   Table2,
   Navigation,
   Star,
+  ArrowUpDown,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -33,13 +34,18 @@ interface SessionWithDistance extends Session {
 }
 
 // Helper function to check if a session is happening right now
+// Includes a 30-minute travel time window before the start time
 const isHappeningNow = (session: Session): boolean => {
   const now = new Date();
   const sessionStart = new Date(`${session.date} ${session.start_time}`);
   const sessionEnd = new Date(`${session.date} ${session.end_time}`);
+  
+  // Subtract 30 minutes from start time for travel window
+  const travelWindowStart = new Date(sessionStart.getTime() - 30 * 60 * 1000);
 
-  // Session is happening now if: start_time <= now < end_time
-  return sessionStart <= now && now < sessionEnd;
+  // Session is happening now if: (start_time - 30 min) <= now < end_time
+  // This includes sessions starting within 30 minutes (travel time) and currently in progress
+  return travelWindowStart <= now && now < sessionEnd;
 };
 
 export default function ScheduleView() {
@@ -54,6 +60,7 @@ export default function ScheduleView() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [prioritizeHappeningNow, setPrioritizeHappeningNow] = useState(false);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
+  const [sortByDistance, setSortByDistance] = useState(false);
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
@@ -121,14 +128,38 @@ export default function ScheduleView() {
       return session;
     }) || [];
 
-  // Always sort sessions by distance when location is available
-  const sortedSessions = userLocation
-    ? [...sessionsWithDistance].sort((a, b) => {
-        if (a.distance === undefined) return 1;
-        if (b.distance === undefined) return -1;
-        return a.distance - b.distance;
-      })
-    : sessionsWithDistance;
+  // Sort sessions: favorites first, then by distance (if enabled) or chronologically
+  const sortedSessions = [...sessionsWithDistance].sort((a, b) => {
+    const isFavA = a.facility?.facility_id
+      ? isFavorite(a.facility.facility_id)
+      : false;
+    const isFavB = b.facility?.facility_id
+      ? isFavorite(b.facility.facility_id)
+      : false;
+
+    // Favorites always come first
+    if (isFavA && !isFavB) return -1;
+    if (!isFavA && isFavB) return 1;
+
+    // If both are favorites or both are not favorites, sort by distance (if enabled) or chronologically
+    if (sortByDistance && userLocation) {
+      const distA = a.distance;
+      const distB = b.distance;
+      if (distA === undefined) return 1;
+      if (distB === undefined) return -1;
+      return distA - distB;
+    }
+
+    // Default: chronological order (by date, then start time)
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    if (dateA.getTime() !== dateB.getTime()) {
+      return dateA.getTime() - dateB.getTime();
+    }
+    const timeA = a.start_time;
+    const timeB = b.start_time;
+    return timeA.localeCompare(timeB);
+  });
 
   // Get dates for the selected week (Sunday to Saturday)
   const getWeekDates = (offset: number = 0) => {
@@ -264,7 +295,7 @@ export default function ScheduleView() {
     return acc;
   }, {} as Record<string, { facility: Session["facility"]; sessions: Record<string, SessionWithDistance[]>; distance?: number }>);
 
-  // Sort facilities: favorites first, then always by distance when location available
+  // Sort facilities: favorites first, then by distance (if enabled) or alphabetically
   const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {});
   sortedFacilityEntries.sort((a, b) => {
     const facilityA = a[1].facility;
@@ -280,8 +311,8 @@ export default function ScheduleView() {
     if (isFavA && !isFavB) return -1;
     if (!isFavA && isFavB) return 1;
 
-    // Then always sort by distance when location is available
-    if (userLocation) {
+    // Then sort by distance (if enabled) or alphabetically
+    if (sortByDistance && userLocation) {
       const distA = a[1].distance;
       const distB = b[1].distance;
       if (distA === undefined) return 1;
@@ -289,7 +320,10 @@ export default function ScheduleView() {
       return distA - distB;
     }
 
-    return 0;
+    // Default: alphabetical order
+    const nameA = facilityA?.name || "";
+    const nameB = facilityB?.name || "";
+    return nameA.localeCompare(nameB);
   });
 
   const weekdays = [
@@ -394,7 +428,7 @@ export default function ScheduleView() {
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
                   <Navigation className="w-4 h-4 text-green-600 dark:text-green-400" />
                   <span className="text-green-800 dark:text-green-300 font-medium">
-                    Sorted by distance
+                    Location enabled
                   </span>
                   <button
                     onClick={handleGetLocation}
@@ -412,6 +446,26 @@ export default function ScheduleView() {
                 >
                   <Navigation className="w-4 h-4" />
                   <span>Enable Location</span>
+                </button>
+              )}
+
+              {/* Sort button - only show when location is enabled */}
+              {userLocation && (
+                <button
+                  onClick={() => setSortByDistance(!sortByDistance)}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                    sortByDistance
+                      ? "bg-primary-100 dark:bg-primary-900/30 border border-primary-300 dark:border-primary-700 text-primary-700 dark:text-primary-300"
+                      : "bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  }`}
+                  title={
+                    sortByDistance
+                      ? "Sorting by distance - Click to sort favorites first"
+                      : "Favorites sorted first - Click to sort by distance"
+                  }
+                >
+                  <ArrowUpDown className="w-4 h-4" />
+                  <span>{sortByDistance ? "Sort by distance" : "Favorites first"}</span>
                 </button>
               )}
 
@@ -518,7 +572,7 @@ export default function ScheduleView() {
             {sortedDates.map((date) => {
               let dateSessions = sessionsByDate[date];
 
-              // Sort sessions within each date: favorites first, then always by distance when available
+              // Sort sessions within each date: favorites first, then by distance (if enabled) or chronologically
               dateSessions = [...dateSessions].sort((a, b) => {
                 const isFavA = a.facility?.facility_id
                   ? isFavorite(a.facility.facility_id)
@@ -531,8 +585,8 @@ export default function ScheduleView() {
                 if (isFavA && !isFavB) return -1;
                 if (!isFavA && isFavB) return 1;
 
-                // Then always sort by distance when location is available
-                if (userLocation) {
+                // Then sort by distance (if enabled) or chronologically
+                if (sortByDistance && userLocation) {
                   const distA = a.distance;
                   const distB = b.distance;
                   if (distA === undefined) return 1;
@@ -540,7 +594,8 @@ export default function ScheduleView() {
                   return distA - distB;
                 }
 
-                return 0;
+                // Default: chronological order (by start time)
+                return a.start_time.localeCompare(b.start_time);
               });
               return (
                 <div

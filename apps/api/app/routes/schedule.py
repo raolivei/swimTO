@@ -3,14 +3,24 @@ from typing import List
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from datetime import date as date_type, time as time_type
+from datetime import date as date_type, time as time_type, datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from app.database import get_db
 from app.models import Session as SessionModel, Facility
 from app.schemas import SessionWithFacility
 
 router = APIRouter()
+
+# Toronto timezone for determining "today"
+TORONTO_TZ = ZoneInfo('America/Toronto')
+
+
+def get_today_toronto() -> date_type:
+    """Get today's date in Toronto timezone."""
+    now_toronto = datetime.now(TORONTO_TZ)
+    return now_toronto.date()
 
 
 @router.get("/", response_model=List[SessionWithFacility])
@@ -44,8 +54,8 @@ async def get_schedule(
     if date_from:
         filters.append(SessionModel.date >= date_from)
     else:
-        # Default to today onwards
-        filters.append(SessionModel.date >= date_type.today())
+        # Default to today onwards (in Toronto timezone)
+        filters.append(SessionModel.date >= get_today_toronto())
     
     if date_to:
         filters.append(SessionModel.date <= date_to)
@@ -85,8 +95,8 @@ async def get_today_schedule(
     swim_type: Optional[str] = Query(None, description="Filter by swim type"),
     db: Session = Depends(get_db)
 ):
-    """Get today's swim schedule."""
-    today = date_type.today()
+    """Get today's swim schedule (in Toronto timezone)."""
+    today = get_today_toronto()
     
     query = db.query(SessionModel).join(Facility).filter(
         SessionModel.date == today

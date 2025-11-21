@@ -27,6 +27,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No ACME challenges or port forwarding needed
   - **Infrastructure as Code**: Certificate management via Terraform (automated setup)
 
+---
+
+## [0.5.1] - 2025-11-20
+
+### Fixed
+
+- **🕐 Timezone Fix**: Fixed "today's schedule" returning wrong date due to UTC timezone
+  - API now uses Toronto timezone (`America/Toronto`) to determine "today"
+  - Fixes issue where schedules for tomorrow were shown when container was in UTC
+  - `/schedule/today` endpoint now correctly returns sessions for the current day in Toronto
+  - Default `date_from` filter also uses Toronto timezone
+
+### Added
+
+- **⏰ Travel Time Window**: Enhanced "Happening Now" filter with 30-minute travel window
+  - Sessions starting within 30 minutes are now included (travel time consideration)
+  - Makes the filter more useful for finding sessions you can still make it to
+  - Shows sessions from (start_time - 30 min) to end_time
+
+- **🔄 Sort Toggle Button**: Added sort button to toggle between sorting modes
+  - **Unpressed (default)**: Favorites sorted first, then chronological order
+  - **Pressed**: Favorites sorted first, then by distance (when location enabled)
+  - Only appears when location is enabled
+  - Clear visual feedback showing current sort mode
+  - Works in both list and table view modes
+
 ### Changed
 
 - Updated Google OAuth redirect URI to use public domain (`swimto.eldertree.xyz`)
