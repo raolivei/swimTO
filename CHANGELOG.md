@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.6.0] - 2025-11-13
+## [0.6.0] - 2025-11-20
 
 ### Fixed
 
@@ -130,7 +130,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.2.2] - 2025-11-04
+## [0.2.2] - 2025-11-14
 
 ### Fixed
 
@@ -139,18 +139,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical
 
 - Added Vite proxy handler for trailing slashes, improved env variable handling
-
----
-
-## [0.2.1] - 2025-11-04
-
-### Fixed
-
-- Enhanced error handling UI, NavLink active states, exponential backoff (2 retries)
-
-### Added
-
-- CHANGELOG.md, detailed error messages with expandable technical details
 
 ---
 
@@ -164,6 +152,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - PROJECT_STRATEGY.md, COPYRIGHT, LICENSE files
 - GitHub Actions workflows, enhanced Kubernetes security contexts
+- CHANGELOG.md, detailed error messages with expandable technical details
+
+### Fixed
+
+- Enhanced error handling UI, NavLink active states, exponential backoff (2 retries)
 
 ### Updated
 
