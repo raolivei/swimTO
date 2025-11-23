@@ -41,13 +41,18 @@ fi
 
 echo -e "${GREEN}Found Vault pod: ${VAULT_POD}${NC}"
 
-# Get Vault token (check logs for root token in dev mode)
+# Get Vault token (use project-specific token if available, fallback to root)
 echo -e "${GREEN}Getting Vault token...${NC}"
-VAULT_TOKEN=$(kubectl logs -n vault $VAULT_POD 2>/dev/null | grep "Root Token" | tail -1 | awk '{print $NF}')
+VAULT_TOKEN=$(kubectl get secret vault-token-swimto -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
 
 if [ -z "$VAULT_TOKEN" ]; then
-    echo -e "${YELLOW}Warning: Could not find root token in logs. Using 'root' as default for dev mode.${NC}"
-    VAULT_TOKEN="root"
+    echo -e "${YELLOW}Warning: Project-specific token not found. Trying root token...${NC}"
+    VAULT_TOKEN=$(kubectl get secret vault-token -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+    
+    if [ -z "$VAULT_TOKEN" ]; then
+        echo -e "${YELLOW}Warning: Root token not found. Using 'root' as default for dev mode.${NC}"
+        VAULT_TOKEN="root"
+    fi
 fi
 
 # Generate secure random secrets

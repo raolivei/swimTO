@@ -33,14 +33,18 @@ if [ -z "$VAULT_POD" ]; then
     exit 1
 fi
 
-# Get Vault token
-VAULT_TOKEN=$(kubectl logs -n vault $VAULT_POD 2>/dev/null | grep "Root Token" | tail -1 | awk '{print $NF}')
+# Get Vault token (prefer project-specific token, fallback to root)
+VAULT_TOKEN=$(kubectl get secret vault-token-swimto -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+
 if [ -z "$VAULT_TOKEN" ]; then
-    VAULT_TOKEN="root"
+    VAULT_TOKEN=$(kubectl get secret vault-token -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+    if [ -z "$VAULT_TOKEN" ]; then
+        VAULT_TOKEN="root"
+    fi
 fi
 
 # Try to get token from Vault
-    GHCR_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv get -field=token secret/swimto/ghcr-token 2>/dev/null" || echo "")
+GHCR_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv get -field=token secret/swimto/ghcr-token 2>/dev/null" || echo "")
 
 if [ -n "$GHCR_TOKEN" ]; then
     echo -e "${GREEN}✅ Found GHCR token in Vault!${NC}"

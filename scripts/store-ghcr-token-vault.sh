@@ -56,37 +56,44 @@ fi
 
 echo -e "${GREEN}Vault is unsealed${NC}"
 
-# Get root token
+# Get SwimTO project token (preferred) or root token (fallback)
 if [ -n "$1" ]; then
-    VAULT_ROOT_TOKEN="$1"
-    echo -e "${GREEN}Using provided root token${NC}"
+    VAULT_TOKEN="$1"
+    echo -e "${GREEN}Using provided token${NC}"
 else
-    # Try to get from external-secrets secret
-    VAULT_ROOT_TOKEN=$(kubectl get secret vault-token -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+    # Try to get project-specific token first
+    VAULT_TOKEN=$(kubectl get secret vault-token-swimto -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
     
-    if [ -z "$VAULT_ROOT_TOKEN" ]; then
-        echo -e "${YELLOW}Root token not found in external-secrets namespace${NC}"
-        echo -e "${YELLOW}Please provide the Vault root token:${NC}"
-        read -s VAULT_ROOT_TOKEN
-        if [ -z "$VAULT_ROOT_TOKEN" ]; then
-            echo -e "${RED}Error: Root token is required${NC}"
-            exit 1
+    if [ -z "$VAULT_TOKEN" ]; then
+        echo -e "${YELLOW}Project-specific token not found. Trying root token...${NC}"
+        VAULT_TOKEN=$(kubectl get secret vault-token -n external-secrets -o jsonpath='{.data.token}' 2>/dev/null | base64 -d 2>/dev/null || echo "")
+        
+        if [ -z "$VAULT_TOKEN" ]; then
+            echo -e "${YELLOW}Root token not found in external-secrets namespace${NC}"
+            echo -e "${YELLOW}Please provide the Vault token:${NC}"
+            read -s VAULT_TOKEN
+            if [ -z "$VAULT_TOKEN" ]; then
+                echo -e "${RED}Error: Token is required${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${GREEN}Found root token in external-secrets namespace${NC}"
         fi
     else
-        echo -e "${GREEN}Found root token in external-secrets namespace${NC}"
+        echo -e "${GREEN}Found SwimTO project token in external-secrets namespace${NC}"
     fi
 fi
 
 # Store the token
 echo -e "${GREEN}Storing GHCR token in Vault...${NC}"
-kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_ROOT_TOKEN}' && vault kv put ${VAULT_PATH} token='${GHCR_TOKEN}'"
+kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv put ${VAULT_PATH} token='${GHCR_TOKEN}'"
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ Successfully stored GHCR token in Vault at ${VAULT_PATH}${NC}"
     
     # Verify it was stored
     echo -e "${GREEN}Verifying storage...${NC}"
-    STORED_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_ROOT_TOKEN}' && vault kv get -field=token ${VAULT_PATH} 2>/dev/null" || echo "")
+    STORED_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv get -field=token ${VAULT_PATH} 2>/dev/null" || echo "")
     
     if [ "$STORED_TOKEN" = "$GHCR_TOKEN" ]; then
         echo -e "${GREEN}✅ Verification successful!${NC}"
