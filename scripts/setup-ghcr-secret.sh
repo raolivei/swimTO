@@ -36,7 +36,7 @@ if [ -n "$VAULT_POD" ]; then
         VAULT_TOKEN="root"
     fi
     
-    GHCR_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv get -field=token secret/canopy/ghcr-token 2>/dev/null" || echo "")
+    GHCR_TOKEN=$(kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv get -field=token secret/swimto/ghcr-token 2>/dev/null" || echo "")
     
     if [ -n "$GHCR_TOKEN" ]; then
         echo -e "${GREEN}Found GHCR token in Vault${NC}"
@@ -71,7 +71,7 @@ if [ -n "$GHCR_TOKEN" ]; then
     # Optionally store in Vault
     read -p "Store token in Vault? (y/n): " STORE_IN_VAULT
     if [ "$STORE_IN_VAULT" = "y" ] && [ -n "$VAULT_POD" ]; then
-        kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv put secret/canopy/ghcr-token token='${GHCR_TOKEN}'" 2>/dev/null
+        kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN='${VAULT_TOKEN}' && vault kv put secret/swimto/ghcr-token token='${GHCR_TOKEN}'" 2>/dev/null
         echo -e "${GREEN}✅ Stored token in Vault${NC}"
     fi
 else
@@ -86,5 +86,6 @@ fi
 
 =======
 >>>>>>> origin/main
+
 
 

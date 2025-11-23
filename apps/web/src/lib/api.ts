@@ -143,7 +143,6 @@ export const favoritesApi = {
   },
 };
 
-
 /**
  * Get a user-friendly error message from an API error
  * Provides specific details for common error scenarios
@@ -160,7 +159,9 @@ export function getApiErrorMessage(error: unknown): {
       return {
         title: "Network Connection Failed",
         message: "Unable to connect to the SwimTO server.",
-        details: `Error: ${error.message}. Attempted URL: ${error.config?.baseURL || API_BASE_URL}${error.config?.url || ""}`,
+        details: `Error: ${error.message}. Attempted URL: ${
+          error.config?.baseURL || API_BASE_URL
+        }${error.config?.url || ""}`,
         suggestions: [
           "Check that you are connected to WiFi or cellular data",
           "Try disabling any VPN or proxy connections",
@@ -250,7 +251,9 @@ export function getApiErrorMessage(error: unknown): {
       return {
         title: "Server Unavailable",
         message: "The SwimTO server is not accepting connections.",
-        details: `Connection refused to ${API_BASE_URL}. API endpoint: ${error.config?.url || "unknown"}`,
+        details: `Connection refused to ${API_BASE_URL}. API endpoint: ${
+          error.config?.url || "unknown"
+        }`,
         suggestions: [
           "The server may be down for maintenance",
           "Try again in a few minutes",

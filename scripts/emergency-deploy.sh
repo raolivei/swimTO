@@ -84,3 +84,4 @@ echo "    kubectl logs -n $NAMESPACE -l app=swimto-web"
 
 
 
+

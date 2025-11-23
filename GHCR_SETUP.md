@@ -32,13 +32,13 @@ export GHCR_TOKEN="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 export KUBECONFIG=~/.kube/config-eldertree
 VAULT_POD=$(kubectl get pods -n vault -l app.kubernetes.io/name=vault -o jsonpath='{.items[0].metadata.name}')
 
-kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN=root && vault kv put secret/canopy/ghcr-token token='${GHCR_TOKEN}'"
+kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN=root && vault kv put secret/swimto/ghcr-token token='${GHCR_TOKEN}'"
 ```
 
 Expected output:
 ```
 ====== Secret Path ======
-secret/data/canopy/ghcr-token
+secret/data/swimto/ghcr-token
 
 ======= Metadata =======
 Key                Value
@@ -63,7 +63,7 @@ version            1
 
 ```bash
 # Check Vault has the token
-kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN=root && vault kv get secret/canopy/ghcr-token"
+kubectl exec -n vault $VAULT_POD -- sh -c "export VAULT_ADDR=http://127.0.0.1:8200 && export VAULT_TOKEN=root && vault kv get secret/swimto/ghcr-token"
 
 # Trigger a workflow run manually
 gh workflow run build-and-push.yml --ref main

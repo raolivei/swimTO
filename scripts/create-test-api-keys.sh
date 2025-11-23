@@ -118,3 +118,4 @@ echo -e "${GREEN}to Kubernetes within 24 hours, or immediately on ExternalSecret
 >>>>>>> origin/main
 
 
+
