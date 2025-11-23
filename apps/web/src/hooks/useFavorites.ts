@@ -45,7 +45,8 @@ export function useFavorites() {
         queryClient.invalidateQueries({ queryKey: ["favorites"] });
       });
     }
-  }, [isAuthenticated, queryClient]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, queryClient, localFavorites.size]);
 
   // Add favorite mutation
   const addMutation = useMutation({

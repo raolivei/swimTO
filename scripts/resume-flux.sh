@@ -29,3 +29,5 @@ echo "💡 Check Flux status:"
 echo "    flux get kustomizations -A"
 echo "    flux logs --follow"
 
+
+
