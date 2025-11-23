@@ -8,10 +8,11 @@ let apiBaseUrl = import.meta.env.VITE_API_URL?.trim() || "/api";
 if (!apiBaseUrl.startsWith("http")) {
   // Relative URL - ensure it uses the same protocol as the current page
   // If page is HTTPS, use HTTPS; if HTTP, use HTTP
-  if (typeof window !== "undefined" && window.location.protocol === "https:") {
-    // For relative URLs on HTTPS pages, they automatically use HTTPS
-    // But we can also construct an absolute URL to be explicit
-    apiBaseUrl = `${window.location.protocol}//${window.location.host}${apiBaseUrl}`;
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    // Always use the same protocol as the current page to avoid mixed content errors
+    apiBaseUrl = `${protocol}//${host}${apiBaseUrl}`;
   }
 }
 const API_BASE_URL = apiBaseUrl;
