@@ -66,6 +66,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.5.1] - 2025-11-25
+
+### Fixed
+
+- **🔐 Login Visibility**: Increased z-index of login error popup and header to ensuring they appear above the map
+- **🔒 HTTPS/Mixed Content**: Forcing HTTPS for API requests when on an HTTPS page to prevent mixed content errors and Google login failures
+- **📱 Mobile Layout**: Adjusted sidebar positioning on mobile to prevent overlap with the search bar
+
 ## [0.5.0] - 2025-11-20
 
 ### Added

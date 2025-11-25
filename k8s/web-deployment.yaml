@@ -14,14 +14,18 @@ spec:
     metadata:
       labels:
         app: swimto-web
+      annotations:
+        deployment.kubernetes.io/revision: "2025-11-25-v0.5.1"
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
       containers:
         - name: web
-          image: ghcr.io/raolivei/swimto-web:latest
+          image: ghcr.io/raolivei/swimto-web:v0.5.1 # {"$imagepolicy": "swimto:swimto-web-policy"}
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
