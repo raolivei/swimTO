@@ -93,9 +93,14 @@ class UpdateResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    """Health check response."""
+    """Health check response.
+    
+    Status can be "healthy" (app and DB working) or "degraded" (app working but DB unavailable).
+    Database field indicates connection status: "connected", "disconnected", "timeout", or "error".
+    """
     status: str
     version: str
+    database: Optional[str] = None  # Database connection status
     timestamp: datetime = Field(default_factory=datetime.utcnow)
 
 

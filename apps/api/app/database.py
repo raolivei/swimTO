@@ -5,7 +5,11 @@ from typing import Generator
 
 from app.config import settings
 
-# Create engine with connection timeout and retry settings
+# Create engine
+# Connection settings optimized for Kubernetes environment:
+# - connect_timeout: Prevents hanging on connection attempts
+# - statement_timeout: Prevents long-running queries from blocking
+# - pool_recycle: Recycles connections to prevent stale connections
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
@@ -13,7 +17,7 @@ engine = create_engine(
     max_overflow=10,
     connect_args={
         "connect_timeout": 10,  # 10 second connection timeout
-        "options": "-c statement_timeout=5000"  # 5 second statement timeout
+        "options": "-c statement_timeout=30000"  # 30 second statement timeout (increased for complex queries)
     },
     pool_recycle=3600,  # Recycle connections after 1 hour
     echo=False

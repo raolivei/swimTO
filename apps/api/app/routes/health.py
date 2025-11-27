@@ -21,28 +21,37 @@ async def health_check():
     pod to be ready even if database is temporarily unavailable.
     """
     # Check database connection with timeout (non-blocking)
-    db_healthy = False
+    # This health check is designed to be resilient - it returns HTTP 200 even if DB is down
+    # so Kubernetes probes succeed and the pod can be marked as ready
+    db_status = "unknown"
     try:
         # Try database connection with short timeout
         def check_db():
             try:
                 with engine.connect() as conn:
                     conn.execute(text("SELECT 1"))
-                    return True
-            except (OperationalError, Exception):
-                return False
+                    return "connected"
+            except OperationalError:
+                return "disconnected"
+            except Exception:
+                return "error"
         
-        db_healthy = await asyncio.wait_for(
+        db_status = await asyncio.wait_for(
             asyncio.to_thread(check_db),
-            timeout=1.0
+            timeout=2.0
         )
-    except (asyncio.TimeoutError, Exception):
-        db_healthy = False
+    except asyncio.TimeoutError:
+        db_status = "timeout"
+    except Exception:
+        db_status = "error"
     
     # Return healthy if app is running (database connection is optional for readiness)
     # This allows Kubernetes to mark the pod as ready even if DB is temporarily down
+    # The health endpoint is designed to be resilient - it will return "degraded" status
+    # if the database is unavailable, but still return HTTP 200 so Kubernetes probes succeed
     return HealthResponse(
-        status="healthy" if db_healthy else "degraded",
-        version=settings.version
+        status="healthy" if db_status == "connected" else "degraded",
+        version=settings.version,
+        database=db_status
     )
 
