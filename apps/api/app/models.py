@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Date, Time, 
-    BigInteger, Double, Text, ForeignKey, UniqueConstraint, JSON, TypeDecorator
+    BigInteger, Integer, Double, Text, ForeignKey, UniqueConstraint, JSON, TypeDecorator
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -17,9 +17,25 @@ class JSONType(TypeDecorator):
     def load_dialect_impl(self, dialect):
         if dialect.name == 'postgresql':
             from sqlalchemy.dialects.postgresql import JSONB
-            return dialect.type_descriptor(JSONB())
+            return dialect.type_descriptor(JSONB(astext_type=None))
         else:
+            # For SQLite and other databases, use standard JSON
             return dialect.type_descriptor(JSON())
+
+# Use BigInteger for PostgreSQL, Integer for SQLite (for autoincrement compatibility)
+# SQLite doesn't properly support BigInteger with autoincrement
+class AutoIncrementBigInt(TypeDecorator):
+    """BigInteger type that uses Integer for SQLite (autoincrement compatibility)."""
+    impl = BigInteger
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'sqlite':
+            # SQLite requires Integer for autoincrement to work properly
+            return dialect.type_descriptor(Integer())
+        else:
+            # PostgreSQL and other databases use BigInteger
+            return dialect.type_descriptor(BigInteger())
 
 Base = declarative_base()
 
@@ -56,7 +72,7 @@ class Session(Base):
     
     __tablename__ = "sessions"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(AutoIncrementBigInt, primary_key=True, autoincrement=True)
     facility_id = Column(String, ForeignKey("facilities.facility_id"), nullable=False)
     swim_type = Column(String(50), nullable=False)
     date = Column(Date, nullable=False)
@@ -84,7 +100,7 @@ class User(Base):
     
     __tablename__ = "users"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(AutoIncrementBigInt, primary_key=True, autoincrement=True)
     email = Column(String(255), unique=True, nullable=False, index=True)
     name = Column(String(255))
     google_id = Column(String(255), unique=True, nullable=False, index=True)
@@ -104,7 +120,7 @@ class UserFavorite(Base):
     
     __tablename__ = "user_favorites"
     
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(AutoIncrementBigInt, primary_key=True, autoincrement=True)
     user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, index=True)
     facility_id = Column(String, ForeignKey("facilities.facility_id"), nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.utcnow)
