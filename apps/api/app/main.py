@@ -18,9 +18,6 @@ logger.add(
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
 )
 
-# Create tables
-Base.metadata.create_all(bind=engine)
-
 # Create FastAPI app
 app = FastAPI(
     title=settings.app_name,
@@ -62,6 +59,12 @@ async def global_exception_handler(request, exc):
 async def startup_event():
     """Startup event."""
     logger.info(f"Starting {settings.app_name} v{settings.version}")
+    # Create tables if they don't exist (alembic handles migrations, but this ensures tables exist)
+    try:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created")
+    except Exception as e:
+        logger.warning(f"Could not create database tables (may already exist): {e}")
 
 
 @app.on_event("shutdown")
