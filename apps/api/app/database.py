@@ -5,12 +5,18 @@ from typing import Generator
 
 from app.config import settings
 
-# Create engine
+# Create engine with connection timeout and retry settings
 engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
     pool_size=5,
-    max_overflow=10
+    max_overflow=10,
+    connect_args={
+        "connect_timeout": 10,  # 10 second connection timeout
+        "options": "-c statement_timeout=5000"  # 5 second statement timeout
+    },
+    pool_recycle=3600,  # Recycle connections after 1 hour
+    echo=False
 )
 
 # Create session factory
