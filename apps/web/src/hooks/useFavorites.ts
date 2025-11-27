@@ -45,7 +45,6 @@ export function useFavorites() {
         queryClient.invalidateQueries({ queryKey: ["favorites"] });
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, queryClient, localFavorites.size]);
 
   // Add favorite mutation

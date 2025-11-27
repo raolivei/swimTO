@@ -2,11 +2,17 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Date, Time, 
-    BigInteger, Double, Text, ForeignKey, UniqueConstraint
+    BigInteger, Double, Text, ForeignKey, UniqueConstraint, JSON
 )
-from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
+
+# Use JSONB for PostgreSQL, JSON for SQLite (for tests)
+try:
+    from sqlalchemy.dialects.postgresql import JSONB
+    JSONType = JSONB
+except ImportError:
+    JSONType = JSON
 
 Base = declarative_base()
 
@@ -27,7 +33,7 @@ class Facility(Base):
     phone = Column(String(20))
     website = Column(Text)
     source = Column(String(50))
-    raw = Column(JSONB)
+    raw = Column(JSONType)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
