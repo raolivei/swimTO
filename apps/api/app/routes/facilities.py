@@ -32,37 +32,66 @@ async def get_facilities(
         facilities = query.all()
         logger.debug(f"Found {len(facilities)} facilities")
         
-        # Enrich with session data
+        # Enrich with session data using optimized bulk queries (avoid N+1 problem)
         result = []
         today = date_type.today()
+        facility_ids = [f.facility_id for f in facilities]
         
+        if not facility_ids:
+            logger.info("No facilities found, returning empty list")
+            return result
+        
+        # Pre-fetch all sessions and find first per facility (simpler than DISTINCT ON)
+        # This avoids N+1 queries by fetching all sessions in one query
+        all_sessions = db.query(SessionModel).filter(
+            SessionModel.facility_id.in_(facility_ids),
+            SessionModel.date >= today
+        ).order_by(
+            SessionModel.facility_id,
+            SessionModel.date,
+            SessionModel.start_time
+        ).all()
+        
+        # Create lookup dict for next sessions (first session per facility)
+        next_sessions_dict = {}
+        for session in all_sessions:
+            if session.facility_id not in next_sessions_dict:
+                next_sessions_dict[session.facility_id] = session
+        
+        # Get session counts in one bulk query
+        session_counts_query = db.query(
+            SessionModel.facility_id,
+            func.count(SessionModel.id).label('count')
+        ).filter(
+            SessionModel.facility_id.in_(facility_ids),
+            SessionModel.date >= today
+        ).group_by(SessionModel.facility_id).all()
+        session_counts_dict = {s.facility_id: s.count for s in session_counts_query}
+        
+        # Get lane swim facilities in one query (if filter requested)
+        lane_swim_facilities = set()
+        if has_lane_swim:
+            lane_swim_query = db.query(SessionModel.facility_id).filter(
+                SessionModel.facility_id.in_(facility_ids),
+                SessionModel.swim_type == "LANE_SWIM",
+                SessionModel.date >= today
+            ).distinct().all()
+            lane_swim_facilities = {s.facility_id for s in lane_swim_query}
+        
+        # Build result using pre-fetched data
         for facility in facilities:
-            # Get next session
-            next_session = db.query(SessionModel).filter(
-                SessionModel.facility_id == facility.facility_id,
-                SessionModel.date >= today
-            ).order_by(SessionModel.date, SessionModel.start_time).first()
-            
-            # Get total session count
-            session_count = db.query(func.count(SessionModel.id)).filter(
-                SessionModel.facility_id == facility.facility_id,
-                SessionModel.date >= today
-            ).scalar()
-            
             # Filter for lane swim if requested
-            if has_lane_swim:
-                has_lane = db.query(SessionModel).filter(
-                    SessionModel.facility_id == facility.facility_id,
-                    SessionModel.swim_type == "LANE_SWIM",
-                    SessionModel.date >= today
-                ).first()
-                if not has_lane:
-                    continue
+            if has_lane_swim and facility.facility_id not in lane_swim_facilities:
+                continue
+            
+            # Get pre-fetched data
+            next_session = next_sessions_dict.get(facility.facility_id)
+            session_count = session_counts_dict.get(facility.facility_id, 0)
             
             result.append(FacilityWithSessions(
                 **facility.__dict__,
                 next_session=next_session,
-                session_count=session_count or 0
+                session_count=session_count
             ))
         
         logger.info(f"Returning {len(result)} facilities")

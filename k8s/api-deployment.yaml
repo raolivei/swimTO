@@ -24,7 +24,7 @@ spec:
       containers:
         - name: api
           image: ghcr.io/raolivei/swimto-api:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always # Always pull to ensure latest image with fixes
           command: ["sh", "-c"]
           args:
             - |
@@ -95,14 +95,20 @@ spec:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 30
-            periodSeconds: 10
+            initialDelaySeconds: 60 # Increased to allow app startup and DB connection
+            periodSeconds: 15 # Increased to reduce probe frequency
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: 8000
-            initialDelaySeconds: 10
-            periodSeconds: 5
+            initialDelaySeconds: 60 # Increased to allow app startup and DB connection
+            periodSeconds: 15 # Increased to reduce probe frequency
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 3
           resources:
             requests:
               memory: "256Mi"
