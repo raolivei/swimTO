@@ -2,17 +2,24 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Date, Time, 
-    BigInteger, Double, Text, ForeignKey, UniqueConstraint, JSON
+    BigInteger, Double, Text, ForeignKey, UniqueConstraint, JSON, TypeDecorator
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
 # Use JSONB for PostgreSQL, JSON for SQLite (for tests)
-try:
-    from sqlalchemy.dialects.postgresql import JSONB
-    JSONType = JSONB
-except ImportError:
-    JSONType = JSON
+# This TypeDecorator automatically uses JSONB for PostgreSQL and JSON for SQLite
+class JSONType(TypeDecorator):
+    """JSON type that uses JSONB for PostgreSQL and JSON for SQLite."""
+    impl = JSON
+    cache_ok = True
+    
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import JSONB
+            return dialect.type_descriptor(JSONB())
+        else:
+            return dialect.type_descriptor(JSON())
 
 Base = declarative_base()
 
