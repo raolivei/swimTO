@@ -6,8 +6,10 @@ def test_health_check(client):
     response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] in ["healthy", "unhealthy"]
+    # Health endpoint now returns "degraded" when DB is unavailable (resilient design)
+    assert data["status"] in ["healthy", "degraded", "unhealthy"]
     assert "version" in data
+    assert "database" in data  # Database status field was added
 
 
 def test_root_endpoint(client):
@@ -15,5 +17,6 @@ def test_root_endpoint(client):
     response = client.get("/")
     assert response.status_code == 200
     data = response.json()
-    assert data["status"] in ["healthy", "unhealthy"]
+    # Health endpoint now returns "degraded" when DB is unavailable (resilient design)
+    assert data["status"] in ["healthy", "degraded", "unhealthy"]
 
