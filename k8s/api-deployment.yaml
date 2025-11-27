@@ -15,6 +15,8 @@ spec:
       labels:
         app: swimto-api
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -22,7 +24,16 @@ spec:
       containers:
         - name: api
           image: ghcr.io/raolivei/swimto-api:latest
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c"]
+          args:
+            - |
+              # Check if alembic directory exists before running migrations
+              if [ -d "/app/alembic" ] && [ -f "/app/alembic.ini" ]; then
+                cd /app && alembic upgrade head >/dev/null 2>&1 || true
+              fi
+              # Start uvicorn server
+              exec uvicorn app.main:app --host 0.0.0.0 --port 8000
           ports:
             - containerPort: 8000
               name: http
