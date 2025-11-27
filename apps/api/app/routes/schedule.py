@@ -43,8 +43,10 @@ async def get_schedule(
     
     if date_from:
         filters.append(SessionModel.date >= date_from)
-    else:
-        # Default to today onwards
+    # Only default to today onwards if no other date filters are specified
+    # This allows facility_id or other filters to show all matching sessions
+    elif not facility_id and not date_to:
+        # Default to today onwards only when no specific filters are applied
         filters.append(SessionModel.date >= date_type.today())
     
     if date_to:
