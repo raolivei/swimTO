@@ -90,17 +90,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       let errorMessage =
         errorInfo.message || "Failed to initiate login. Please try again.";
 
-      // Check if it's a network error
+      // Check if it's a timeout error (most common issue)
       if (
+        axios.isAxiosError(error) &&
+        (error.code === "ECONNABORTED" || error.message.includes("timeout"))
+      ) {
+        errorMessage =
+          "The authentication server took too long to respond. This may indicate a network issue or the server is temporarily unavailable. Please check your connection and try again.";
+      }
+      // Check if it's a network error
+      else if (
         errorInfo.title === "Network Connection Failed" ||
-        errorInfo.title === "Server Unavailable"
+        errorInfo.title === "Server Unavailable" ||
+        errorInfo.title === "Request Timed Out"
       ) {
         errorMessage =
           "Unable to connect to the authentication server. Please check your connection and try again.";
       }
-
       // Check if OAuth is not configured
-      if (axios.isAxiosError(error) && error.response?.status === 503) {
+      else if (axios.isAxiosError(error) && error.response?.status === 503) {
         errorMessage =
           "Google authentication is not configured on the server. Please contact support.";
       }

@@ -112,8 +112,37 @@ export interface FavoriteResponse {
 
 export const authApi = {
   getGoogleAuthUrl: async (): Promise<{ auth_url: string }> => {
-    const { data } = await api.get("/auth/google-url");
-    return data;
+    // Use a shorter timeout for this endpoint since it should return instantly
+    // Retry logic for network issues
+    const maxRetries = 2;
+    let lastError: unknown;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const { data } = await api.get("/auth/google-url", {
+          timeout: 10000, // 10 seconds - should be instant, but allow some buffer
+        });
+        return data;
+      } catch (error) {
+        lastError = error;
+        
+        // Don't retry on 4xx errors (client errors)
+        if (axios.isAxiosError(error) && error.response?.status && error.response.status < 500) {
+          throw error;
+        }
+        
+        // On last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+      }
+    }
+    
+    // Should never reach here, but TypeScript needs this
+    throw lastError;
   },
 
   googleCallback: async (code: string): Promise<TokenResponse> => {

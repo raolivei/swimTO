@@ -16,7 +16,10 @@ router = APIRouter()
 @router.get("/auth/google-url", tags=["auth"])
 async def get_google_auth_url():
     """Get Google OAuth URL."""
+    logger.debug("Received request for Google auth URL")
+    
     if not settings.google_client_id:
+        logger.warning("Google OAuth not configured - missing client_id")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google OAuth not configured"
@@ -34,6 +37,7 @@ async def get_google_auth_url():
         f"&prompt=consent"
     )
     
+    logger.debug(f"Generated Google auth URL (redirect_uri: {redirect_uri})")
     return {"auth_url": google_auth_url}
 
 
