@@ -13,7 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../contexts/useAuth";
 import { useState, useEffect } from "react";
 
 export default function Layout() {
