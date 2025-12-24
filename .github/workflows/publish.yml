@@ -94,7 +94,7 @@ jobs:
           TAG="${{ needs.git-tag-release.outputs.new_tag }}"
           IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image_name }}:$TAG"
           ARTIFACT="${{ matrix.image_name }}-$TAG"
-          
+
           docker load -i "${{ matrix.image_name }}-dist/${ARTIFACT}-arm64.tar"
           LOADED=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ matrix.image_name }}.*arm64" | head -1)
           docker tag "$LOADED" "$IMAGE"
