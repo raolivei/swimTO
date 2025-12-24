@@ -28,7 +28,7 @@ on:
         required: true
         type: string
       arch:
-        description: "Comma-separated list of architectures (e.g., arm64,amd64)"
+        description: "Architecture to build (e.g., arm64)"
         required: true
         type: string
     secrets:
@@ -41,9 +41,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-    strategy:
-      matrix:
-        arch: [amd64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,23 +54,10 @@ jobs:
       - name: Create packages directory
         run: mkdir -p ${{ inputs.packages_dir }}
 
-      - name: Check if architecture should be built
-        id: check-arch
-        run: |
-          ARCH_STRING="${{ inputs.arch }}"
-          if [[ "$ARCH_STRING" == *"${{ matrix.arch }}"* ]]; then
-            echo "build=true" >> $GITHUB_OUTPUT
-            echo "Building for ${{ matrix.arch }}"
-          else
-            echo "build=false" >> $GITHUB_OUTPUT
-            echo "Skipping ${{ matrix.arch }} (not in requested architectures: $ARCH_STRING)"
-          fi
-
       - name: Determine platform
         id: platform
-        if: steps.check-arch.outputs.build == 'true'
         run: |
-          ARCH="${{ matrix.arch }}"
+          ARCH="${{ inputs.arch }}"
           case "$ARCH" in
             amd64)
               echo "platform=linux/amd64" >> $GITHUB_OUTPUT
@@ -87,22 +71,20 @@ jobs:
           esac
 
       - name: Build Docker image
-        if: steps.check-arch.outputs.build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           platforms: ${{ steps.platform.outputs.platform }}
           push: false
-          tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}-${{ matrix.arch }}
+          tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}-${{ inputs.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
+          outputs: type=docker,dest=${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ inputs.arch }}.tar
 
       - name: Upload Docker image artifact
-        if: steps.check-arch.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.docker_artifact_name }}-${{ matrix.arch }}
-          path: ${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
+          name: ${{ inputs.docker_artifact_name }}-${{ inputs.arch }}
+          path: ${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ inputs.arch }}.tar
           retention-days: 7
