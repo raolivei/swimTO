@@ -1,5 +1,9 @@
 name: Publish & Release
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     tags:
@@ -87,7 +91,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Load and tag API images
@@ -155,7 +159,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Load and tag Web images
