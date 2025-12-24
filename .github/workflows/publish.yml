@@ -4,8 +4,8 @@ on:
   push:
     tags:
       - "**"
-  schedule:
-    # - cron: "15 0 7 2,4,6,8,10,12 *"
+  # schedule:
+  # - cron: "15 0 7 2,4,6,8,10,12 *"
   workflow_dispatch:
     inputs:
       version:
