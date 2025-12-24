@@ -18,7 +18,7 @@ jobs:
     permissions:
       contents: write
     outputs:
-      new_tag: ${{ steps.tag.outputs.new_tag }}
+      new_tag: ${{ steps.normalize.outputs.new_tag }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -77,4 +77,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

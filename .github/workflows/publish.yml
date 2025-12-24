@@ -14,12 +14,17 @@ on:
 
 jobs:
   git-tag-release:
+    permissions:
+      contents: write
     uses: ./.github/workflows/git-tag-and-release.yaml
     with:
       version: ${{ github.event.inputs.version || github.ref_name }}
 
   build-api-image:
     needs: git-tag-release
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/docker-build-release.yaml
     with:
       dockerfile: apps/api/Dockerfile
@@ -36,6 +41,9 @@ jobs:
 
   build-web-image:
     needs: git-tag-release
+    permissions:
+      contents: read
+      packages: write
     uses: ./.github/workflows/docker-build-release.yaml
     with:
       dockerfile: apps/web/Dockerfile
