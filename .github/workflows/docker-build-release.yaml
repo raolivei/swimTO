@@ -15,11 +15,6 @@ on:
         description: "Tag for the Docker image"
         required: true
         type: string
-      packages_type:
-        description: "Type of package (Dockerfile)"
-        required: false
-        type: string
-        default: "Dockerfile"
       docker_artifact_name:
         description: "Name for the Docker artifact"
         required: true
@@ -32,11 +27,6 @@ on:
         description: "Build context path"
         required: true
         type: string
-      codeartifact:
-        description: "Whether to use CodeArtifact"
-        required: false
-        type: boolean
-        default: false
       arch:
         description: "Comma-separated list of architectures (e.g., arm64,amd64)"
         required: true
