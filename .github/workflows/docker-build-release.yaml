@@ -53,7 +53,7 @@ jobs:
       packages: write
     strategy:
       matrix:
-        arch: ${{ fromJSON(format('["{0}"]', replace(inputs.arch, ',', '","'))) }}
+        arch: [amd64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -67,8 +67,21 @@ jobs:
       - name: Create packages directory
         run: mkdir -p ${{ inputs.packages_dir }}
 
+      - name: Check if architecture should be built
+        id: check-arch
+        run: |
+          ARCH_STRING="${{ inputs.arch }}"
+          if [[ "$ARCH_STRING" == *"${{ matrix.arch }}"* ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+            echo "Building for ${{ matrix.arch }}"
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+            echo "Skipping ${{ matrix.arch }} (not in requested architectures: $ARCH_STRING)"
+          fi
+
       - name: Determine platform
         id: platform
+        if: steps.check-arch.outputs.build == 'true'
         run: |
           ARCH="${{ matrix.arch }}"
           case "$ARCH" in
@@ -84,6 +97,7 @@ jobs:
           esac
 
       - name: Build Docker image
+        if: steps.check-arch.outputs.build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
@@ -96,9 +110,9 @@ jobs:
           outputs: type=docker,dest=${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
 
       - name: Upload Docker image artifact
+        if: steps.check-arch.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.docker_artifact_name }}-${{ matrix.arch }}
           path: ${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
           retention-days: 7
-
