@@ -15,6 +15,11 @@ on:
         description: "Tag for the Docker image"
         required: true
         type: string
+      packages_type:
+        description: "Type of package (Dockerfile)"
+        required: false
+        type: string
+        default: "Dockerfile"
       docker_artifact_name:
         description: "Name for the Docker artifact"
         required: true
@@ -27,8 +32,13 @@ on:
         description: "Build context path"
         required: true
         type: string
+      codeartifact:
+        description: "Whether to use CodeArtifact"
+        required: false
+        type: boolean
+        default: false
       arch:
-        description: "Architecture to build (e.g., arm64)"
+        description: "Comma-separated list of architectures (e.g., arm64,amd64)"
         required: true
         type: string
     secrets:
@@ -41,6 +51,9 @@ jobs:
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -54,10 +67,23 @@ jobs:
       - name: Create packages directory
         run: mkdir -p ${{ inputs.packages_dir }}
 
+      - name: Check if architecture should be built
+        id: check-arch
+        run: |
+          ARCH_STRING="${{ inputs.arch }}"
+          if [[ "$ARCH_STRING" == *"${{ matrix.arch }}"* ]]; then
+            echo "build=true" >> $GITHUB_OUTPUT
+            echo "Building for ${{ matrix.arch }}"
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+            echo "Skipping ${{ matrix.arch }} (not in requested architectures: $ARCH_STRING)"
+          fi
+
       - name: Determine platform
         id: platform
+        if: steps.check-arch.outputs.build == 'true'
         run: |
-          ARCH="${{ inputs.arch }}"
+          ARCH="${{ matrix.arch }}"
           case "$ARCH" in
             amd64)
               echo "platform=linux/amd64" >> $GITHUB_OUTPUT
@@ -71,20 +97,22 @@ jobs:
           esac
 
       - name: Build Docker image
+        if: steps.check-arch.outputs.build == 'true'
         uses: docker/build-push-action@v5
         with:
           context: ${{ inputs.context }}
           file: ${{ inputs.dockerfile }}
           platforms: ${{ steps.platform.outputs.platform }}
           push: false
-          tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}-${{ inputs.arch }}
+          tags: ${{ inputs.image_name }}:${{ inputs.image_tag }}-${{ matrix.arch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ inputs.arch }}.tar
+          outputs: type=docker,dest=${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
 
       - name: Upload Docker image artifact
+        if: steps.check-arch.outputs.build == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ inputs.docker_artifact_name }}-${{ inputs.arch }}
-          path: ${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ inputs.arch }}.tar
+          name: ${{ inputs.docker_artifact_name }}-${{ matrix.arch }}
+          path: ${{ inputs.packages_dir }}/${{ inputs.docker_artifact_name }}-${{ matrix.arch }}.tar
           retention-days: 7
