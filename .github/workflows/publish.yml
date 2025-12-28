@@ -1,16 +1,22 @@
 name: Publish & Release
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     tags:
       - "**"
-  # schedule:
-  # - cron: "15 0 7 2,4,6,8,10,12 *"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version to tag release."
+        description: "Version to tag release"
         required: true
+
+concurrency:
+  group: publish-release
+  cancel-in-progress: true
 
 jobs:
   git-tag-release:
@@ -20,7 +26,7 @@ jobs:
     with:
       version: ${{ github.event.inputs.version || github.ref_name }}
 
-  build-api-image:
+  build-api:
     needs: git-tag-release
     permissions:
       contents: read
@@ -30,16 +36,14 @@ jobs:
       dockerfile: apps/api/Dockerfile
       image_name: swimto-api
       image_tag: ${{ needs.git-tag-release.outputs.new_tag }}
-      packages_type: Dockerfile
       docker_artifact_name: swimto-api-${{ needs.git-tag-release.outputs.new_tag }}
       packages_dir: swimto-api-dist
       context: .
-      codeartifact: false
-      arch: arm64,amd64
+      arch: arm64
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 
-  build-web-image:
+  build-web:
     needs: git-tag-release
     permissions:
       contents: read
@@ -49,21 +53,22 @@ jobs:
       dockerfile: apps/web/Dockerfile
       image_name: swimto-web
       image_tag: ${{ needs.git-tag-release.outputs.new_tag }}
-      packages_type: Dockerfile
       docker_artifact_name: swimto-web-${{ needs.git-tag-release.outputs.new_tag }}
       packages_dir: swimto-web-dist
       context: apps/web
-      codeartifact: false
-      arch: arm64,amd64
+      arch: arm64
     secrets:
       token: ${{ secrets.GITHUB_TOKEN }}
 
-  publish-api-image:
-    needs: [git-tag-release, build-api-image]
+  publish:
+    needs: [git-tag-release, build-api, build-web]
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      matrix:
+        image_name: [swimto-api, swimto-web]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,125 +76,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Download API image artifacts (amd64)
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: swimto-api-${{ needs.git-tag-release.outputs.new_tag }}-amd64
-          path: swimto-api-dist
-
-      - name: Download API image artifacts (arm64)
-        uses: actions/download-artifact@v4
-        with:
-          name: swimto-api-${{ needs.git-tag-release.outputs.new_tag }}-arm64
-          path: swimto-api-dist
+          name: ${{ matrix.image_name }}-${{ needs.git-tag-release.outputs.new_tag }}-arm64
+          path: ${{ matrix.image_name }}-dist
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
-          username: ${{ github.repository_owner }}
+          username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Load and tag API images
+      - name: Publish image
         run: |
-          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/swimto-api:${{ needs.git-tag-release.outputs.new_tag }}"
-          ARTIFACT_NAME="swimto-api-${{ needs.git-tag-release.outputs.new_tag }}"
-          MANIFEST_PARAMS=()
+          TAG="${{ needs.git-tag-release.outputs.new_tag }}"
+          IMAGE="ghcr.io/${{ github.repository_owner }}/${{ matrix.image_name }}:$TAG"
+          ARTIFACT="${{ matrix.image_name }}-$TAG"
 
-          # Load and push amd64 image
-          if [ -f "swimto-api-dist/${ARTIFACT_NAME}-amd64.tar" ]; then
-            docker load -i "swimto-api-dist/${ARTIFACT_NAME}-amd64.tar"
-            # Get the actual image name from docker load output or use expected format
-            LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "swimto-api.*amd64" | head -1 || echo "swimto-api:${{ needs.git-tag-release.outputs.new_tag }}-amd64")
-            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}-amd64"
-            docker push "${IMAGE_TAG}-amd64"
-            MANIFEST_PARAMS+=("${IMAGE_TAG}-amd64")
-          fi
-
-          # Load and push arm64 image
-          if [ -f "swimto-api-dist/${ARTIFACT_NAME}-arm64.tar" ]; then
-            docker load -i "swimto-api-dist/${ARTIFACT_NAME}-arm64.tar"
-            # Get the actual image name from docker load output or use expected format
-            LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "swimto-api.*arm64" | head -1 || echo "swimto-api:${{ needs.git-tag-release.outputs.new_tag }}-arm64")
-            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}-arm64"
-            docker push "${IMAGE_TAG}-arm64"
-            MANIFEST_PARAMS+=("${IMAGE_TAG}-arm64")
-          fi
-
-          # Create and push multi-arch manifest if we have at least one architecture
-          if [ ${#MANIFEST_PARAMS[@]} -gt 0 ]; then
-            docker manifest create "${IMAGE_TAG}" "${MANIFEST_PARAMS[@]}" || true
-            docker manifest push "${IMAGE_TAG}"
-          fi
-
-      - name: Output published image
-        run: |
-          echo "Published image: ghcr.io/${{ github.repository_owner }}/swimto-api:${{ needs.git-tag-release.outputs.new_tag }}"
-
-  publish-web-image:
-    needs: [git-tag-release, build-web-image]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Download Web image artifacts (amd64)
-        uses: actions/download-artifact@v4
-        with:
-          name: swimto-web-${{ needs.git-tag-release.outputs.new_tag }}-amd64
-          path: swimto-web-dist
-
-      - name: Download Web image artifacts (arm64)
-        uses: actions/download-artifact@v4
-        with:
-          name: swimto-web-${{ needs.git-tag-release.outputs.new_tag }}-arm64
-          path: swimto-web-dist
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Load and tag Web images
-        run: |
-          IMAGE_TAG="ghcr.io/${{ github.repository_owner }}/swimto-web:${{ needs.git-tag-release.outputs.new_tag }}"
-          ARTIFACT_NAME="swimto-web-${{ needs.git-tag-release.outputs.new_tag }}"
-          MANIFEST_PARAMS=()
-
-          # Load and push amd64 image
-          if [ -f "swimto-web-dist/${ARTIFACT_NAME}-amd64.tar" ]; then
-            docker load -i "swimto-web-dist/${ARTIFACT_NAME}-amd64.tar"
-            # Get the actual image name from docker load output or use expected format
-            LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "swimto-web.*amd64" | head -1 || echo "swimto-web:${{ needs.git-tag-release.outputs.new_tag }}-amd64")
-            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}-amd64"
-            docker push "${IMAGE_TAG}-amd64"
-            MANIFEST_PARAMS+=("${IMAGE_TAG}-amd64")
-          fi
-
-          # Load and push arm64 image
-          if [ -f "swimto-web-dist/${ARTIFACT_NAME}-arm64.tar" ]; then
-            docker load -i "swimto-web-dist/${ARTIFACT_NAME}-arm64.tar"
-            # Get the actual image name from docker load output or use expected format
-            LOADED_IMAGE=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "swimto-web.*arm64" | head -1 || echo "swimto-web:${{ needs.git-tag-release.outputs.new_tag }}-arm64")
-            docker tag "${LOADED_IMAGE}" "${IMAGE_TAG}-arm64"
-            docker push "${IMAGE_TAG}-arm64"
-            MANIFEST_PARAMS+=("${IMAGE_TAG}-arm64")
-          fi
-
-          # Create and push multi-arch manifest if we have at least one architecture
-          if [ ${#MANIFEST_PARAMS[@]} -gt 0 ]; then
-            docker manifest create "${IMAGE_TAG}" "${MANIFEST_PARAMS[@]}" || true
-            docker manifest push "${IMAGE_TAG}"
-          fi
-
-      - name: Output published image
-        run: |
-          echo "Published image: ghcr.io/${{ github.repository_owner }}/swimto-web:${{ needs.git-tag-release.outputs.new_tag }}"
+          docker load -i "${{ matrix.image_name }}-dist/${ARTIFACT}-arm64.tar"
+          LOADED=$(docker images --format "{{.Repository}}:{{.Tag}}" | grep "${{ matrix.image_name }}.*arm64" | head -1)
+          docker tag "$LOADED" "$IMAGE"
+          docker push "$IMAGE"
+          echo "Published: $IMAGE"
