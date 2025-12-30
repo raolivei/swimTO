@@ -1,4 +1,6 @@
 ---
+# Local domain Ingress (swimto.eldertree.local)
+# ExternalDNS annotation ensures DNS record is created in Pi-hole via RFC2136
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -8,6 +10,7 @@ metadata:
     traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
     traefik.ingress.kubernetes.io/router.middlewares: default-redirect-https@kubernetescrd
     cert-manager.io/cluster-issuer: selfsigned-cluster-issuer
+    external-dns.alpha.kubernetes.io/hostname: swimto.eldertree.local
   labels:
     app: swimto
 spec:
@@ -18,6 +21,44 @@ spec:
       secretName: swimto-tls
   rules:
     - host: swimto.eldertree.local
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: swimto-api-service
+                port:
+                  number: 8000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: swimto-web-service
+                port:
+                  number: 3000
+---
+# Public domain Ingress (swimto.eldertree.xyz)
+# Uses Cloudflare Origin Certificate - HTTPS termination handled by Cloudflare
+# Do NOT use redirect-https middleware (causes redirect loops with Cloudflare)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: swimto-public
+  namespace: swimto
+  annotations:
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    external-dns.alpha.kubernetes.io/hostname: swimto.eldertree.xyz
+  labels:
+    app: swimto
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - swimto.eldertree.xyz
+      secretName: swimto-cloudflare-origin-tls
+  rules:
+    - host: swimto.eldertree.xyz
       http:
         paths:
           - path: /api
