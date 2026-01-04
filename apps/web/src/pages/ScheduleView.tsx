@@ -132,6 +132,17 @@ export default function ScheduleView() {
   const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
+  const [isMobile, setIsMobile] = useState(false); // Track if we're on mobile
+
+  // Track window size for responsive table layout
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   // Calculate date range to request from API (yesterday to 7 days ahead)
   const today = new Date();
@@ -454,7 +465,7 @@ export default function ScheduleView() {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-primary-500 bg-clip-text text-transparent mb-3">
@@ -829,19 +840,19 @@ export default function ScheduleView() {
         ) : (
           /* Table View */
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(100vh-20rem)] overflow-x-hidden">
+            <div className="overflow-y-auto max-h-[calc(100vh-20rem)] overflow-x-auto">
               <table
-                className="w-full table-fixed"
+                className="w-full table-fixed min-w-full"
                 style={{ tableLayout: "fixed", width: "100%" }}
               >
                 <thead className="bg-gradient-to-r from-primary-500 to-primary-600 text-white sticky top-0 z-20 shadow-md">
                   <tr>
                     <th
-                      className="px-3 sm:px-4 py-3 sm:py-4 text-left sticky left-0 bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 z-30 shadow-[2px_0_8px_rgba(0,0,0,0.15)] border-r-2 border-primary-400/40"
+                      className="px-2 sm:px-4 py-3 sm:py-4 text-left sticky left-0 bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700 z-30 shadow-[2px_0_8px_rgba(0,0,0,0.15)] border-r-2 border-primary-400/40"
                       style={{
-                        width: "280px",
-                        minWidth: "280px",
-                        maxWidth: "280px",
+                        width: isMobile ? "140px" : "280px",
+                        minWidth: isMobile ? "140px" : "280px",
+                        maxWidth: isMobile ? "140px" : "280px",
                       }}
                     >
                       <div className="flex items-center gap-2 sm:gap-3">
@@ -889,11 +900,17 @@ export default function ScheduleView() {
                       return (
                         <th
                           key={index}
-                          className={`px-1.5 sm:px-2 py-3 sm:py-4 text-center transition-all relative ${
+                          className={`px-2 sm:px-2 py-3 sm:py-4 text-center transition-all relative ${
                             isToday
                               ? "bg-gradient-to-b from-primary-600 to-primary-700 dark:from-primary-700 dark:to-primary-800 ring-2 ring-yellow-400 dark:ring-yellow-500 ring-inset shadow-lg"
                               : "bg-gradient-to-b from-primary-500 to-primary-600 dark:from-primary-600 dark:to-primary-700"
                           }`}
+                          style={{
+                            width: isMobile
+                              ? `calc((100% - 140px) / 6)`
+                              : `calc((100% - 280px) / 6)`,
+                            minWidth: isMobile ? "80px" : "100px",
+                          }}
                         >
                           <div className="flex flex-col items-center justify-center gap-1">
                             <div
@@ -930,11 +947,11 @@ export default function ScheduleView() {
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <td
-                        className="px-3 sm:px-4 py-2 sm:py-3 sticky left-0 bg-white/98 dark:bg-gray-800/98 backdrop-blur-md z-10 border-r-2 border-gray-300 dark:border-gray-600 shadow-[2px_0_8px_rgba(0,0,0,0.05)]"
+                        className="px-2 sm:px-4 py-2 sm:py-3 sticky left-0 bg-white/98 dark:bg-gray-800/98 backdrop-blur-md z-10 border-r-2 border-gray-300 dark:border-gray-600 shadow-[2px_0_8px_rgba(0,0,0,0.05)]"
                         style={{
-                          width: "280px",
-                          minWidth: "280px",
-                          maxWidth: "280px",
+                          width: isMobile ? "140px" : "280px",
+                          minWidth: isMobile ? "140px" : "280px",
+                          maxWidth: isMobile ? "140px" : "280px",
                         }}
                       >
                         <div className="flex items-start gap-3 sm:gap-4">
@@ -1077,7 +1094,7 @@ export default function ScheduleView() {
                         return (
                           <td
                             key={index}
-                            className={`px-1 sm:px-1.5 py-2 text-center align-top transition-colors overflow-hidden ${
+                            className={`px-2 sm:px-1.5 py-2.5 sm:py-2 text-center align-top transition-colors overflow-hidden ${
                               isToday
                                 ? "bg-primary-50/30 dark:bg-primary-900/10 border-l-2 border-r-2 border-primary-300 dark:border-primary-700"
                                 : isYesterday
@@ -1085,27 +1102,28 @@ export default function ScheduleView() {
                                 : ""
                             }`}
                             style={{
-                              width: `calc((100% - 280px) / 6)`,
-                              minWidth: "100px",
-                              maxWidth: "120px",
+                              width: isMobile
+                                ? `calc((100% - 140px) / 6)`
+                                : `calc((100% - 280px) / 6)`,
+                              minWidth: isMobile ? "80px" : "100px",
                             }}
                           >
                             {daySessions.length > 0 ? (
-                              <div className="space-y-1.5 sm:space-y-2">
+                              <div className="space-y-2 sm:space-y-2">
                                 {displaySessions.map((session) => {
                                   const happeningNow = isHappeningNow(session);
 
                                   return (
                                     <div
                                       key={session.id}
-                                      className={`group relative p-1.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md overflow-hidden ${
+                                      className={`group relative p-2.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md overflow-hidden ${
                                         happeningNow
                                           ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
                                           : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
                                       <div
-                                        className={`text-[10px] sm:text-xs font-bold mb-1 break-words leading-tight ${
+                                        className={`text-sm sm:text-xs font-bold mb-1.5 sm:mb-1 break-words leading-tight ${
                                           happeningNow
                                             ? "text-yellow-900 dark:text-yellow-100"
                                             : isToday || isYesterday
@@ -1119,7 +1137,7 @@ export default function ScheduleView() {
                                         )}
                                       </div>
                                       <span
-                                        className={`inline-block px-1.5 py-0.5 rounded-md text-[9px] sm:text-[10px] font-bold shadow-sm break-words ${getSwimTypeColor(
+                                        className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] sm:text-[10px] font-bold shadow-sm break-words ${getSwimTypeColor(
                                           session.swim_type
                                         )}`}
                                       >

@@ -98,6 +98,22 @@ code {
   * {
     -webkit-tap-highlight-color: rgba(14, 165, 233, 0.1);
   }
+
+  /* Schedule table mobile improvements */
+  table {
+    font-size: 14px;
+  }
+
+  /* Better spacing for schedule cells on mobile */
+  td {
+    padding: 0.75rem 0.5rem !important;
+  }
+
+  /* Ensure calendar table uses full width on mobile */
+  .schedule-table-container {
+    margin: 0 -0.5rem;
+    padding: 0 0.5rem;
+  }
 }
 
 /* Safe area insets for notched devices */
