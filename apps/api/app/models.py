@@ -110,6 +110,7 @@ class User(Base):
     
     # Relationships
     favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
+    preferences = relationship("UserPreferences", back_populates="user", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<User(id={self.id}, email={self.email})>"
@@ -135,4 +136,40 @@ class UserFavorite(Base):
     
     def __repr__(self):
         return f"<UserFavorite(user_id={self.user_id}, facility_id={self.facility_id})>"
+
+
+class UserPreferences(Base):
+    """User preferences and settings."""
+    
+    __tablename__ = "user_preferences"
+    
+    id = Column(AutoIncrementBigInt, primary_key=True, autoincrement=True)
+    user_id = Column(BigInteger, ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    
+    # View preferences
+    default_view = Column(String(20), default="list")  # "list", "map", "table"
+    default_swim_type = Column(String(50), default=None)  # "LANE_SWIM", "RECREATIONAL", etc.
+    dark_mode = Column(Boolean, default=None)  # None = follow system
+    
+    # Location preferences
+    home_latitude = Column(Double, default=None)
+    home_longitude = Column(Double, default=None)
+    home_address = Column(Text, default=None)
+    default_distance_km = Column(Double, default=5.0)  # Default search radius
+    
+    # Notification preferences
+    notifications_enabled = Column(Boolean, default=False)
+    notify_favorite_updates = Column(Boolean, default=True)
+    
+    # Additional preferences stored as JSON for flexibility
+    extra = Column(JSONType, default=dict)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", back_populates="preferences")
+    
+    def __repr__(self):
+        return f"<UserPreferences(user_id={self.user_id})>"
 

@@ -98,11 +98,23 @@ SECRET_KEY=your-secret-key-for-jwt
 ### 1. Google OAuth Setup
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a new project or select existing
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URIs:
-   - `http://localhost:5173/auth/callback` (development)
-   - `https://yourdomain.com/auth/callback` (production)
+3. Navigate to **APIs & Services** > **Credentials**
+4. Click **Create Credentials** > **OAuth 2.0 Client IDs**
+5. Configure the OAuth consent screen if prompted
+6. Select **Web application** as the application type
+7. Add **ALL** of the following Authorized redirect URIs:
+
+```
+http://localhost:5173/auth/callback
+http://localhost:3000/auth/callback
+https://swimto.eldertree.xyz/auth/callback
+https://swimto.eldertree.local/auth/callback
+http://swimto.eldertree.local/auth/callback
+```
+
+**⚠️ IMPORTANT**: All redirect URIs must be registered in Google Cloud Console. The API dynamically selects the correct URI based on the request origin, but Google must have all URIs whitelisted.
+
+8. Copy the **Client ID** and **Client Secret** for backend configuration
 
 ### 2. Backend Configuration
 Update `.env` file:

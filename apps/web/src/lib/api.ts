@@ -111,17 +111,25 @@ export interface FavoriteResponse {
 }
 
 export const authApi = {
-  getGoogleAuthUrl: async (): Promise<{ auth_url: string }> => {
+  getGoogleAuthUrl: async (): Promise<{ auth_url: string; redirect_uri: string }> => {
     // Use a shorter timeout for this endpoint since it should return instantly
     // Retry logic for network issues
     const maxRetries = 2;
     let lastError: unknown;
     
+    // Pass current origin so backend can construct correct redirect URI
+    const origin = typeof window !== "undefined" ? window.location.origin : undefined;
+    
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const { data } = await api.get("/auth/google-url", {
           timeout: 10000, // 10 seconds - should be instant, but allow some buffer
+          params: { origin },
         });
+        // Store redirect_uri for use in callback
+        if (data.redirect_uri) {
+          sessionStorage.setItem("swimto_oauth_redirect_uri", data.redirect_uri);
+        }
         return data;
       } catch (error) {
         lastError = error;
@@ -146,8 +154,12 @@ export const authApi = {
   },
 
   googleCallback: async (code: string): Promise<TokenResponse> => {
+    // Get the redirect_uri that was used when generating the auth URL
+    const redirect_uri = sessionStorage.getItem("swimto_oauth_redirect_uri");
+    sessionStorage.removeItem("swimto_oauth_redirect_uri"); // Clean up
+    
     const { data } = await api.post("/auth/google-callback", null, {
-      params: { code },
+      params: { code, redirect_uri },
     });
     return data;
   },
