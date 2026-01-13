@@ -116,14 +116,19 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      - name: Set up QEMU for ARM64 emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Build and push API image
         id: build-api
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./apps/api/Dockerfile
-          # For PR builds, use single platform (faster). For main/dev, use multi-platform
-          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # eldertree cluster is ARM64 only - no need for multi-platform
+          platforms: linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ needs.prepare.outputs.api-tags }}
           labels: ${{ needs.prepare.outputs.api-labels }}
@@ -157,6 +162,11 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.CR_PAT }}
 
+      - name: Set up QEMU for ARM64 emulation
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -166,8 +176,8 @@ jobs:
         with:
           context: ./apps/web
           file: ./apps/web/Dockerfile
-          # For PR builds, use single platform (faster). For main/dev, use multi-platform
-          platforms: ${{ github.event_name == 'pull_request' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          # eldertree cluster is ARM64 only - no need for multi-platform
+          platforms: linux/arm64
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ needs.prepare.outputs.web-tags }}
           labels: ${{ needs.prepare.outputs.web-labels }}
