@@ -147,6 +147,41 @@ class FavoriteCreate(BaseModel):
     facility_id: str
 
 
+class UserPreferencesBase(BaseModel):
+    """Base user preferences schema."""
+    default_view: Optional[str] = Field(None, description="Default view: 'list', 'map', or 'table'")
+    default_swim_type: Optional[str] = Field(None, description="Default swim type filter")
+    dark_mode: Optional[bool] = Field(None, description="Dark mode preference (None = follow system)")
+    home_latitude: Optional[float] = Field(None, description="Home location latitude")
+    home_longitude: Optional[float] = Field(None, description="Home location longitude")
+    home_address: Optional[str] = Field(None, description="Home address for display")
+    default_distance_km: Optional[float] = Field(None, ge=0.1, le=50, description="Default search radius in km")
+    notifications_enabled: Optional[bool] = Field(None, description="Enable push notifications")
+    notify_favorite_updates: Optional[bool] = Field(None, description="Notify when favorites have schedule updates")
+    extra: Optional[dict] = Field(None, description="Additional preferences as key-value pairs")
+
+
+class UserPreferencesCreate(UserPreferencesBase):
+    """Create user preferences schema."""
+    pass
+
+
+class UserPreferencesUpdate(UserPreferencesBase):
+    """Update user preferences schema (all fields optional)."""
+    pass
+
+
+class UserPreferencesResponse(UserPreferencesBase):
+    """User preferences response schema."""
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 # Resolve forward references for Pydantic v2
 FacilityWithSessions.model_rebuild()
 

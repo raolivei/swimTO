@@ -18,6 +18,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **🔐 Multi-Domain OAuth Support**: Google OAuth now works across multiple domains
+  - Dynamic redirect URI detection based on request origin
+  - Supports `swimto.eldertree.xyz` (public), `swimto.eldertree.local` (internal), and `localhost` (dev)
+  - Frontend passes origin to backend for correct redirect URI construction
+  - Redirect URI stored in sessionStorage for callback verification
+  
+- **⚙️ User Preferences**: New preferences system for personalized experience
+  - New `UserPreferences` database model with view, location, and notification preferences
+  - REST API endpoints: GET/PUT/PATCH/DELETE `/preferences`
+  - Stores: default view mode, swim type filter, dark mode preference
+  - Stores: home location (lat/lng/address), default search radius
+  - Stores: notification preferences for favorite updates
+  - Extensible `extra` JSON field for future preferences
+
 - **🌐 Public Domain Support**: Configured `swimto.eldertree.xyz` with Cloudflare Origin Certificates
   - Added public domain ingress resources with Cloudflare Origin Certificate TLS
   - Updated OAuth redirect URI to use `https://swimto.eldertree.xyz/auth/callback`

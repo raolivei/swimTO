@@ -1,8 +1,9 @@
 """Authentication routes."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from sqlalchemy.orm import Session
 from loguru import logger
 import httpx
+from urllib.parse import urlparse
 
 from app.config import settings
 from app.database import get_db
@@ -12,10 +13,70 @@ from app.auth import create_access_token, get_current_user
 
 router = APIRouter()
 
+# Allowed redirect URI origins (for security - prevent open redirect attacks)
+ALLOWED_ORIGINS = [
+    "https://swimto.eldertree.xyz",
+    "https://swimto.eldertree.local",
+    "http://swimto.eldertree.local",
+    "http://localhost:5173",
+    "http://localhost:3000",
+]
+
+
+def get_redirect_uri(origin: str | None, request: Request) -> str:
+    """Determine the correct redirect URI based on request origin.
+    
+    Priority:
+    1. Explicit origin parameter (if allowed)
+    2. Origin header from request (if allowed)
+    3. Referer header from request (if allowed)
+    4. Default from settings or localhost
+    """
+    callback_path = "/auth/callback"
+    
+    # Try explicit origin parameter
+    if origin:
+        parsed = urlparse(origin)
+        base_origin = f"{parsed.scheme}://{parsed.netloc}"
+        if base_origin in ALLOWED_ORIGINS:
+            return f"{base_origin}{callback_path}"
+        logger.warning(f"Origin parameter not in allowed list: {origin}")
+    
+    # Try Origin header
+    origin_header = request.headers.get("origin")
+    if origin_header and origin_header in ALLOWED_ORIGINS:
+        return f"{origin_header}{callback_path}"
+    
+    # Try Referer header
+    referer = request.headers.get("referer")
+    if referer:
+        parsed = urlparse(referer)
+        base_origin = f"{parsed.scheme}://{parsed.netloc}"
+        if base_origin in ALLOWED_ORIGINS:
+            return f"{base_origin}{callback_path}"
+    
+    # Fall back to settings or default
+    if settings.google_redirect_uri:
+        return settings.google_redirect_uri
+    
+    return "http://localhost:5173/auth/callback"
+
 
 @router.get("/auth/google-url", tags=["auth"])
-async def get_google_auth_url():
-    """Get Google OAuth URL."""
+async def get_google_auth_url(
+    request: Request,
+    origin: str | None = Query(None, description="Origin URL for redirect")
+):
+    """Get Google OAuth URL.
+    
+    The redirect_uri is determined dynamically based on:
+    1. The 'origin' query parameter (if provided and allowed)
+    2. The Origin header (if allowed)
+    3. The Referer header (if allowed)
+    4. Default configuration
+    
+    This allows the same API to serve multiple frontend domains.
+    """
     logger.debug("Received request for Google auth URL")
     
     if not settings.google_client_id:
@@ -25,7 +86,7 @@ async def get_google_auth_url():
             detail="Google OAuth not configured"
         )
     
-    redirect_uri = settings.google_redirect_uri or "http://localhost:5173/auth/callback"
+    redirect_uri = get_redirect_uri(origin, request)
     scope = "openid email profile"
     google_auth_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth"
@@ -37,23 +98,31 @@ async def get_google_auth_url():
         f"&prompt=consent"
     )
     
-    logger.debug(f"Generated Google auth URL (redirect_uri: {redirect_uri})")
-    return {"auth_url": google_auth_url}
+    logger.info(f"Generated Google auth URL (redirect_uri: {redirect_uri})")
+    return {"auth_url": google_auth_url, "redirect_uri": redirect_uri}
 
 
 @router.post("/auth/google-callback", response_model=TokenResponse, tags=["auth"])
 async def google_callback(
+    request: Request,
     code: str,
+    redirect_uri: str | None = Query(None, description="Redirect URI used during auth"),
     db: Session = Depends(get_db)
 ):
-    """Handle Google OAuth callback."""
+    """Handle Google OAuth callback.
+    
+    The redirect_uri must match the one used when generating the auth URL.
+    It can be passed explicitly or determined from request headers.
+    """
     if not settings.google_client_id or not settings.google_client_secret:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Google OAuth not configured"
         )
     
-    redirect_uri = settings.google_redirect_uri or "http://localhost:5173/auth/callback"
+    # Determine redirect URI - must match what was used for the auth URL
+    final_redirect_uri = redirect_uri or get_redirect_uri(None, request)
+    logger.info(f"Google callback with redirect_uri: {final_redirect_uri}")
     
     # Exchange code for token
     try:
@@ -64,7 +133,7 @@ async def google_callback(
                     "code": code,
                     "client_id": settings.google_client_id,
                     "client_secret": settings.google_client_secret,
-                    "redirect_uri": redirect_uri,
+                    "redirect_uri": final_redirect_uri,
                     "grant_type": "authorization_code",
                 }
             )
