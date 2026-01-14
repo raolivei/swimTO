@@ -30,7 +30,7 @@ export default function Home() {
     }).length || 0;
 
   return (
-    <div className="min-h-[calc(100vh-8rem)]">
+    <div className="min-h-[calc(100dvh-8rem)]">
       {/* Hero Section with animated gradient */}
       <section className="relative bg-gradient-to-br from-primary-600 via-primary-500 to-blue-600 dark:from-primary-700 dark:via-primary-800 dark:to-blue-800 text-white py-24 overflow-hidden">
         {/* Animated background circles */}

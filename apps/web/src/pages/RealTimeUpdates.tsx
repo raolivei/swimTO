@@ -3,7 +3,7 @@ import { Clock, RefreshCw, Database, Server, CheckCircle, ArrowLeft } from "luci
 
 export default function RealTimeUpdates() {
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Back button */}
         <Link
