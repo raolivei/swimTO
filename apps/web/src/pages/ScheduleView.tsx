@@ -4,7 +4,9 @@ import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import {
   formatDate,
   formatTimeRange,
+  formatTimeRangeAbbreviated,
   getSwimTypeLabel,
+  getSwimTypeLabelAbbreviated,
   getSwimTypeColor,
   getDayOfWeek,
   getUserLocation,
@@ -134,10 +136,15 @@ export default function ScheduleView() {
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
   const [isMobile, setIsMobile] = useState(false); // Track if we're on mobile
 
-  // Track window size for responsive table layout
+  // Track window size for responsive table layout and force list view on mobile
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      // Force list view on mobile - table view is not optimized for small screens
+      if (mobile) {
+        setViewMode("list");
+      }
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
@@ -353,9 +360,9 @@ export default function ScheduleView() {
     );
   }
 
-  // Group sessions by facility and date for table view
+  // Group sessions by facility ID and date for table view (using facility_id to avoid duplicates from name variations)
   const sessionsByFacilityAndDay = filteredSessions.reduce((acc, session) => {
-    const facilityName = session.facility?.name || "Unknown";
+    const facilityId = session.facility?.facility_id || "unknown";
     // Normalize date string to ensure consistent format (YYYY-MM-DD)
     const [year, month, day] = session.date.split("-").map(Number);
     const normalizedDateString = `${year}-${String(month).padStart(
@@ -368,19 +375,19 @@ export default function ScheduleView() {
       return acc;
     }
 
-    if (!acc[facilityName]) {
-      acc[facilityName] = {
+    if (!acc[facilityId]) {
+      acc[facilityId] = {
         facility: session.facility,
         sessions: {},
         distance: session.distance,
       };
     }
 
-    if (!acc[facilityName].sessions[normalizedDateString]) {
-      acc[facilityName].sessions[normalizedDateString] = [];
+    if (!acc[facilityId].sessions[normalizedDateString]) {
+      acc[facilityId].sessions[normalizedDateString] = [];
     }
 
-    acc[facilityName].sessions[normalizedDateString].push(session);
+    acc[facilityId].sessions[normalizedDateString].push(session);
     return acc;
   }, {} as Record<string, { facility: Session["facility"]; sessions: Record<string, SessionWithDistance[]>; distance?: number }>);
 
@@ -464,7 +471,7 @@ export default function ScheduleView() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-8rem)] bg-gradient-to-br from-gray-50 to-primary-50/10 dark:from-gray-900 dark:to-gray-800 transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
         <div className="mb-8">
@@ -691,7 +698,7 @@ export default function ScheduleView() {
               Try adjusting your filters
             </p>
           </div>
-        ) : viewMode === "list" ? (
+        ) : viewMode === "list" || isMobile ? (
           <div className="space-y-6">
             {sortedDates.map((date) => {
               let dateSessions = sessionsByDate[date];
@@ -840,7 +847,7 @@ export default function ScheduleView() {
         ) : (
           /* Table View */
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(100vh-20rem)] overflow-x-auto">
+            <div className="overflow-y-auto max-h-[calc(100dvh-20rem)] overflow-x-auto">
               <table
                 className="w-full table-fixed min-w-full"
                 style={{ tableLayout: "fixed", width: "100%" }}
@@ -941,9 +948,9 @@ export default function ScheduleView() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {sortedFacilityEntries.map(([facilityName, data]) => (
+                  {sortedFacilityEntries.map(([facilityId, data]) => (
                     <tr
-                      key={facilityName}
+                      key={facilityId}
                       className="hover:bg-primary-50/50 dark:hover:bg-gray-700/50 transition-colors"
                     >
                       <td
@@ -988,10 +995,10 @@ export default function ScheduleView() {
                                   rel="noopener noreferrer"
                                   className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
                                 >
-                                  {facilityName}
+                                  {data.facility?.name || "Unknown"}
                                 </a>
                               ) : (
-                                facilityName
+                                data.facility?.name || "Unknown"
                               )}
                             </div>
                             {data.distance !== undefined &&
@@ -1069,7 +1076,7 @@ export default function ScheduleView() {
                           }
                         }
 
-                        const cellKey = `${facilityName}-${dateString}`;
+                        const cellKey = `${facilityId}-${dateString}`;
                         const isExpanded = expandedCells.has(cellKey);
                         const displaySessions = isExpanded
                           ? daySessions
@@ -1116,14 +1123,14 @@ export default function ScheduleView() {
                                   return (
                                     <div
                                       key={session.id}
-                                      className={`group relative p-2.5 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md overflow-hidden ${
+                                      className={`group relative p-2 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md ${
                                         happeningNow
                                           ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
                                           : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
                                       <div
-                                        className={`text-sm sm:text-xs font-bold mb-1.5 sm:mb-1 break-words leading-tight ${
+                                        className={`text-sm font-bold mb-1 break-words leading-tight ${
                                           happeningNow
                                             ? "text-yellow-900 dark:text-yellow-100"
                                             : isToday || isYesterday
@@ -1131,17 +1138,24 @@ export default function ScheduleView() {
                                             : "text-gray-900 dark:text-gray-100"
                                         }`}
                                       >
-                                        {formatTimeRange(
-                                          session.start_time,
-                                          session.end_time
-                                        )}
+                                        {isMobile
+                                          ? formatTimeRangeAbbreviated(
+                                              session.start_time,
+                                              session.end_time
+                                            )
+                                          : formatTimeRange(
+                                              session.start_time,
+                                              session.end_time
+                                            )}
                                       </div>
                                       <span
-                                        className={`inline-block px-1.5 py-0.5 rounded-md text-[10px] sm:text-[10px] font-bold shadow-sm break-words ${getSwimTypeColor(
+                                        className={`inline-block px-1.5 py-0.5 rounded-md text-xs font-bold shadow-sm break-words ${getSwimTypeColor(
                                           session.swim_type
                                         )}`}
                                       >
-                                        {getSwimTypeLabel(session.swim_type)}
+                                        {isMobile
+                                          ? getSwimTypeLabelAbbreviated(session.swim_type)
+                                          : getSwimTypeLabel(session.swim_type)}
                                       </span>
                                     </div>
                                   );

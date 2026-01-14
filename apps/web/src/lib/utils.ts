@@ -25,12 +25,49 @@ export function formatTimeRange(start: string, end: string): string {
   return `${formatTime(start)} - ${formatTime(end)}`;
 }
 
+/**
+ * Format time in abbreviated format for mobile (e.g., "7a", "12:30p")
+ */
+export function formatTimeAbbreviated(timeString: string): string {
+  const time = parse(timeString, "HH:mm:ss", new Date());
+  const hours = time.getHours();
+  const minutes = time.getMinutes();
+  const ampm = hours >= 12 ? "p" : "a";
+  const hour12 = hours % 12 || 12;
+  
+  if (minutes === 0) {
+    return `${hour12}${ampm}`;
+  }
+  return `${hour12}:${minutes.toString().padStart(2, "0")}${ampm}`;
+}
+
+/**
+ * Format time range in abbreviated format for mobile (e.g., "7a-8:30a")
+ */
+export function formatTimeRangeAbbreviated(start: string, end: string): string {
+  return `${formatTimeAbbreviated(start)}-${formatTimeAbbreviated(end)}`;
+}
+
 export function getSwimTypeLabel(type: string): string {
   const labels: Record<string, string> = {
     LANE_SWIM: "Lane Swim",
     RECREATIONAL: "Recreational Swim",
     ADULT_SWIM: "Adult Swim",
     SENIOR_SWIM: "Senior Swim",
+    OTHER: "Other",
+  };
+  return labels[type] || type;
+}
+
+/**
+ * Get abbreviated swim type label for mobile displays
+ */
+export function getSwimTypeLabelAbbreviated(type: string): string {
+  const labels: Record<string, string> = {
+    LANE_SWIM: "Lane",
+    RECREATIONAL: "Rec",
+    ADULT_SWIM: "Adult",
+    SENIOR_SWIM: "Senior",
     OTHER: "Other",
   };
   return labels[type] || type;

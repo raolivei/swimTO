@@ -2,7 +2,7 @@ import { ExternalLink } from "lucide-react";
 
 export default function About() {
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gray-50 dark:bg-gray-900 py-12 transition-colors duration-300">
+    <div className="min-h-[calc(100dvh-8rem)] bg-gray-50 dark:bg-gray-900 py-12 transition-colors duration-300">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-8 transition-colors duration-300">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">

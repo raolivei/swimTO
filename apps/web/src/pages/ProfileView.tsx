@@ -22,7 +22,7 @@ export default function ProfileView() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="min-h-[calc(100vh-20rem)] flex items-center justify-center">
+      <div className="min-h-[calc(100dvh-20rem)] flex items-center justify-center">
         <div className="text-center">
           <User className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
@@ -43,7 +43,7 @@ export default function ProfileView() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-20rem)] py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-[calc(100dvh-20rem)] py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden mb-6">

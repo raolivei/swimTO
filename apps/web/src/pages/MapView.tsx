@@ -75,6 +75,83 @@ const userLocationIcon = new Icon({
   shadowSize: [41, 41],
 });
 
+// Session availability icons
+const happeningNowIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [28, 45],
+  iconAnchor: [14, 45],
+  popupAnchor: [1, -37],
+  shadowSize: [45, 45],
+});
+
+const sessionsLaterTodayIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+const noSessionsIcon = new Icon({
+  iconUrl:
+    "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-grey.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
+
+// Helper function to determine session availability state
+type SessionAvailability = "happening-now" | "today" | "no-sessions";
+
+const getSessionAvailability = (facility: Facility): SessionAvailability => {
+  if (!facility.next_session) {
+    return "no-sessions";
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Parse the next session date
+  const [year, month, day] = facility.next_session.date.split("-").map(Number);
+  const sessionDate = new Date(year, month - 1, day);
+
+  // Check if session is today
+  if (sessionDate.getTime() !== today.getTime()) {
+    return "no-sessions"; // Next session is not today
+  }
+
+  // Parse start and end times
+  const [startHour, startMin] = facility.next_session.start_time.split(":").map(Number);
+  const [endHour, endMin] = facility.next_session.end_time.split(":").map(Number);
+
+  const sessionStart = new Date(year, month - 1, day, startHour, startMin);
+  const sessionEnd = new Date(year, month - 1, day, endHour, endMin);
+
+  // Add 30 minute buffer before start for "happening now"
+  const startWithBuffer = new Date(sessionStart.getTime() - 30 * 60 * 1000);
+
+  // Check if happening now (including 30 min travel buffer)
+  if (now >= startWithBuffer && now < sessionEnd) {
+    return "happening-now";
+  }
+
+  // Session is today but not happening yet
+  if (now < sessionStart) {
+    return "today";
+  }
+
+  return "no-sessions";
+};
+
 // Extended Facility type with distance
 interface FacilityWithDistance extends Facility {
   distance?: number;
@@ -255,7 +332,7 @@ export default function MapView() {
     const errorInfo = getApiErrorMessage(error);
 
     return (
-      <div className="h-[calc(100vh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="h-[calc(100dvh-8rem)] flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="max-w-2xl w-full mx-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 border-l-4 border-red-500">
             <div className="flex items-start">
@@ -310,7 +387,7 @@ export default function MapView() {
   );
 
   return (
-    <div className="h-[calc(100vh-8rem)] relative">
+    <div className="h-[calc(100dvh-8rem)] relative">
       {/* Search Bar */}
       <div className="absolute top-4 left-4 right-4 md:left-1/2 md:-translate-x-1/2 md:w-96 z-10">
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3 border border-gray-200 dark:border-gray-700">
@@ -406,13 +483,20 @@ export default function MapView() {
               const isFavorited = isFavorite(facility.facility_id);
               const isHighlighted =
                 highlightedFacilityId === facility.facility_id;
+              const availability = getSessionAvailability(facility);
 
-              // Determine which icon to use (priority: highlighted > favorited > default)
+              // Determine which icon to use (priority: highlighted > favorited > session availability)
               let icon = poolIcon;
               if (isHighlighted) {
                 icon = highlightedPoolIcon;
               } else if (isFavorited) {
                 icon = favoritePoolIcon;
+              } else if (availability === "happening-now") {
+                icon = happeningNowIcon;
+              } else if (availability === "today") {
+                icon = sessionsLaterTodayIcon;
+              } else {
+                icon = noSessionsIcon;
               }
 
               return (
@@ -490,10 +574,31 @@ export default function MapView() {
                           </p>
                         </button>
                       )}
+                      {/* Session availability status */}
+                      {availability === "happening-now" && (
+                        <div className="bg-green-100 p-2 rounded mb-2 border border-green-300">
+                          <p className="text-xs font-bold text-green-800 flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                            HAPPENING NOW
+                          </p>
+                        </div>
+                      )}
                       {facility.next_session && (
-                        <div className="bg-blue-50 p-2 rounded mb-2">
-                          <p className="text-xs font-semibold text-blue-900">
-                            Next Session
+                        <div className={`p-2 rounded mb-2 ${
+                          availability === "happening-now" 
+                            ? "bg-green-50" 
+                            : availability === "today" 
+                            ? "bg-blue-50" 
+                            : "bg-gray-50"
+                        }`}>
+                          <p className={`text-xs font-semibold ${
+                            availability === "happening-now"
+                              ? "text-green-900"
+                              : availability === "today"
+                              ? "text-blue-900"
+                              : "text-gray-700"
+                          }`}>
+                            {availability === "today" ? "Today" : "Next Session"}
                           </p>
                           <p className="text-sm">
                             {formatDate(facility.next_session.date)}
@@ -520,7 +625,7 @@ export default function MapView() {
 
       {/* Sidebar - Full width on mobile, fixed width on desktop */}
       {selectedFacility && (
-        <div className="absolute top-20 md:top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-[calc(100vh-16rem)] md:max-h-[calc(100vh-12rem)] overflow-y-auto z-20">
+        <div className="absolute top-20 md:top-4 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 max-h-[calc(100dvh-16rem)] md:max-h-[calc(100dvh-12rem)] overflow-y-auto z-20">
           <button
             onClick={() => setSelectedFacility(null)}
             className="absolute top-2 right-2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
@@ -719,6 +824,31 @@ export default function MapView() {
               </span>{" "}
               pools with lane swim
             </p>
+          </div>
+
+          {/* Map Legend */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-3">
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
+              Map Legend
+            </p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Happening now</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Later today</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-gray-400"></div>
+                <span className="text-gray-600 dark:text-gray-400">No sessions</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                <span className="text-gray-600 dark:text-gray-400">Favorite</span>
+              </div>
+            </div>
           </div>
         </div>
       )}
