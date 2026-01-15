@@ -1,0 +1,165 @@
+name: swimTO Deployment
+
+on:
+  workflow_run:
+    workflows: ["Build and Push Docker Images"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Image tag to deploy (e.g., v0.5.4). Uses VERSION file if not specified."
+        required: false
+        type: string
+      component:
+        description: "Component to deploy"
+        required: true
+        type: choice
+        default: both
+        options:
+          - api
+          - web
+          - both
+
+jobs:
+  # Only proceed if triggered manually OR if the build workflow succeeded
+  check-trigger:
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+    steps:
+      - name: Check trigger conditions
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "Manual deployment triggered"
+          elif [ "${{ github.event_name }}" = "workflow_run" ]; then
+            if [ "${{ github.event.workflow_run.conclusion }}" = "success" ]; then
+              echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+              echo "Build workflow succeeded, proceeding with deployment"
+            else
+              echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+              echo "Build workflow did not succeed (status: ${{ github.event.workflow_run.conclusion }})"
+            fi
+          else
+            echo "should_deploy=false" >> "$GITHUB_OUTPUT"
+            echo "Unknown trigger: ${{ github.event_name }}"
+          fi
+
+  get-version:
+    needs: check-trigger
+    if: needs.check-trigger.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      image_tag: ${{ steps.version.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.image_tag }}" ]; then
+            VERSION="${{ github.event.inputs.image_tag }}"
+          else
+            VERSION=$(cat VERSION | tr -d '[:space:]')
+            VERSION="v${VERSION}"
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "image_tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Deploying version: $VERSION"
+
+  verify-images:
+    needs: get-version
+    runs-on: ubuntu-latest
+    outputs:
+      api_exists: ${{ steps.check-api.outputs.exists }}
+      web_exists: ${{ steps.check-web.outputs.exists }}
+    steps:
+      - name: Check API image exists
+        id: check-api
+        run: |
+          IMAGE="ghcr.io/raolivei/swimto-api:${{ needs.get-version.outputs.image_tag }}"
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ API image exists: $IMAGE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "❌ API image not found: $IMAGE"
+          fi
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+
+      - name: Check Web image exists
+        id: check-web
+        run: |
+          IMAGE="ghcr.io/raolivei/swimto-web:${{ needs.get-version.outputs.image_tag }}"
+          if docker manifest inspect "$IMAGE" > /dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Web image exists: $IMAGE"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "❌ Web image not found: $IMAGE"
+          fi
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
+
+  deploy-api:
+    needs: [get-version, verify-images]
+    if: |
+      needs.verify-images.outputs.api_exists == 'true' &&
+      (github.event.inputs.component == 'api' || github.event.inputs.component == 'both' || github.event_name == 'workflow_run')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pi-fleet deployment for API
+        run: |
+          echo "Triggering deployment for swimto-api:${{ needs.get-version.outputs.image_tag }}"
+          gh api repos/raolivei/pi-fleet/dispatches \
+            -f event_type=deploy-image \
+            -f "client_payload={\"project\":\"swimto\",\"component\":\"api\",\"image_tag\":\"${{ needs.get-version.outputs.image_tag }}\"}"
+        env:
+          GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
+
+      - name: Deployment triggered
+        run: |
+          echo "::notice::API deployment triggered for swimto-api:${{ needs.get-version.outputs.image_tag }}"
+          echo "Check pi-fleet repository for the deployment PR"
+
+  deploy-web:
+    needs: [get-version, verify-images]
+    if: |
+      needs.verify-images.outputs.web_exists == 'true' &&
+      (github.event.inputs.component == 'web' || github.event.inputs.component == 'both' || github.event_name == 'workflow_run')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger pi-fleet deployment for Web
+        run: |
+          echo "Triggering deployment for swimto-web:${{ needs.get-version.outputs.image_tag }}"
+          gh api repos/raolivei/pi-fleet/dispatches \
+            -f event_type=deploy-image \
+            -f "client_payload={\"project\":\"swimto\",\"component\":\"web\",\"image_tag\":\"${{ needs.get-version.outputs.image_tag }}\"}"
+        env:
+          GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
+
+      - name: Deployment triggered
+        run: |
+          echo "::notice::Web deployment triggered for swimto-web:${{ needs.get-version.outputs.image_tag }}"
+          echo "Check pi-fleet repository for the deployment PR"
+
+  summary:
+    needs: [get-version, verify-images, deploy-api, deploy-web]
+    if: always() && needs.get-version.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Image Tag | Image Exists | Deployed |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-----------|--------------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| API | ${{ needs.get-version.outputs.image_tag }} | ${{ needs.verify-images.outputs.api_exists }} | ${{ needs.deploy-api.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Web | ${{ needs.get-version.outputs.image_tag }} | ${{ needs.verify-images.outputs.web_exists }} | ${{ needs.deploy-web.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check the [pi-fleet repository](https://github.com/raolivei/pi-fleet/pulls) for deployment PRs." >> $GITHUB_STEP_SUMMARY
