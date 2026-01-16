@@ -8,6 +8,40 @@
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+
+  /* 
+   * Z-INDEX HIERARCHY DOCUMENTATION
+   * ================================
+   * Organized from lowest to highest to prevent stacking issues
+   * 
+   * LAYER 1: Base content (0-9)
+   * - Default content, no explicit z-index needed
+   * 
+   * LAYER 2: Map & Table elements (10-39)
+   * - z-10: Map search bar, table body cells (sticky)
+   * - z-20: Table header (sticky), map sidebar
+   * - z-30: Table header corner cell (sticky intersection)
+   * 
+   * LAYER 3: Modals & Overlays (50)
+   * - z-50: Maps modal, fullscreen overlays
+   * 
+   * LAYER 4: Fixed Navigation (2000-2001)
+   * - z-2000: Main header/nav (always above everything except toasts)
+   * - z-2001: Login error popup (above header)
+   * 
+   * Usage notes:
+   * - Tailwind classes: z-10, z-20, z-30, z-50, z-[2000], z-[2001]
+   * - Modals should use z-50
+   * - Never use z-index values between 50 and 2000 to leave room for future layers
+   */
+  --z-map-search: 10;
+  --z-table-body-sticky: 10;
+  --z-map-sidebar: 20;
+  --z-table-header: 20;
+  --z-table-header-corner: 30;
+  --z-modal: 50;
+  --z-header: 2000;
+  --z-header-popup: 2001;
 }
 
 body {
@@ -143,4 +177,14 @@ body {
   50% {
     transform: translateY(-5px) scaleY(1.05);
   }
+}
+
+/* Hide scrollbar for horizontal chip scroll while maintaining functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }

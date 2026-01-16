@@ -25,6 +25,8 @@ import {
   Navigation,
   Star,
   Waves,
+  Clock,
+  Timer,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -48,6 +50,53 @@ const isHappeningNow = (session: Session): boolean => {
   // Session is happening now if: (start_time - 30 min) <= now < end_time
   // This includes sessions starting within 30 minutes (travel time) and currently in progress
   return travelWindowStart <= now && now < sessionEnd;
+};
+
+// Helper function to find the next upcoming session
+const findNextSession = (sessions: Session[]): Session | null => {
+  const now = new Date();
+  
+  // Filter to future sessions only and sort by datetime
+  const futureSessions = sessions
+    .filter((session) => {
+      const sessionStart = new Date(`${session.date} ${session.start_time}`);
+      return sessionStart > now;
+    })
+    .sort((a, b) => {
+      const startA = new Date(`${a.date} ${a.start_time}`);
+      const startB = new Date(`${b.date} ${b.start_time}`);
+      return startA.getTime() - startB.getTime();
+    });
+  
+  return futureSessions[0] || null;
+};
+
+// Helper function to format time until a session
+const formatTimeUntil = (session: Session): { text: string; isUrgent: boolean; isToday: boolean } => {
+  const now = new Date();
+  const sessionStart = new Date(`${session.date} ${session.start_time}`);
+  const diffMs = sessionStart.getTime() - now.getTime();
+  
+  if (diffMs < 0) {
+    return { text: "Started", isUrgent: false, isToday: false };
+  }
+  
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMins / 60);
+  const diffDays = Math.floor(diffHours / 24);
+  
+  const isToday = diffDays === 0;
+  const isUrgent = diffMins <= 60; // Within 1 hour
+  
+  if (diffMins < 60) {
+    return { text: `${diffMins} min`, isUrgent, isToday };
+  } else if (diffHours < 24) {
+    const mins = diffMins % 60;
+    return { text: mins > 0 ? `${diffHours}h ${mins}m` : `${diffHours}h`, isUrgent, isToday };
+  } else {
+    const hours = diffHours % 24;
+    return { text: hours > 0 ? `${diffDays}d ${hours}h` : `${diffDays}d`, isUrgent, isToday };
+  }
 };
 
 // Helper function to compare sessions for sorting
@@ -135,6 +184,7 @@ export default function ScheduleView() {
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
   const [isMobile, setIsMobile] = useState(false); // Track if we're on mobile
+  const [countdownTick, setCountdownTick] = useState(0); // Force re-render for countdown
 
   // Track window size for responsive table layout and force list view on mobile
   useEffect(() => {
@@ -149,6 +199,14 @@ export default function ScheduleView() {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Update countdown every minute
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCountdownTick((t) => t + 1);
+    }, 60000); // Update every minute
+    return () => clearInterval(interval);
   }, []);
 
   // Calculate date range to request from API (yesterday to 7 days ahead)
@@ -482,6 +540,72 @@ export default function ScheduleView() {
             Find drop-in swim times at Toronto's community pools
           </p>
 
+          {/* Session Summary Stats */}
+          {filteredSessions && (
+            <div className="flex flex-wrap gap-3 mb-4">
+              {/* Session Count */}
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 dark:bg-primary-900/30 border border-primary-200 dark:border-primary-700">
+                <Waves className="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                <span className="text-sm font-medium text-primary-900 dark:text-primary-100">
+                  <span className="font-bold">{filteredSessions.length}</span> session{filteredSessions.length !== 1 ? 's' : ''} found
+                </span>
+              </div>
+              
+              {/* Unique Facilities */}
+              <div className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700">
+                <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                  <span className="font-bold">
+                    {new Set(filteredSessions.map(s => s.facility?.facility_id).filter(Boolean)).size}
+                  </span> pool{new Set(filteredSessions.map(s => s.facility?.facility_id).filter(Boolean)).size !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* Next Session Countdown */}
+              {sessions && sessions.length > 0 && (() => {
+                const nextSession = findNextSession(sessions);
+                if (!nextSession) return null;
+                const timeUntil = formatTimeUntil(nextSession);
+                // Using countdownTick to force re-render
+                void countdownTick;
+                return (
+                  <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg transition-all ${
+                    timeUntil.isUrgent
+                      ? "bg-gradient-to-r from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40 border-2 border-amber-400 dark:border-amber-600 shadow-md shadow-amber-400/20"
+                      : timeUntil.isToday
+                      ? "bg-gradient-to-r from-green-100 to-emerald-100 dark:from-green-900/40 dark:to-emerald-900/40 border border-green-300 dark:border-green-700"
+                      : "bg-white/80 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700"
+                  }`}>
+                    <Timer className={`w-4 h-4 ${
+                      timeUntil.isUrgent
+                        ? "text-amber-700 dark:text-amber-300 animate-pulse"
+                        : timeUntil.isToday
+                        ? "text-green-700 dark:text-green-300"
+                        : "text-gray-600 dark:text-gray-400"
+                    }`} />
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">
+                        Next:
+                      </span>
+                      <span className={`text-sm font-bold ${
+                        timeUntil.isUrgent
+                          ? "text-amber-700 dark:text-amber-300"
+                          : timeUntil.isToday
+                          ? "text-green-700 dark:text-green-300"
+                          : "text-gray-900 dark:text-gray-100"
+                      }`}>
+                        {timeUntil.text}
+                      </span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
+                        @ {nextSession.facility?.name?.slice(0, 20) || "Unknown"}{(nextSession.facility?.name?.length || 0) > 20 ? '...' : ''}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Week Navigation */}
           <div className="flex items-center justify-center gap-4 mt-6">
             <button
@@ -565,7 +689,7 @@ export default function ScheduleView() {
                         sortMode === "distance" ? "favorites" : "distance"
                       );
                     }}
-                    className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
+                    className={`min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
                       sortMode === "distance"
                         ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
                         : "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
@@ -586,7 +710,7 @@ export default function ScheduleView() {
               ) : (
                 <button
                   onClick={handleGetLocation}
-                  className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  className="min-h-[44px] flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   title="Enable location to sort by distance"
                 >
                   <Navigation className="w-4 h-4" />
@@ -599,7 +723,7 @@ export default function ScheduleView() {
                 onClick={() =>
                   setPrioritizeHappeningNow(!prioritizeHappeningNow)
                 }
-                className={`flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
+                className={`min-h-[44px] flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
                   prioritizeHappeningNow
                     ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
                     : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
@@ -654,26 +778,29 @@ export default function ScheduleView() {
           )}
 
           <div className={`${showFilters ? "block" : "hidden"} md:block`}>
-            <div className="flex flex-wrap gap-1.5 sm:gap-2">
-              {[
-                "ALL",
-                "LANE_SWIM",
-                "RECREATIONAL",
-                "ADULT_SWIM",
-                "SENIOR_SWIM",
-              ].map((type) => (
-                <button
-                  key={type}
-                  onClick={() => setSwimType(type as SwimType | "ALL")}
-                  className={`px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 transform hover:scale-105 ${
-                    swimType === type
-                      ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
-                </button>
-              ))}
+            {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
+            <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
+              <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
+                {[
+                  "ALL",
+                  "LANE_SWIM",
+                  "RECREATIONAL",
+                  "ADULT_SWIM",
+                  "SENIOR_SWIM",
+                ].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setSwimType(type as SwimType | "ALL")}
+                    className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
+                      swimType === type
+                        ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
