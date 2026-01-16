@@ -121,7 +121,7 @@ jobs:
           echo "Triggering deployment for swimto-api:${{ needs.get-version.outputs.image_tag }}"
           gh api repos/raolivei/pi-fleet/dispatches \
             -f event_type=deploy-image \
-            -f "client_payload={\"project\":\"swimto\",\"component\":\"api\",\"image_tag\":\"${{ needs.get-version.outputs.image_tag }}\"}"
+            -F client_payload='{"project":"swimto","component":"api","image_tag":"${{ needs.get-version.outputs.image_tag }}"}'
         env:
           GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
 
@@ -142,7 +142,7 @@ jobs:
           echo "Triggering deployment for swimto-web:${{ needs.get-version.outputs.image_tag }}"
           gh api repos/raolivei/pi-fleet/dispatches \
             -f event_type=deploy-image \
-            -f "client_payload={\"project\":\"swimto\",\"component\":\"web\",\"image_tag\":\"${{ needs.get-version.outputs.image_tag }}\"}"
+            -F client_payload='{"project":"swimto","component":"web","image_tag":"${{ needs.get-version.outputs.image_tag }}"}'
         env:
           GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
 
