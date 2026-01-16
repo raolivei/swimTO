@@ -25,7 +25,6 @@ import {
   Navigation,
   Star,
   Waves,
-  Clock,
   Timer,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
