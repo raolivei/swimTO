@@ -93,3 +93,4 @@ data/cache/
 charts/*/charts/
 *.tgz
 
+monitoring.yaml
