@@ -78,6 +78,13 @@ jobs:
       api_exists: ${{ steps.check-api.outputs.exists }}
       web_exists: ${{ steps.check-web.outputs.exists }}
     steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.CR_PAT }}
+
       - name: Check API image exists
         id: check-api
         run: |
@@ -89,8 +96,6 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "❌ API image not found: $IMAGE"
           fi
-        env:
-          DOCKER_CLI_EXPERIMENTAL: enabled
 
       - name: Check Web image exists
         id: check-web
@@ -103,8 +108,6 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
             echo "❌ Web image not found: $IMAGE"
           fi
-        env:
-          DOCKER_CLI_EXPERIMENTAL: enabled
 
   deploy-api:
     needs: [get-version, verify-images]
