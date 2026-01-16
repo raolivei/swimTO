@@ -119,9 +119,16 @@ jobs:
       - name: Trigger pi-fleet deployment for API
         run: |
           echo "Triggering deployment for swimto-api:${{ needs.get-version.outputs.image_tag }}"
-          gh api repos/raolivei/pi-fleet/dispatches \
-            -f event_type=deploy-image \
-            -F client_payload='{"project":"swimto","component":"api","image_tag":"${{ needs.get-version.outputs.image_tag }}"}'
+          gh api repos/raolivei/pi-fleet/dispatches --method POST --input - <<EOF
+          {
+            "event_type": "deploy-image",
+            "client_payload": {
+              "project": "swimto",
+              "component": "api",
+              "image_tag": "${{ needs.get-version.outputs.image_tag }}"
+            }
+          }
+          EOF
         env:
           GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
 
@@ -140,9 +147,16 @@ jobs:
       - name: Trigger pi-fleet deployment for Web
         run: |
           echo "Triggering deployment for swimto-web:${{ needs.get-version.outputs.image_tag }}"
-          gh api repos/raolivei/pi-fleet/dispatches \
-            -f event_type=deploy-image \
-            -F client_payload='{"project":"swimto","component":"web","image_tag":"${{ needs.get-version.outputs.image_tag }}"}'
+          gh api repos/raolivei/pi-fleet/dispatches --method POST --input - <<EOF
+          {
+            "event_type": "deploy-image",
+            "client_payload": {
+              "project": "swimto",
+              "component": "web",
+              "image_tag": "${{ needs.get-version.outputs.image_tag }}"
+            }
+          }
+          EOF
         env:
           GH_TOKEN: ${{ secrets.PI_FLEET_PAT }}
 
