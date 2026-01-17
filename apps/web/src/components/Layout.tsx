@@ -1,4 +1,4 @@
-import { Outlet, NavLink } from "react-router-dom";
+import { Outlet, NavLink, Link } from "react-router-dom";
 import {
   Waves,
   Map,
@@ -11,10 +11,14 @@ import {
   User,
   AlertCircle,
   X,
+  Mail,
+  Github,
+  Heart,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/useAuth";
 import { useState, useEffect } from "react";
+import { InstallPrompt } from "./InstallPrompt";
 
 export default function Layout() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -202,27 +206,141 @@ export default function Layout() {
       <main className="flex-1">
         <Outlet />
       </main>
+      <InstallPrompt />
       <footer className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 border-t border-gray-700 dark:border-gray-800 transition-colors duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <Waves className="w-6 h-6 text-primary-400" />
-              <span className="text-xl font-bold text-white">SwimTO</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* Brand Column */}
+            <div className="md:col-span-1">
+              <div className="flex items-center gap-2 mb-4">
+                <Waves className="w-8 h-8 text-primary-400" />
+                <span className="text-2xl font-bold text-white">SwimTO</span>
+              </div>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Toronto's premier pool schedule finder. Find indoor drop-in swim
+                times at community centers near you.
+              </p>
+              <div className="flex items-center gap-3 mt-4">
+                <a
+                  href="mailto:hello@swimto.app"
+                  className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                  aria-label="Email us"
+                >
+                  <Mail className="w-5 h-5 text-gray-400 hover:text-white" />
+                </a>
+                <a
+                  href="https://github.com/raolivei/swimTO"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+                  aria-label="GitHub repository"
+                >
+                  <Github className="w-5 h-5 text-gray-400 hover:text-white" />
+                </a>
+              </div>
             </div>
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              Data from{" "}
-              <a
-                href="https://open.toronto.ca"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-400 hover:text-primary-300 transition-colors underline decoration-primary-400/30 hover:decoration-primary-300"
-              >
-                City of Toronto Open Data Portal
-              </a>
-            </p>
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-600">
-              Licensed under the Open Government Licence – Toronto
-            </p>
+
+            {/* Quick Links */}
+            <div>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+                Quick Links
+              </h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/schedule"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    View Schedule
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/map"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    Pool Map
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/about"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    About
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+                Legal
+              </h3>
+              <ul className="space-y-2">
+                <li>
+                  <Link
+                    to="/terms"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/privacy"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <a
+                    href="https://open.toronto.ca/open-data-license/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-400 hover:text-primary-400 transition-colors text-sm"
+                  >
+                    Data License
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            {/* Data Source */}
+            <div>
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
+                Data Source
+              </h3>
+              <p className="text-sm text-gray-400 leading-relaxed">
+                Schedule data from the{" "}
+                <a
+                  href="https://open.toronto.ca"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary-400 hover:text-primary-300 transition-colors underline"
+                >
+                  City of Toronto Open Data Portal
+                </a>
+              </p>
+              <p className="text-xs text-gray-500 mt-2">
+                Licensed under the Open Government Licence – Toronto
+              </p>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-gray-800 mt-8 pt-8">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <p className="text-sm text-gray-500">
+                © {new Date().getFullYear()} SwimTO. All rights reserved.
+              </p>
+              <p className="text-sm text-gray-500 flex items-center gap-1">
+                Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" />{" "}
+                in Toronto
+              </p>
+            </div>
           </div>
         </div>
       </footer>

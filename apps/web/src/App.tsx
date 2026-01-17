@@ -9,6 +9,8 @@ import About from "./pages/About";
 import RealTimeUpdates from "./pages/RealTimeUpdates";
 import AuthCallback from "./pages/AuthCallback";
 import ProfileView from "./pages/ProfileView";
+import TermsOfService from "./pages/TermsOfService";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
               <Route path="about" element={<About />} />
               <Route path="profile" element={<ProfileView />} />
               <Route path="real-time-updates" element={<RealTimeUpdates />} />
+              <Route path="terms" element={<TermsOfService />} />
+              <Route path="privacy" element={<PrivacyPolicy />} />
             </Route>
             <Route path="/auth/callback" element={<AuthCallback />} />
           </Routes>

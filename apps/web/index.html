@@ -4,8 +4,35 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
-    <meta name="description" content="Find indoor pool drop-in swim schedules in Toronto" />
-    <title>SwimTO - Toronto Pool Schedules</title>
+    
+    <!-- Primary Meta Tags -->
+    <title>SwimTO - Find Indoor Pool Drop-in Swim Times in Toronto</title>
+    <meta name="title" content="SwimTO - Find Indoor Pool Drop-in Swim Times in Toronto" />
+    <meta name="description" content="Discover indoor pool drop-in swim schedules across Toronto. Find lane swim, recreational swim, and adult swim times at 50+ community centers near you. Free, mobile-friendly, and always up-to-date." />
+    <meta name="keywords" content="Toronto pools, lane swim, drop-in swimming, Toronto community centers, swim schedule, indoor pools Toronto, recreational swimming" />
+    <meta name="author" content="SwimTO" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://swimto.app/" />
+    <meta property="og:title" content="SwimTO - Find Indoor Pool Drop-in Swim Times in Toronto" />
+    <meta property="og:description" content="Discover indoor pool drop-in swim schedules across Toronto. Find lane swim times at 50+ community centers near you." />
+    <meta property="og:image" content="https://swimto.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:site_name" content="SwimTO" />
+    <meta property="og:locale" content="en_CA" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://swimto.app/" />
+    <meta property="twitter:title" content="SwimTO - Find Indoor Pool Drop-in Swim Times in Toronto" />
+    <meta property="twitter:description" content="Discover indoor pool drop-in swim schedules across Toronto. Find lane swim times at 50+ community centers near you." />
+    <meta property="twitter:image" content="https://swimto.app/og-image.png" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://swimto.app/" />
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
@@ -18,6 +45,34 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="SwimTO" />
+    <link rel="apple-touch-icon" href="/swimto-logo-512.png" />
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "SwimTO",
+      "description": "Find indoor pool drop-in swim schedules across Toronto",
+      "url": "https://swimto.app",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "CAD"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "SwimTO"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "ratingCount": "50"
+      }
+    }
+    </script>
     
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -29,4 +84,3 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-

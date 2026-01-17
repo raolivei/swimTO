@@ -26,6 +26,9 @@ import {
   Star,
   Waves,
   Timer,
+  Share2,
+  Calendar as CalendarIcon,
+  Check,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -96,6 +99,90 @@ const formatTimeUntil = (session: Session): { text: string; isUrgent: boolean; i
     const hours = diffHours % 24;
     return { text: hours > 0 ? `${diffDays}d ${hours}h` : `${diffDays}d`, isUrgent, isToday };
   }
+};
+
+// Generate calendar event for a session
+const generateCalendarUrl = (session: Session): string => {
+  const start = new Date(`${session.date} ${session.start_time}`);
+  const end = new Date(`${session.date} ${session.end_time}`);
+  
+  // Format for Google Calendar
+  const formatGoogleDate = (date: Date) => {
+    return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+  };
+  
+  const title = encodeURIComponent(`${getSwimTypeLabel(session.swim_type)} at ${session.facility?.name || 'Pool'}`);
+  const details = encodeURIComponent(`Drop-in swim session\n\nTime: ${formatTimeRange(session.start_time, session.end_time)}\nType: ${getSwimTypeLabel(session.swim_type)}${session.notes ? `\nNotes: ${session.notes}` : ''}\n\nFound via SwimTO - swimto.app`);
+  const location = encodeURIComponent(session.facility?.address || '');
+  
+  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${formatGoogleDate(start)}/${formatGoogleDate(end)}&details=${details}&location=${location}`;
+};
+
+// Generate share text for a session
+const getShareText = (session: Session): { title: string; text: string; url: string } => {
+  const title = `${getSwimTypeLabel(session.swim_type)} at ${session.facility?.name || 'Pool'}`;
+  const text = `${getSwimTypeLabel(session.swim_type)} at ${session.facility?.name}\n${formatDate(session.date)} from ${formatTimeRange(session.start_time, session.end_time)}\n${session.facility?.address || ''}`;
+  const url = window.location.origin + '/schedule';
+  
+  return { title, text, url };
+};
+
+// Share Button Component
+const ShareButton = ({ session }: { session: Session }) => {
+  const [copied, setCopied] = useState(false);
+  
+  const handleShare = async () => {
+    const { title, text, url } = getShareText(session);
+    
+    // Use native share API if available (mobile)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+      } catch {
+        // User cancelled or error - silently ignore
+      }
+    } else {
+      // Fallback: copy to clipboard
+      const fullText = `${text}\n\nFind more swim times at ${url}`;
+      await navigator.clipboard.writeText(fullText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  
+  return (
+    <button
+      onClick={handleShare}
+      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+      aria-label="Share this session"
+      title="Share this session"
+    >
+      {copied ? (
+        <Check className="w-4 h-4 text-green-500" />
+      ) : (
+        <Share2 className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+      )}
+    </button>
+  );
+};
+
+// Calendar Button Component
+const CalendarButton = ({ session }: { session: Session }) => {
+  const handleAddToCalendar = () => {
+    const url = generateCalendarUrl(session);
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+  
+  return (
+    <button
+      onClick={handleAddToCalendar}
+      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+      aria-label="Add to calendar"
+      title="Add to Google Calendar"
+    >
+      <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+    </button>
+  );
 };
 
 // Helper function to compare sessions for sorting
@@ -946,8 +1033,8 @@ export default function ScheduleView() {
                               </div>
                             </div>
 
-                            {/* Type */}
-                            <div className="flex-shrink-0">
+                            {/* Type + Actions */}
+                            <div className="flex-shrink-0 flex flex-col sm:flex-row items-end sm:items-center gap-2">
                               <span
                                 className={`px-4 py-2 rounded-xl text-xs font-bold ${getSwimTypeColor(
                                   session.swim_type
@@ -955,6 +1042,10 @@ export default function ScheduleView() {
                               >
                                 {getSwimTypeLabel(session.swim_type)}
                               </span>
+                              <div className="flex items-center gap-1">
+                                <ShareButton session={session} />
+                                <CalendarButton session={session} />
+                              </div>
                             </div>
                           </div>
 
