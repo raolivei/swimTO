@@ -975,9 +975,9 @@ export default function ScheduleView() {
             })}
           </div>
         ) : (
-          /* Table View */
+          /* Table View - Single page scroll, no separate table scroll */
           <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200/50 dark:border-gray-700/50 overflow-hidden">
-            <div className="overflow-y-auto max-h-[calc(100dvh-20rem)] overflow-x-auto">
+            <div className="overflow-x-auto">
               <table
                 className="w-full table-fixed min-w-full"
                 style={{ tableLayout: "fixed", width: "100%" }}
