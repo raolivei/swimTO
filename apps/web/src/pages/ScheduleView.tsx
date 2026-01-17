@@ -896,7 +896,11 @@ export default function ScheduleView() {
                                 />
                               </button>
                               <div className="flex-1">
-                                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-lg">
+                                {/* Time - Most important info, shown prominently */}
+                                <div className="text-xl font-bold text-primary-600 dark:text-primary-400 mb-2">
+                                  {formatTimeRange(session.start_time, session.end_time)}
+                                </div>
+                                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-base">
                                   {session.facility?.website ? (
                                     <a
                                       href={session.facility.website}
