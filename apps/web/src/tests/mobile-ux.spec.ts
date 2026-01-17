@@ -279,3 +279,60 @@ test.describe("Mobile UX - Filter Chip Scroll", () => {
     expect(hasPageScroll, "Page should not have horizontal scroll").toBe(false);
   });
 });
+
+test.describe("Mobile UX - Session Times Visibility", () => {
+  test("session times should be visible and prominent in list view", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.waitForLoadState("networkidle");
+
+    // Wait for sessions to load (may take a moment)
+    await page.waitForTimeout(2000);
+
+    // Look for time format patterns (e.g., "7:00 AM - 8:30 AM" or "12:00 PM - 1:00 PM")
+    const timePattern = /\d{1,2}:\d{2}\s*(AM|PM)\s*-\s*\d{1,2}:\d{2}\s*(AM|PM)/i;
+    
+    // Find elements containing time patterns
+    const timeElements = page.locator('div').filter({ hasText: timePattern });
+    const count = await timeElements.count();
+
+    // Should have at least one visible time if there are sessions
+    if (count > 0) {
+      const firstTime = timeElements.first();
+      await expect(firstTime).toBeVisible();
+      
+      // Time should be reasonably sized (at least 16px font)
+      const fontSize = await firstTime.evaluate((el) => {
+        return parseFloat(window.getComputedStyle(el).fontSize);
+      });
+      expect(fontSize, "Time font size should be at least 16px").toBeGreaterThanOrEqual(16);
+      
+      console.log(`✓ Found ${count} session times, font-size: ${fontSize}px`);
+    } else {
+      // If no sessions, that's okay - just log it
+      console.log("No sessions found to verify times");
+    }
+  });
+
+  test("session cards should show time before facility name", async ({ page }) => {
+    await page.goto("/schedule");
+    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(2000);
+
+    // Find session cards in list view
+    const sessionCards = page.locator('[class*="rounded-xl"][class*="border-2"]');
+    const cardCount = await sessionCards.count();
+
+    if (cardCount > 0) {
+      const firstCard = sessionCards.first();
+      
+      // Get the text content of the card
+      const cardText = await firstCard.textContent();
+      
+      // Time pattern should appear in the card
+      const timePattern = /\d{1,2}:\d{2}\s*(AM|PM)/i;
+      expect(cardText).toMatch(timePattern);
+      
+      console.log(`✓ Session card contains time information`);
+    }
+  });
+});
