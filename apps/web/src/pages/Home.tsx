@@ -1,7 +1,8 @@
 import { Link } from "react-router-dom";
-import { Map, Calendar, Sparkles, Clock, MapPin } from "lucide-react";
+import { Map, Calendar, Sparkles, Clock, MapPin, Search, Star, Share2, ChevronDown, Shield, Smartphone } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { facilityApi, scheduleApi } from "../lib/api";
+import { useState } from "react";
 
 export default function Home() {
   // Fetch facilities data for stats
@@ -194,6 +195,118 @@ export default function Home() {
         </div>
       </section>
 
+      {/* How It Works */}
+      <section className="py-20 bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              How It Works
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Get swimming in 3 simple steps
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            {/* Connecting line (hidden on mobile) */}
+            <div className="hidden md:block absolute top-16 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-primary-200 via-primary-400 to-primary-200 dark:from-primary-800 dark:via-primary-600 dark:to-primary-800" />
+            
+            <div className="relative text-center">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-primary-100 to-primary-200 dark:from-primary-900/50 dark:to-primary-800/50 rounded-full flex items-center justify-center mb-6 relative z-10">
+                <Search className="w-12 h-12 text-primary-600 dark:text-primary-400" />
+                <div className="absolute -top-2 -right-2 w-10 h-10 bg-primary-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                  1
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Find Pools Near You
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Use the map or schedule view to find community pools in your area with available swim times.
+              </p>
+            </div>
+
+            <div className="relative text-center">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-full flex items-center justify-center mb-6 relative z-10">
+                <Calendar className="w-12 h-12 text-green-600 dark:text-green-400" />
+                <div className="absolute -top-2 -right-2 w-10 h-10 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                  2
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Check the Schedule
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Browse available times, filter by swim type, and add sessions to your calendar.
+              </p>
+            </div>
+
+            <div className="relative text-center">
+              <div className="w-32 h-32 mx-auto bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-full flex items-center justify-center mb-6 relative z-10">
+                <Sparkles className="w-12 h-12 text-blue-600 dark:text-blue-400" />
+                <div className="absolute -top-2 -right-2 w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-lg shadow-lg">
+                  3
+                </div>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Dive In!
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400">
+                Show up at your chosen pool during drop-in hours. No reservation needed!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why SwimTO */}
+      <section className="py-20 bg-white dark:bg-gray-900 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Why SwimTO?
+            </h2>
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Built by swimmers, for swimmers
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <Star className="w-10 h-10 text-yellow-500 mb-4" />
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Save Favorites</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Star your go-to pools for quick access to their schedules.
+              </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <Share2 className="w-10 h-10 text-primary-500 mb-4" />
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Share Sessions</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Easily share swim times with friends and family.
+              </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <Shield className="w-10 h-10 text-green-500 mb-4" />
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Privacy First</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                No tracking, no ads. Your data stays yours.
+              </p>
+            </div>
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <Smartphone className="w-10 h-10 text-purple-500 mb-4" />
+              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-2">Mobile Ready</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Works beautifully on any device. Install as an app!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <FAQSection />
+
       {/* CTA with gradient */}
       <section className="py-20 bg-gradient-to-r from-primary-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -214,5 +327,84 @@ export default function Home() {
         </div>
       </section>
     </div>
+  );
+}
+
+// FAQ Section Component
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  const faqs = [
+    {
+      question: "Is SwimTO free to use?",
+      answer: "Yes! SwimTO is completely free to use. We believe everyone should have easy access to public pool schedules."
+    },
+    {
+      question: "How accurate is the schedule data?",
+      answer: "Our data comes directly from the City of Toronto Open Data Portal and is updated daily. However, we always recommend confirming with the facility for any last-minute changes."
+    },
+    {
+      question: "What types of swim sessions are available?",
+      answer: "We show all drop-in swim types including Lane Swim, Recreational Swim, Adult Swim, and Senior Swim. You can filter by type in the schedule view."
+    },
+    {
+      question: "Do I need to create an account?",
+      answer: "No account is required to browse schedules! However, signing in with Google lets you save favorite pools for quick access across devices."
+    },
+    {
+      question: "Can I add sessions to my calendar?",
+      answer: "Yes! Each session has an 'Add to Calendar' button that creates an event in Google Calendar with all the details."
+    },
+    {
+      question: "Why can't I find a specific pool?",
+      answer: "SwimTO currently shows City of Toronto community center pools that offer drop-in lane swim. Private pools and some specialized facilities may not be included."
+    }
+  ];
+
+  return (
+    <section className="py-20 bg-gray-50 dark:bg-gray-800 transition-colors duration-300">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
+          <h2 className="text-4xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+            Frequently Asked Questions
+          </h2>
+          <p className="text-xl text-gray-600 dark:text-gray-400">
+            Got questions? We've got answers.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          {faqs.map((faq, index) => (
+            <div
+              key={index}
+              className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden"
+            >
+              <button
+                onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  {faq.question}
+                </span>
+                <ChevronDown
+                  className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+                    openIndex === index ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ${
+                  openIndex === index ? "max-h-48" : "max-h-0"
+                }`}
+              >
+                <p className="px-6 pb-4 text-gray-600 dark:text-gray-400">
+                  {faq.answer}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
