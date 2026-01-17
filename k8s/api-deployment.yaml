@@ -23,7 +23,7 @@ spec:
         fsGroup: 1000
       containers:
         - name: api
-          image: ghcr.io/raolivei/swimto-api:v0.5.5
+          image: ghcr.io/raolivei/swimto-api:v0.6.0
           imagePullPolicy: IfNotPresent # Use IfNotPresent for versioned tags
           command: ["sh", "-c"]
           args:
