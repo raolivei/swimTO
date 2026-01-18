@@ -252,7 +252,40 @@ curl -X POST "http://localhost:8000/update" \
 
 ## Rate Limiting
 
-Currently no rate limiting is implemented. Use responsibly.
+All endpoints are rate limited to prevent abuse:
+
+| Endpoint Category | Rate Limit |
+|-------------------|------------|
+| `/facilities/*` | 60 requests/minute per IP |
+| `/schedule/*` | 60 requests/minute per IP |
+| `/health` | Unlimited |
+| `/update` | 10 requests/minute (admin only) |
+
+### Rate Limit Headers
+
+Responses include rate limit information in headers:
+
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1737218400
+```
+
+### Rate Limit Exceeded Response
+
+When rate limit is exceeded, you'll receive a `429 Too Many Requests` response:
+
+```json
+{
+  "error": "Rate limit exceeded",
+  "detail": "Rate limit exceeded: 60 per 1 minute"
+}
+```
+
+**Best Practices:**
+- Cache responses when possible
+- Use batch requests where available
+- Implement exponential backoff on 429 responses
 
 ## CORS
 
