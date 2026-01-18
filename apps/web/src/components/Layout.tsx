@@ -13,13 +13,13 @@ import {
   X,
   Mail,
   Github,
-  Heart,
   Home,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/useAuth";
 import { useState, useEffect } from "react";
 import { InstallPrompt } from "./InstallPrompt";
+import { PitangaMark } from "./PitangaMark";
 
 export default function Layout() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -338,10 +338,16 @@ export default function Layout() {
                 © {new Date().getFullYear()} SwimTO. All rights reserved.
               </p>
               <div className="flex items-center gap-4">
-                <p className="text-sm text-gray-500 flex items-center gap-1">
-                  Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" />{" "}
-                  in Toronto
-                </p>
+                <a 
+                  href="https://pitanga.cloud" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-sm text-gray-500 hover:text-gray-300 flex items-center gap-2 transition-colors"
+                  title="Visit Pitanga Cloud"
+                >
+                  <PitangaMark className="w-5 h-5" />
+                  <span>A Pitanga Cloud project</span>
+                </a>
                 <span className="text-xs text-gray-600 font-mono">
                   v{import.meta.env.VITE_APP_VERSION || "dev"}
                 </span>
