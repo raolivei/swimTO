@@ -26,12 +26,17 @@
    * - z-50: Maps modal, fullscreen overlays
    * 
    * LAYER 4: Fixed Navigation (2000-2001)
-   * - z-2000: Main header/nav (always above everything except toasts)
-   * - z-2001: Login error popup (above header)
+   * - z-[2000]: Main header/nav (always above everything except toasts/PWA prompts)
+   * - z-[2001]: Login error popup (above header)
+   * 
+   * LAYER 5: PWA Install Prompts (2500-3000)
+   * - z-[2500]: PWA install prompt banner (above header)
+   * - z-[3000]: PWA install modal with backdrop (topmost layer)
    * 
    * Usage notes:
-   * - Tailwind classes: z-10, z-20, z-30, z-50, z-[2000], z-[2001]
-   * - Modals should use z-50
+   * - Tailwind classes: z-10, z-20, z-30, z-50, z-[2000], z-[2001], z-[2500], z-[3000]
+   * - Regular modals should use z-50
+   * - PWA prompts use z-[2500] and z-[3000] to appear above navigation
    * - Never use z-index values between 50 and 2000 to leave room for future layers
    */
   --z-map-search: 10;
@@ -42,6 +47,8 @@
   --z-modal: 50;
   --z-header: 2000;
   --z-header-popup: 2001;
+  --z-pwa-banner: 2500;
+  --z-pwa-modal: 3000;
 }
 
 body {

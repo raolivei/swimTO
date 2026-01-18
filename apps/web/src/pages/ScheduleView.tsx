@@ -153,7 +153,7 @@ const ShareButton = ({ session }: { session: Session }) => {
   return (
     <button
       onClick={handleShare}
-      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
       aria-label="Share this session"
       title="Share this session"
     >
@@ -176,7 +176,7 @@ const CalendarButton = ({ session }: { session: Session }) => {
   return (
     <button
       onClick={handleAddToCalendar}
-      className="p-2 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
+      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
       aria-label="Add to calendar"
       title="Add to Google Calendar"
     >
@@ -758,7 +758,7 @@ export default function ScheduleView() {
             <div className="flex items-center justify-center gap-4 mt-6">
               <button
                 onClick={() => setWeekOffset(weekOffset - 1)}
-                className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
+                className="min-h-[44px] px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
               >
                 ← Prev
               </button>
@@ -789,7 +789,7 @@ export default function ScheduleView() {
 
               <button
                 onClick={() => setWeekOffset(weekOffset + 1)}
-                className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
+                className="min-h-[44px] px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
               >
                 Next →
               </button>
@@ -797,7 +797,7 @@ export default function ScheduleView() {
               {weekOffset !== 0 && (
                 <button
                   onClick={() => setWeekOffset(0)}
-                  className="px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
+                  className="min-h-[44px] px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
                   title="Go to today"
                 >
                   Today
@@ -812,7 +812,7 @@ export default function ScheduleView() {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+              className="min-h-[44px] flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               <Filter className="w-5 h-5" />
               Filters
@@ -912,7 +912,7 @@ export default function ScheduleView() {
               <div className="hidden md:flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
+                  className={`min-h-[44px] flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
                     viewMode === "list"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -923,7 +923,7 @@ export default function ScheduleView() {
                 </button>
                 <button
                   onClick={() => setViewMode("table")}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
+                  className={`min-h-[44px] flex items-center gap-1.5 px-4 py-2 rounded-md font-medium transition-all duration-300 text-sm ${
                     viewMode === "table"
                       ? "bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-md"
                       : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
@@ -1037,7 +1037,7 @@ export default function ScheduleView() {
                                     session.facility?.facility_id
                                   )
                                 }
-                                className="flex-shrink-0 hover:scale-110 transition-transform duration-200 mt-1"
+                                className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center hover:scale-110 transition-transform duration-200"
                                 aria-label={
                                   favorites.has(
                                     session.facility?.facility_id || ""
@@ -1054,7 +1054,7 @@ export default function ScheduleView() {
                                 }
                               >
                                 <Star
-                                  className={`w-5 h-5 ${
+                                  className={`w-6 h-6 ${
                                     favorites.has(
                                       session.facility?.facility_id || ""
                                     )
@@ -1268,7 +1268,7 @@ export default function ScheduleView() {
                             onClick={() =>
                               handleToggleFavorite(data.facility?.facility_id)
                             }
-                            className="flex-shrink-0 mt-1 hover:scale-110 transition-transform duration-200 p-1.5 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+                            className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center hover:scale-110 transition-transform duration-200 rounded-lg hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
                             aria-label={
                               isFavorite(data.facility?.facility_id || "")
                                 ? "Remove from favorites"
@@ -1281,7 +1281,7 @@ export default function ScheduleView() {
                             }
                           >
                             <Star
-                              className={`w-5 h-5 sm:w-6 sm:h-6 transition-all duration-200 ${
+                              className={`w-6 h-6 transition-all duration-200 ${
                                 isFavorite(data.facility?.facility_id || "")
                                   ? "fill-yellow-400 text-yellow-400 scale-110"
                                   : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
@@ -1309,7 +1309,7 @@ export default function ScheduleView() {
                                   onClick={() =>
                                     setMapsModalAddress(data.facility!.address!)
                                   }
-                                  className="mb-2 px-2 py-1 text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-300 cursor-pointer transition-all duration-200 flex items-center gap-1.5"
+                                  className="mb-2 min-h-[44px] px-3 py-2 text-sm font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-md hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-700 dark:hover:text-green-300 cursor-pointer transition-all duration-200 flex items-center gap-1.5"
                                   title="Open in maps"
                                 >
                                   <Navigation className="w-4 h-4" />
@@ -1475,7 +1475,7 @@ export default function ScheduleView() {
                                       }
                                       setExpandedCells(newExpanded);
                                     }}
-                                    className="w-full mt-2 px-2 py-1.5 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-all duration-200"
+                                    className="w-full mt-2 min-h-[44px] px-2 py-2 text-xs font-semibold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-900/20 rounded-md hover:bg-primary-100 dark:hover:bg-primary-900/30 hover:text-primary-700 dark:hover:text-primary-300 transition-all duration-200"
                                   >
                                     {isExpanded
                                       ? "Show less"
@@ -1571,7 +1571,7 @@ export default function ScheduleView() {
 
             <button
               onClick={() => setMapsModalAddress(null)}
-              className="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="mt-4 w-full min-h-[44px] px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
             >
               Cancel
             </button>

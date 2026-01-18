@@ -67,6 +67,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **♿ Accessibility Improvements (#81)**: All interactive elements now meet 44px minimum tap target requirement
+  - ShareButton and CalendarButton in schedule view
+  - Favorite star buttons across list and table views
+  - Navigation buttons (prev/next day/week, today)
+  - Filter toggle and view mode buttons
+  - Distance buttons and modal cancel buttons
+  - Close buttons in map sidebar
+  - Location controls (Enable, Recenter, Disable)
+
+### Changed
+
+- **📚 Enhanced Z-Index Documentation (#50)**: Updated CSS variables and documentation
+  - Added PWA layer documentation (z-2500, z-3000)
+  - Added CSS variables for all z-index values
+  - Clear layer hierarchy from base content to PWA modals
+
 - **🔐 Multi-Domain OAuth Support**: Google OAuth now works across multiple domains
   - Dynamic redirect URI detection based on request origin
   - Supports `swimto.eldertree.xyz` (public), `swimto.eldertree.local` (internal), and `localhost` (dev)
