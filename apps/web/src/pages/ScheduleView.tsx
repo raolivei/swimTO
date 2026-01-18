@@ -266,7 +266,8 @@ export default function ScheduleView() {
     "distance"
   );
   const [iconJump, setIconJump] = useState(false);
-  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = current week, 1 = next week, -1 = prev week (desktop)
+  const [dayOffset, setDayOffset] = useState(0); // 0 = today, 1 = tomorrow, -1 = yesterday (mobile)
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set()); // Track expanded table cells
   const [mapsModalAddress, setMapsModalAddress] = useState<string | null>(null); // Track address for maps modal
   const [isMobile, setIsMobile] = useState(false); // Track if we're on mobile
@@ -382,25 +383,34 @@ export default function ScheduleView() {
     compareSessions(a, b, sortMode, userLocation, isFavorite)
   );
 
-  // Generate dates starting from yesterday + next 5 days (6 days total)
-  // Apply weekOffset to shift the window forward/backward by weeks
-  // Recalculate today and yesterday to ensure they're current
+  // Generate dates for the visible range
+  // Desktop: 6 days starting from yesterday, shifted by weekOffset
+  // Mobile: Single day, shifted by dayOffset from today
   const currentToday = new Date();
   currentToday.setHours(0, 0, 0, 0);
   const currentYesterday = new Date(currentToday);
   currentYesterday.setDate(currentToday.getDate() - 1);
 
-  // Apply week offset (each offset shifts by 6 days)
-  const startDate = new Date(currentYesterday);
-  startDate.setDate(currentYesterday.getDate() + weekOffset * 6);
-  startDate.setHours(0, 0, 0, 0);
-
   const visibleWeekDates: Date[] = [];
-  for (let i = 0; i < 6; i++) {
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + i);
-    date.setHours(0, 0, 0, 0); // Normalize to midnight
-    visibleWeekDates.push(date);
+  
+  if (isMobile) {
+    // Mobile: Show single day based on dayOffset
+    const singleDate = new Date(currentToday);
+    singleDate.setDate(currentToday.getDate() + dayOffset);
+    singleDate.setHours(0, 0, 0, 0);
+    visibleWeekDates.push(singleDate);
+  } else {
+    // Desktop: Show 6 days starting from yesterday, shifted by weekOffset
+    const startDate = new Date(currentYesterday);
+    startDate.setDate(currentYesterday.getDate() + weekOffset * 6);
+    startDate.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < 6; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      date.setHours(0, 0, 0, 0);
+      visibleWeekDates.push(date);
+    }
   }
 
   // Pre-compute visible date strings once for efficiency
@@ -692,56 +702,109 @@ export default function ScheduleView() {
             </div>
           )}
 
-          {/* Week Navigation */}
-          <div className="flex items-center justify-center gap-4 mt-6">
-            <button
-              onClick={() => setWeekOffset(weekOffset - 1)}
-              className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
-            >
-              ← Prev
-            </button>
-
-            <div className="text-center px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
-              <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
-                {weekOffset === 0
-                  ? "This Week"
-                  : weekOffset > 0
-                  ? `+${weekOffset} Week${weekOffset > 1 ? "s" : ""}`
-                  : `${weekOffset} Week${weekOffset < -1 ? "s" : ""}`}
-              </div>
-              <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {visibleWeekDates[0].toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}{" "}
-                -{" "}
-                {visibleWeekDates[
-                  visibleWeekDates.length - 1
-                ].toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </div>
-            </div>
-
-            <button
-              onClick={() => setWeekOffset(weekOffset + 1)}
-              className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
-            >
-              Next →
-            </button>
-
-            {weekOffset !== 0 && (
+          {/* Date Navigation - Different for Mobile vs Desktop */}
+          {isMobile ? (
+            /* Mobile: Day-by-day navigation */
+            <div className="flex items-center justify-center gap-2 mt-6">
               <button
-                onClick={() => setWeekOffset(0)}
-                className="px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
-                title="Go to today"
+                onClick={() => setDayOffset(dayOffset - 1)}
+                className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 shadow-sm text-sm"
+                aria-label="Previous day"
               >
-                Today
+                ←
               </button>
-            )}
-          </div>
+
+              <div className="flex-1 text-center px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-base">
+                  {dayOffset === 0
+                    ? "Today"
+                    : dayOffset === 1
+                    ? "Tomorrow"
+                    : dayOffset === -1
+                    ? "Yesterday"
+                    : visibleWeekDates[0].toLocaleDateString("en-US", {
+                        weekday: "short",
+                      })}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {visibleWeekDates[0].toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setDayOffset(dayOffset + 1)}
+                className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 shadow-sm text-sm"
+                aria-label="Next day"
+              >
+                →
+              </button>
+
+              {dayOffset !== 0 && (
+                <button
+                  onClick={() => setDayOffset(0)}
+                  className="min-h-[44px] px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
+                  title="Go to today"
+                >
+                  Today
+                </button>
+              )}
+            </div>
+          ) : (
+            /* Desktop: Week navigation */
+            <div className="flex items-center justify-center gap-4 mt-6">
+              <button
+                onClick={() => setWeekOffset(weekOffset - 1)}
+                className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
+              >
+                ← Prev
+              </button>
+
+              <div className="text-center px-4 py-2 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
+                  {weekOffset === 0
+                    ? "This Week"
+                    : weekOffset > 0
+                    ? `+${weekOffset} Week${weekOffset > 1 ? "s" : ""}`
+                    : `${weekOffset} Week${weekOffset < -1 ? "s" : ""}`}
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {visibleWeekDates[0].toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}{" "}
+                  -{" "}
+                  {visibleWeekDates[
+                    visibleWeekDates.length - 1
+                  ].toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setWeekOffset(weekOffset + 1)}
+                className="px-3 py-2 rounded-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 hover:bg-primary-50 dark:hover:bg-gray-700 hover:border-primary-300 dark:hover:border-primary-500 transition-all font-medium text-gray-700 dark:text-gray-300 hover:text-primary-700 dark:hover:text-primary-400 shadow-sm text-sm"
+              >
+                Next →
+              </button>
+
+              {weekOffset !== 0 && (
+                <button
+                  onClick={() => setWeekOffset(0)}
+                  className="px-3 py-2 rounded-lg bg-primary-500 dark:bg-primary-600 text-white hover:bg-primary-600 dark:hover:bg-primary-700 transition-all font-medium shadow-sm text-sm"
+                  title="Go to today"
+                >
+                  Today
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Filters and View Toggle */}
