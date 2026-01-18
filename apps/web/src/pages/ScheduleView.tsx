@@ -829,32 +829,50 @@ export default function ScheduleView() {
                 </div>
               ) : userLocation ? (
                 <>
-                  {/* Combined Location/Favorites button - toggles between distance and favorites */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // Toggle between distance and favorites
-                      setSortMode(
-                        sortMode === "distance" ? "favorites" : "distance"
-                      );
-                    }}
-                    className={`min-h-[44px] min-w-[44px] flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
-                      sortMode === "distance"
-                        ? "bg-green-100 dark:bg-green-900/40 border-2 border-green-400 dark:border-green-600 shadow-md shadow-green-400/30"
-                        : "bg-yellow-100 dark:bg-yellow-900/40 border-2 border-yellow-400 dark:border-yellow-600 shadow-md shadow-yellow-400/30"
-                    }`}
-                    title={
-                      sortMode === "distance"
-                        ? "Sort by location (distance only)"
-                        : "Favorites first, sorted by location"
-                    }
-                  >
-                    {sortMode === "favorites" ? (
-                      <Star className="w-5 h-5 transition-all duration-300 text-yellow-600 dark:text-yellow-400 fill-yellow-600 dark:fill-yellow-400" />
-                    ) : (
-                      <Navigation className="w-5 h-5 transition-all duration-300 text-green-600 dark:text-green-400 fill-green-600 dark:fill-green-400" />
-                    )}
-                  </button>
+                  {/* Sort Mode Toggle: Location vs Favorites */}
+                  <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                    {/* Location Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSortMode("distance")}
+                      className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 ${
+                        sortMode === "distance"
+                          ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }`}
+                      title="Sort by distance"
+                    >
+                      <Navigation
+                        className={`w-4 h-4 transition-all duration-200 ${
+                          sortMode === "distance"
+                            ? "fill-green-600 dark:fill-green-400"
+                            : ""
+                        }`}
+                      />
+                      <span className="text-sm font-medium hidden sm:inline">Nearest</span>
+                    </button>
+                    
+                    {/* Favorites Button */}
+                    <button
+                      type="button"
+                      onClick={() => setSortMode("favorites")}
+                      className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 border-l border-gray-200 dark:border-gray-700 ${
+                        sortMode === "favorites"
+                          ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                      }`}
+                      title="Favorites first, then by distance"
+                    >
+                      <Star
+                        className={`w-4 h-4 transition-all duration-200 ${
+                          sortMode === "favorites"
+                            ? "fill-yellow-500 dark:fill-yellow-400"
+                            : ""
+                        }`}
+                      />
+                      <span className="text-sm font-medium hidden sm:inline">Favorites</span>
+                    </button>
+                  </div>
                 </>
               ) : (
                 <button
