@@ -14,6 +14,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.0] - 2026-01-18
+
+### Added
+
+- **🔒 API Rate Limiting**: Implemented rate limiting using slowapi
+  - 60 requests/minute per IP for public endpoints (`/facilities/*`, `/schedule/*`)
+  - Rate limit headers in responses (X-RateLimit-Limit, X-RateLimit-Remaining, X-RateLimit-Reset)
+  - Returns 429 Too Many Requests when exceeded
+
+- **📊 Prometheus Metrics**: Enabled Prometheus instrumentation for API monitoring
+  - Metrics endpoint at `/metrics`
+  - Request latency, error rates, and throughput metrics
+  - Ready for Grafana dashboard integration
+
+- **🐛 Sentry Error Tracking**: Optional Sentry integration for error monitoring
+  - Automatic exception capture with stack traces
+  - FastAPI and Starlette integration
+  - Configurable via `SENTRY_DSN` environment variable
+
+- **🔐 Security Headers Middleware**: Added security headers to all API responses
+  - X-Content-Type-Options: nosniff
+  - X-Frame-Options: DENY
+  - X-XSS-Protection: 1; mode=block
+  - Referrer-Policy: strict-origin-when-cross-origin
+  - HSTS in production (Strict-Transport-Security)
+
+- **📦 GZip Compression**: Added GZip middleware for response compression
+  - Compresses responses larger than 1KB
+  - Reduces bandwidth usage for API consumers
+
+- **💾 Automated Database Backups**: CronJob for daily PostgreSQL backups
+  - Daily backups at 3:00 AM UTC
+  - 7-day retention policy with automatic cleanup
+  - SHA256 checksums for backup verification
+  - Scripts: `backup-postgres.sh`, `restore-postgres.sh`
+
+- **📚 Disaster Recovery Documentation**: Comprehensive DR guide
+  - Backup verification procedures
+  - Restore procedures (interactive and automated)
+  - Full system recovery checklist
+  - Incident response guidelines
+
+### Changed
+
+- Updated `requirements.txt` with production dependencies (slowapi, sentry-sdk)
+- Updated API documentation with rate limiting information
+
+---
+
 ## [Unreleased]
 
 ### Added

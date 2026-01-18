@@ -1,20 +1,25 @@
 """Schedule endpoints."""
-from typing import List
-from fastapi import APIRouter, Depends, Query
+from typing import List, Optional
+from datetime import date as date_type, time as time_type
+
+from fastapi import APIRouter, Depends, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
-from datetime import date as date_type, time as time_type
-from typing import Optional
 
 from app.database import get_db
 from app.models import Session as SessionModel, Facility
 from app.schemas import SessionWithFacility
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=List[SessionWithFacility])
+@limiter.limit("60/minute")  # 60 requests per minute per IP
 async def get_schedule(
+    request: Request,  # Required for rate limiting
     facility_id: Optional[str] = Query(None, description="Filter by facility"),
     district: Optional[str] = Query(None, description="Filter by district"),
     swim_type: Optional[str] = Query(None, description="Filter by swim type (e.g., LANE_SWIM)"),
@@ -83,7 +88,9 @@ async def get_schedule(
 
 
 @router.get("/today", response_model=List[SessionWithFacility])
+@limiter.limit("60/minute")
 async def get_today_schedule(
+    request: Request,  # Required for rate limiting
     swim_type: Optional[str] = Query(None, description="Filter by swim type"),
     db: Session = Depends(get_db)
 ):

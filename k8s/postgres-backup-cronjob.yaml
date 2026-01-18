@@ -1,0 +1,153 @@
+# Postgres Backup CronJob for swimTO
+# Runs daily at 3:00 AM UTC, creates compressed backups with 7-day retention
+#
+# Backups are stored in PVC: swimto-backups
+# To list backups: kubectl exec -n swimto deploy/swimto-api -- ls -la /backups/
+# To restore: kubectl exec -it -n swimto deploy/swimto-api -- /scripts/restore-postgres.sh latest
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: swimto-backups
+  namespace: swimto
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts
+  namespace: swimto
+data:
+  backup-postgres.sh: |
+    #!/bin/bash
+    set -euo pipefail
+    
+    POSTGRES_HOST="${POSTGRES_HOST:-postgres}"
+    POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+    POSTGRES_DB="${POSTGRES_DB:-swimto}"
+    POSTGRES_USER="${POSTGRES_USER:-swimto}"
+    BACKUP_DIR="${BACKUP_DIR:-/backups}"
+    RETENTION_DAYS="${RETENTION_DAYS:-7}"
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    BACKUP_FILE="${BACKUP_DIR}/swimto_${TIMESTAMP}.sql.gz"
+    
+    mkdir -p "${BACKUP_DIR}"
+    
+    echo "=== swimTO Database Backup ==="
+    echo "Timestamp: ${TIMESTAMP}"
+    echo "Host: ${POSTGRES_HOST}:${POSTGRES_PORT}"
+    
+    if [ -z "${PGPASSWORD:-}" ]; then
+        echo "ERROR: PGPASSWORD not set"
+        exit 1
+    fi
+    
+    echo "Creating backup..."
+    pg_dump \
+        -h "${POSTGRES_HOST}" \
+        -p "${POSTGRES_PORT}" \
+        -U "${POSTGRES_USER}" \
+        -d "${POSTGRES_DB}" \
+        --format=plain \
+        --no-owner \
+        --no-acl \
+        2>&1 | gzip > "${BACKUP_FILE}"
+    
+    if [ ! -s "${BACKUP_FILE}" ]; then
+        echo "ERROR: Backup failed - file is empty"
+        exit 1
+    fi
+    
+    sha256sum "${BACKUP_FILE}" > "${BACKUP_FILE}.sha256"
+    
+    BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+    echo "Backup created: ${BACKUP_FILE} (${BACKUP_SIZE})"
+    
+    # Cleanup old backups
+    echo "Cleaning up backups older than ${RETENTION_DAYS} days..."
+    find "${BACKUP_DIR}" -name "swimto_*.sql.gz*" -mtime "+${RETENTION_DAYS}" -delete 2>/dev/null || true
+    
+    echo "Current backups:"
+    ls -lh "${BACKUP_DIR}"/swimto_*.sql.gz 2>/dev/null || echo "(none)"
+    
+    echo "=== Backup Complete ==="
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgres-backup
+  namespace: swimto
+  labels:
+    app: swimto
+    component: backup
+spec:
+  # Run daily at 3:00 AM UTC
+  schedule: "0 3 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 600  # 10 minute timeout
+      template:
+        metadata:
+          labels:
+            app: swimto
+            component: backup
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: backup
+              image: postgres:16-alpine
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  chmod +x /scripts/backup-postgres.sh
+                  /scripts/backup-postgres.sh
+              env:
+                - name: POSTGRES_HOST
+                  value: "postgres"
+                - name: POSTGRES_PORT
+                  value: "5432"
+                - name: POSTGRES_DB
+                  value: "swimto"
+                - name: POSTGRES_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: swimto-secrets
+                      key: POSTGRES_USER
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: swimto-secrets
+                      key: POSTGRES_PASSWORD
+                - name: BACKUP_DIR
+                  value: "/backups"
+                - name: RETENTION_DAYS
+                  value: "7"
+              volumeMounts:
+                - name: backup-storage
+                  mountPath: /backups
+                - name: backup-scripts
+                  mountPath: /scripts
+              resources:
+                requests:
+                  memory: "128Mi"
+                  cpu: "100m"
+                limits:
+                  memory: "256Mi"
+                  cpu: "500m"
+          volumes:
+            - name: backup-storage
+              persistentVolumeClaim:
+                claimName: swimto-backups
+            - name: backup-scripts
+              configMap:
+                name: backup-scripts
+                defaultMode: 0755

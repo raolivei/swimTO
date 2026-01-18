@@ -1,14 +1,41 @@
 """Main FastAPI application."""
-from fastapi import FastAPI
+import os
+import sys
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
-import sys
+from prometheus_fastapi_instrumentator import Instrumentator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import engine
 from app.models import Base
 from app.routes import facilities, schedule, update, health, auth, favorites, preferences
+
+# Initialize Sentry if DSN is configured
+sentry_dsn = os.getenv("SENTRY_DSN")
+if sentry_dsn:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.starlette import StarletteIntegration
+    
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        integrations=[
+            StarletteIntegration(transaction_style="endpoint"),
+            FastApiIntegration(transaction_style="endpoint"),
+        ],
+        traces_sample_rate=0.1,  # 10% of transactions for performance monitoring
+        profiles_sample_rate=0.1,
+        environment=os.getenv("ENVIRONMENT", "production"),
+    )
+    logger.info("Sentry error tracking initialized")
 
 # Configure logging
 logger.remove()
@@ -17,6 +44,9 @@ logger.add(
     level=settings.log_level,
     format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
 )
+
+# Initialize rate limiter
+limiter = Limiter(key_func=get_remote_address)
 
 # Create FastAPI app
 app = FastAPI(
@@ -27,7 +57,31 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
+# Add rate limiter to app state
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+# Security headers middleware
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+    
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "geolocation=(self), camera=(), microphone=()"
+        # HSTS - only in production with HTTPS
+        if os.getenv("ENVIRONMENT") == "production":
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        return response
+
+
+# Add middleware (order matters - first added = last executed)
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -35,6 +89,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize Prometheus instrumentation
+Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
 # Include routers
 app.include_router(health.router, tags=["health"])
@@ -47,9 +104,13 @@ app.include_router(update.router, prefix="/update", tags=["update"])
 
 
 @app.exception_handler(Exception)
-async def global_exception_handler(request, exc):
-    """Global exception handler."""
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler with Sentry reporting."""
     logger.exception(f"Unhandled exception: {exc}")
+    # Sentry will automatically capture this if initialized
+    if sentry_dsn:
+        import sentry_sdk
+        sentry_sdk.capture_exception(exc)
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"}

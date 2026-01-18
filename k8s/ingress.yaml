@@ -62,6 +62,7 @@ spec:
 ---
 # Public domain Ingress (swimto.eldertree.xyz - legacy)
 # Uses Cloudflare Origin Certificate - HTTPS termination handled by Cloudflare
+# Do NOT use redirect-https middleware (causes redirect loops with Cloudflare)
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -101,11 +102,6 @@ spec:
 # Primary public domain Ingress (swimto.app)
 # Uses Cloudflare Origin Certificate - HTTPS termination handled by Cloudflare
 # This is the main production domain for the app
-# NOTE: After purchasing swimto.app domain:
-# 1. Add domain to Cloudflare
-# 2. Create Cloudflare Origin Certificate for swimto.app
-# 3. Create k8s secret: kubectl create secret tls swimto-app-tls --cert=origin.pem --key=origin-key.pem -n swimto
-# 4. Configure DNS in Cloudflare to point to your server's public IP
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

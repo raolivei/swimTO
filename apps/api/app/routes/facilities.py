@@ -1,6 +1,10 @@
 """Facilities endpoints."""
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from datetime import date as date_type
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import SQLAlchemyError
@@ -9,13 +13,15 @@ from loguru import logger
 from app.database import get_db
 from app.models import Facility, Session as SessionModel
 from app.schemas import FacilityResponse, FacilityWithSessions
-from datetime import date as date_type
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 
 @router.get("/", response_model=List[FacilityWithSessions])
+@limiter.limit("60/minute")  # 60 requests per minute per IP
 async def get_facilities(
+    request: Request,  # Required for rate limiting
     district: Optional[str] = Query(None, description="Filter by district"),
     has_lane_swim: bool = Query(False, description="Only facilities with lane swim"),
     db: Session = Depends(get_db)
@@ -112,7 +118,9 @@ async def get_facilities(
 
 
 @router.get("/{facility_id}", response_model=FacilityResponse)
+@limiter.limit("60/minute")
 async def get_facility(
+    request: Request,  # Required for rate limiting
     facility_id: str,
     db: Session = Depends(get_db)
 ):
