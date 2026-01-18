@@ -173,6 +173,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             VITE_API_URL=${{ secrets.API_URL }}
+            APP_VERSION=${{ needs.prepare.outputs.version }}
 
       - name: Output image info
         if: github.event_name != 'pull_request'

@@ -15,14 +15,17 @@ CMD ["npm", "run", "dev"]
 # Build stage
 FROM node:20-alpine AS builder
 
+ARG APP_VERSION=dev
+
 WORKDIR /app
 
 # Install dependencies (cached unless package.json changes)
 COPY package*.json ./
 RUN npm ci --ignore-scripts
 
-# Copy source and build
+# Copy source and build with version injected
 COPY . .
+ENV VITE_APP_VERSION=${APP_VERSION}
 RUN npm run build
 
 # Production stage - nginx for static file serving (much smaller than node)

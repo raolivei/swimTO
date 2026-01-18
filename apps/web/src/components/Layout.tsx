@@ -336,10 +336,15 @@ export default function Layout() {
               <p className="text-sm text-gray-500">
                 © {new Date().getFullYear()} SwimTO. All rights reserved.
               </p>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
-                Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" />{" "}
-                in Toronto
-              </p>
+              <div className="flex items-center gap-4">
+                <p className="text-sm text-gray-500 flex items-center gap-1">
+                  Made with <Heart className="w-4 h-4 text-red-500 fill-red-500" />{" "}
+                  in Toronto
+                </p>
+                <span className="text-xs text-gray-600 font-mono">
+                  v{import.meta.env.VITE_APP_VERSION || "dev"}
+                </span>
+              </div>
             </div>
           </div>
         </div>
