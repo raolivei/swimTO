@@ -14,6 +14,7 @@ import {
   Mail,
   Github,
   Heart,
+  Home,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/useAuth";
@@ -74,7 +75,7 @@ export default function Layout() {
             <div className="flex items-center gap-1 sm:gap-2 min-w-0">
               <nav className="flex gap-1 sm:gap-2" aria-label="Main navigation">
                 <NavLink to="/" end className={navLinkClass}>
-                  <Waves className="w-5 h-5" />
+                  <Home className="w-5 h-5" />
                   <span className="hidden sm:inline">Home</span>
                 </NavLink>
                 <NavLink to="/map" className={navLinkClass}>
