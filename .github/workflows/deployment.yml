@@ -21,6 +21,10 @@ on:
           - web
           - both
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false # Don't cancel deployments in progress
+
 jobs:
   # Only proceed if triggered manually OR if the build workflow succeeded
   check-trigger:
