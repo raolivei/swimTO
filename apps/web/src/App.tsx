@@ -11,6 +11,7 @@ import AuthCallback from "./pages/AuthCallback";
 import ProfileView from "./pages/ProfileView";
 import TermsOfService from "./pages/TermsOfService";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
+import LogoOptions from "./pages/LogoOptions";
 
 function App() {
   return (
@@ -29,6 +30,7 @@ function App() {
               <Route path="privacy" element={<PrivacyPolicy />} />
             </Route>
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/logo-options" element={<LogoOptions />} />
           </Routes>
         </AuthProvider>
       </Router>

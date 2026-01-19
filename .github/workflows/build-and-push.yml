@@ -99,7 +99,7 @@ jobs:
 
   build-api:
     name: Build and Push API Image
-    runs-on: ubuntu-24.04-arm  # Native ARM64 runner - no QEMU needed
+    runs-on: ubuntu-24.04-arm # Native ARM64 runner - no QEMU needed
     needs: prepare
     timeout-minutes: 15
     permissions:
@@ -142,7 +142,7 @@ jobs:
 
   build-web:
     name: Build and Push Web Image
-    runs-on: ubuntu-24.04-arm  # Native ARM64 runner - no QEMU needed
+    runs-on: ubuntu-24.04-arm # Native ARM64 runner - no QEMU needed
     needs: prepare
     timeout-minutes: 15
     permissions:

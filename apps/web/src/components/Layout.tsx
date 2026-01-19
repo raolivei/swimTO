@@ -338,16 +338,19 @@ export default function Layout() {
                 © {new Date().getFullYear()} SwimTO. All rights reserved.
               </p>
               <div className="flex items-center gap-4">
-                <a 
-                  href="https://pitanga.cloud" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-sm text-gray-500 hover:text-gray-300 flex items-center gap-2 transition-colors"
-                  title="Visit Pitanga Cloud"
-                >
-                  <PitangaMark className="w-5 h-5" />
-                  <span>A Pitanga Cloud project</span>
-                </a>
+                <p className="text-sm text-gray-500 flex items-center gap-1">
+                  Made with <span className="text-red-500">❤</span> by{" "}
+                  <a 
+                    href="https://pitanga.cloud" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-gray-300 transition-colors inline-flex items-center gap-1"
+                    title="Visit Pitanga Cloud"
+                  >
+                    <PitangaMark className="w-4 h-4" />
+                    <span className="font-medium">Pitanga</span>
+                  </a>
+                </p>
                 <span className="text-xs text-gray-600 font-mono">
                   v{import.meta.env.VITE_APP_VERSION || "dev"}
                 </span>
