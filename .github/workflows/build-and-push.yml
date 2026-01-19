@@ -25,6 +25,10 @@ on:
         required: false
         default: "latest"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME_API: ghcr.io/raolivei/swimto-api
