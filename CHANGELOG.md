@@ -14,6 +14,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.2] - 2026-01-20
+
+### Fixed
+
+- **🌐 OAuth Domain Support**: Added `https://swimto.app` to allowed OAuth origins
+  - Enables Google OAuth login when accessing the app via swimto.app domain
+  - Fixed redirect URI mismatch that was causing "Origin parameter not in allowed list" errors
+
+### Infrastructure
+
+- **🔧 Cluster Networking**: Fixed critical networking issue on eldertree cluster
+  - Resolved Tailscale routing table conflict that blocked pod-to-pod cross-node communication
+  - Added systemd service to prevent route conflicts on node-2 reboot
+  - Fixed ingress routing to properly handle /auth and /health paths
+
+---
+
 ## [0.7.1] - 2026-01-20
 
 ### Fixed
