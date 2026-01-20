@@ -15,6 +15,7 @@ router = APIRouter()
 
 # Allowed redirect URI origins (for security - prevent open redirect attacks)
 ALLOWED_ORIGINS = [
+    "https://swimto.app",
     "https://swimto.eldertree.xyz",
     "https://swimto.eldertree.local",
     "http://swimto.eldertree.local",
