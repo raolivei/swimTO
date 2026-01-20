@@ -14,6 +14,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.1] - 2026-01-20
+
+### Fixed
+
+- **🔐 Login 307 Redirect**: Fixed FastAPI trailing slash redirects breaking CORS on auth endpoints
+  - Added `redirect_slashes=False` to FastAPI app configuration
+  - Prevents 307 redirects that break OAuth flow on some environments
+
+- **📜 Double Scrollbar**: Fixed double scrollbar appearing on some pages
+  - Removed conflicting `min-h-[calc(100dvh-8rem)]` from ScheduleView
+  - Simplified CSS overflow handling
+
+### Changed
+
+- **Footer Branding**: Updated footer to show "Made with ❤ by Pitanga" as text link to pitanga.cloud
+  - Removed Pitanga logo icon for cleaner appearance
+
+---
+
 ## [0.7.0] - 2026-01-18
 
 ### Added

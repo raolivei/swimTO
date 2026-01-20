@@ -108,15 +108,22 @@ SECRET_KEY=your-secret-key-for-jwt
 http://localhost:5173/auth/callback
 http://localhost:3000/auth/callback
 https://swimto.eldertree.xyz/auth/callback
+https://swimto.app/auth/callback
 https://swimto.eldertree.local/auth/callback
 http://swimto.eldertree.local/auth/callback
 ```
 
 **⚠️ IMPORTANT**: All redirect URIs must be registered in Google Cloud Console. The API dynamically selects the correct URI based on the request origin, but Google must have all URIs whitelisted.
 
+**Production Domains:**
+- `swimto.app` - Primary public domain
+- `swimto.eldertree.xyz` - Internal/staging domain
+
 8. Copy the **Client ID** and **Client Secret** for backend configuration
 
 ### 2. Backend Configuration
+
+#### Local Development
 Update `.env` file:
 ```env
 GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
@@ -124,6 +131,26 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:5173/auth/callback
 SECRET_KEY=generate-a-secure-random-key
 ```
+
+#### Production (Kubernetes + Vault)
+Credentials are stored in HashiCorp Vault and synced via ExternalSecrets:
+
+```bash
+# Store credentials in Vault
+export KUBECONFIG=~/.kube/config-eldertree
+VAULT_TOKEN=$(kubectl get secret -n vault vault-unseal-keys -o jsonpath='{.data.ROOT_TOKEN}' | base64 -d)
+kubectl exec -n vault vault-0 -- sh -c "VAULT_TOKEN='$VAULT_TOKEN' vault kv put secret/swimto/oauth \
+  google-client-id='YOUR_CLIENT_ID.apps.googleusercontent.com' \
+  google-client-secret='YOUR_CLIENT_SECRET'"
+
+# Force ExternalSecret refresh
+kubectl annotate externalsecret swimto-secrets -n swimto force-sync=$(date +%s) --overwrite
+
+# Restart API to pick up new credentials
+kubectl rollout restart deployment/swimto-api -n swimto
+```
+
+The ExternalSecret at `k8s/swimto-secrets.yaml` maps Vault secrets to Kubernetes secrets.
 
 ### 3. Database Migration
 Run database migrations to create User and UserFavorite tables:
