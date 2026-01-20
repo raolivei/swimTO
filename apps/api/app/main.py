@@ -54,7 +54,8 @@ app = FastAPI(
     version=settings.version,
     description="API for Toronto indoor pool drop-in swim schedules",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    redirect_slashes=False  # Prevent 307 redirects that break CORS
 )
 
 # Add rate limiter to app state
