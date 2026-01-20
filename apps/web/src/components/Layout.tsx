@@ -19,7 +19,6 @@ import { useDarkMode } from "../contexts/DarkModeContext";
 import { useAuth } from "../contexts/useAuth";
 import { useState, useEffect } from "react";
 import { InstallPrompt } from "./InstallPrompt";
-import { PitangaMark } from "./PitangaMark";
 
 export default function Layout() {
   const { isDarkMode, toggleDarkMode } = useDarkMode();
@@ -344,11 +343,9 @@ export default function Layout() {
                     href="https://pitanga.cloud" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="hover:text-gray-300 transition-colors inline-flex items-center gap-1"
-                    title="Visit Pitanga Cloud"
+                    className="font-medium hover:text-gray-300 transition-colors"
                   >
-                    <PitangaMark className="w-4 h-4" />
-                    <span className="font-medium">Pitanga</span>
+                    Pitanga
                   </a>
                 </p>
                 <span className="text-xs text-gray-600 font-mono">
