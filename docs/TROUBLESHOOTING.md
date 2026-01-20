@@ -74,7 +74,61 @@ Database connection now includes:
 
 - `apps/api/app/database.py` - Connection settings
 
-### 4. Image Pull Errors
+### 4. Login/Auth 307 Redirect Errors
+
+**Symptoms:**
+
+- Login button shows "Unable to connect to authentication server"
+- API logs show `307 Temporary Redirect` for `/auth/google-url/`
+- CORS errors in browser console after redirect
+
+**Cause:**
+FastAPI's default `redirect_slashes=True` redirects requests with trailing slashes (e.g., `/auth/google-url/` → `/auth/google-url`). This 307 redirect can break CORS on some browser/proxy configurations.
+
+**Solution:**
+This has been fixed in v0.7.1 by adding `redirect_slashes=False` to the FastAPI app:
+
+```python
+app = FastAPI(
+    title=settings.app_name,
+    redirect_slashes=False  # Prevent 307 redirects that break CORS
+)
+```
+
+**Files:**
+
+- `apps/api/app/main.py` - FastAPI app configuration
+
+**Verification:**
+```bash
+# Check API logs for 307 redirects
+kubectl logs -n swimto -l app=swimto-api --tail=50 | grep "307"
+
+# Should see 200 OK instead of 307 after fix
+```
+
+### 5. Double Scrollbar Issue
+
+**Symptoms:**
+
+- Two vertical scrollbars visible on page
+- Nested scroll areas
+
+**Cause:**
+Conflicting height/min-height settings between Layout component (`min-h-dvh`) and page components (e.g., `min-h-[calc(100dvh-8rem)]`).
+
+**Solution:**
+Fixed in v0.7.1 by:
+- Removing conflicting `min-h-[calc(100dvh-8rem)]` from page components
+- Simplifying CSS overflow handling in `index.css`
+
+**Files:**
+
+- `apps/web/src/index.css` - Simplified overflow settings
+- `apps/web/src/pages/ScheduleView.tsx` - Removed conflicting min-height
+- `apps/web/src/components/Layout.tsx` - Uses `min-h-dvh` for full viewport height
+
+### 6. Image Pull Errors
 
 **Symptoms:**
 
