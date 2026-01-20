@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.3] - 2026-01-20
+
+### Fixed
+
+- **🛣️ API Route Trailing Slash**: Fixed 404 errors on `/api/facilities` and `/api/schedule`
+  - Changed route definitions from `"/"` to `""` in facilities and schedule routers
+  - Routes now work without requiring trailing slash
+- **🔐 Auth Endpoint Routing**: Fixed Traefik middleware to properly strip `/api` prefix
+  - Created `api-strip-prefix-clean` middleware using `replacePathRegex`
+  - Fixes 404 on `/api/auth/google-url` endpoint
+
+---
+
 ## [0.7.2] - 2026-01-20
 
 ### Fixed
