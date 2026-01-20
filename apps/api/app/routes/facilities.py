@@ -18,7 +18,7 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 
-@router.get("/", response_model=List[FacilityWithSessions])
+@router.get("", response_model=List[FacilityWithSessions])
 @limiter.limit("60/minute")  # 60 requests per minute per IP
 async def get_facilities(
     request: Request,  # Required for rate limiting
