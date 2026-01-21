@@ -148,6 +148,183 @@ Missing or incorrect GitHub Container Registry credentials.
 
 - `k8s/api-deployment.yaml` - Image pull secrets configuration
 
+### 7. Tailscale/k3s Routing Conflict (Cross-Node Networking Failure)
+
+**Symptoms:**
+
+- API pods can't reach PostgreSQL on different nodes
+- DNS resolution failing inside pods: `Temporary failure in name resolution`
+- `kubectl exec` works but pod can't reach external services
+- Connection timeouts to services on other nodes
+- Works when pods are on the same node
+
+**Cause:**
+Tailscale adds routes in routing table 52 that intercept k3s pod/service CIDR traffic:
+- `10.42.0.0/16` (pod network) routed through Tailscale
+- `10.43.0.0/16` (service network) routed through Tailscale
+
+This breaks Flannel VXLAN overlay networking between nodes.
+
+**Diagnosis:**
+```bash
+# SSH to the affected node and check routing table 52
+ssh raolivei@node-2.eldertree.local
+ip route show table 52 | grep -E "10\.4[23]"
+# If you see these routes, Tailscale is intercepting k3s traffic:
+# 10.42.0.0/16 dev tailscale0
+# 10.43.0.0/16 dev tailscale0
+```
+
+**Solution:**
+
+1. Remove the conflicting routes:
+```bash
+sudo ip route del 10.42.0.0/16 table 52 2>/dev/null
+sudo ip route del 10.43.0.0/16 table 52 2>/dev/null
+```
+
+2. Make persistent with systemd service:
+```bash
+cat <<EOF | sudo tee /etc/systemd/system/fix-tailscale-k3s-routes.service
+[Unit]
+Description=Fix Tailscale routes that conflict with k3s
+After=tailscaled.service k3s.service
+Wants=tailscaled.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "sleep 30 && ip route del 10.42.0.0/16 table 52 2>/dev/null; ip route del 10.43.0.0/16 table 52 2>/dev/null"
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl enable fix-tailscale-k3s-routes.service
+```
+
+**Files:**
+
+- See eldertree-docs runbook `NET-006` for full details
+
+### 8. API Route 404 Errors (Trailing Slash Mismatch)
+
+**Symptoms:**
+
+- `/api/facilities` returns 404
+- `/api/schedule` returns 404
+- Endpoints work with trailing slash (`/api/facilities/`) but not without
+
+**Cause:**
+API routes defined with `"/"` require trailing slash. Frontend calls without trailing slash.
+
+**Solution:**
+Fixed in v0.7.3 by changing route definitions from `"/"` to `""`:
+
+```python
+# Before (requires trailing slash)
+@router.get("/", response_model=List[FacilityWithSessions])
+
+# After (accepts both)
+@router.get("", response_model=List[FacilityWithSessions])
+```
+
+**Files:**
+
+- `apps/api/app/routes/facilities.py` - Changed `"/"` to `""`
+- `apps/api/app/routes/schedule.py` - Changed `"/"` to `""`
+
+### 9. Traefik Ingress /api Prefix Not Stripped
+
+**Symptoms:**
+
+- `/api/auth/google-url` returns 404
+- API logs show request to `/api/auth/google-url` instead of `/auth/google-url`
+- Direct pod access works but ingress routing fails
+
+**Cause:**
+Traefik middleware not properly stripping `/api` prefix before forwarding to API service.
+
+**Solution:**
+Create Traefik middleware to strip `/api` prefix:
+
+```yaml
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: api-strip-prefix-clean
+  namespace: swimto
+spec:
+  stripPrefix:
+    prefixes:
+      - /api
+```
+
+Apply to ingress:
+```yaml
+metadata:
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: swimto-api-strip-prefix-clean@kubernetescrd
+```
+
+**Verification:**
+```bash
+# Check middleware exists
+kubectl get middleware -n swimto
+
+# Test through ingress
+curl https://swimto.app/api/health
+# Should return health status (API receives /health)
+```
+
+### 10. OAuth Callback Routed to API Instead of Frontend
+
+**Symptoms:**
+
+- Google OAuth login redirects to `/auth/callback`
+- Browser shows 404 or API error instead of frontend handling the callback
+- Login flow broken after Google authentication succeeds
+
+**Cause:**
+Ingress routes `/auth/callback` to API service instead of web (frontend) service.
+
+**Solution:**
+Add explicit path rule in ingress to route `/auth/callback` to frontend:
+
+```yaml
+spec:
+  rules:
+  - host: swimto.app
+    http:
+      paths:
+      # OAuth callback MUST go to frontend
+      - backend:
+          service:
+            name: swimto-web-service
+            port:
+              number: 3000
+        path: /auth/callback
+        pathType: Prefix
+      # API routes
+      - backend:
+          service:
+            name: swimto-api-service
+            port:
+              number: 8000
+        path: /api
+        pathType: Prefix
+      # Default to frontend
+      - backend:
+          service:
+            name: swimto-web-service
+            port:
+              number: 3000
+        path: /
+        pathType: Prefix
+```
+
+**Note:** Path order matters in Kubernetes Ingress. More specific paths should come first.
+
 ## Deployment Configuration
 
 ### Probe Settings
