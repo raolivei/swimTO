@@ -100,6 +100,7 @@ app = FastAPI(
 - `apps/api/app/main.py` - FastAPI app configuration
 
 **Verification:**
+
 ```bash
 # Check API logs for 307 redirects
 kubectl logs -n swimto -l app=swimto-api --tail=50 | grep "307"
@@ -119,6 +120,7 @@ Conflicting height/min-height settings between Layout component (`min-h-dvh`) an
 
 **Solution:**
 Fixed in v0.7.1 by:
+
 - Removing conflicting `min-h-[calc(100dvh-8rem)]` from page components
 - Simplifying CSS overflow handling in `index.css`
 
@@ -160,12 +162,14 @@ Missing or incorrect GitHub Container Registry credentials.
 
 **Cause:**
 Tailscale adds routes in routing table 52 that intercept k3s pod/service CIDR traffic:
+
 - `10.42.0.0/16` (pod network) routed through Tailscale
 - `10.43.0.0/16` (service network) routed through Tailscale
 
 This breaks Flannel VXLAN overlay networking between nodes.
 
 **Diagnosis:**
+
 ```bash
 # SSH to the affected node and check routing table 52
 ssh raolivei@node-2.eldertree.local
@@ -178,12 +182,14 @@ ip route show table 52 | grep -E "10\.4[23]"
 **Solution:**
 
 1. Remove the conflicting routes:
+
 ```bash
 sudo ip route del 10.42.0.0/16 table 52 2>/dev/null
 sudo ip route del 10.43.0.0/16 table 52 2>/dev/null
 ```
 
 2. Make persistent with systemd service:
+
 ```bash
 cat <<EOF | sudo tee /etc/systemd/system/fix-tailscale-k3s-routes.service
 [Unit]
@@ -261,6 +267,7 @@ spec:
 ```
 
 Apply to ingress:
+
 ```yaml
 metadata:
   annotations:
@@ -268,6 +275,7 @@ metadata:
 ```
 
 **Verification:**
+
 ```bash
 # Check middleware exists
 kubectl get middleware -n swimto
@@ -291,36 +299,99 @@ Ingress routes `/auth/callback` to API service instead of web (frontend) service
 **Solution:**
 Add explicit path rule in ingress to route `/auth/callback` to frontend:
 
+### 11. OAuth 500 Internal Server Error
+
+**Symptoms:**
+
+- Login button works, redirects to Google
+- After Google authentication, returns "Authentication Error"
+- Browser Network tab shows `POST /api/auth/google-callback` returns 500
+
+**Possible Causes:**
+
+1. **Missing OAuth credentials in Vault** - Most common cause
+2. **Redirect URI mismatch** - URI not registered in Google Cloud Console
+3. **Database connection issues** - Can't create/update user record
+4. **Invalid/expired authorization code** - Code already used or expired
+
+**Diagnosis:**
+
+```bash
+export KUBECONFIG=~/.kube/config-eldertree
+
+# 1. Check if OAuth credentials exist in Vault
+VAULT_TOKEN=$(kubectl get secret -n vault vault-unseal-keys -o jsonpath='{.data.ROOT_TOKEN}' | base64 -d)
+kubectl exec -n vault vault-0 -- sh -c "VAULT_TOKEN='$VAULT_TOKEN' vault kv get secret/swimto/oauth"
+
+# 2. Check ExternalSecret sync status
+kubectl get externalsecret swimto-secrets -n swimto
+kubectl describe externalsecret swimto-secrets -n swimto | grep -A5 "Status:"
+
+# 3. Check if secrets are available in the pod
+kubectl exec -n swimto deploy/swimto-api -- env | grep -i google
+
+# 4. Check API logs for detailed error
+kubectl logs -n swimto -l app=swimto-api --tail=100 | grep -i "oauth\|google\|error"
+```
+
+**Solution - Add OAuth credentials to Vault:**
+
+```bash
+# Store credentials in Vault (get from Google Cloud Console)
+export KUBECONFIG=~/.kube/config-eldertree
+VAULT_TOKEN=$(kubectl get secret -n vault vault-unseal-keys -o jsonpath='{.data.ROOT_TOKEN}' | base64 -d)
+kubectl exec -n vault vault-0 -- sh -c "VAULT_TOKEN='$VAULT_TOKEN' vault kv put secret/swimto/oauth \
+  google-client-id='YOUR_CLIENT_ID.apps.googleusercontent.com' \
+  google-client-secret='YOUR_CLIENT_SECRET'"
+
+# Force ExternalSecret refresh
+kubectl annotate externalsecret swimto-secrets -n swimto force-sync=$(date +%s) --overwrite
+
+# Restart API to pick up new credentials
+kubectl rollout restart deployment/swimto-api -n swimto
+```
+
+**Solution - Register redirect URI in Google Cloud Console:**
+
+Ensure ALL these redirect URIs are registered:
+
+- `https://swimto.app/auth/callback`
+- `https://swimto.eldertree.xyz/auth/callback`
+- `http://localhost:5173/auth/callback`
+- `http://localhost:3000/auth/callback`
+
+Go to [Google Cloud Console](https://console.cloud.google.com/) > APIs & Services > Credentials > Your OAuth 2.0 Client > Authorized redirect URIs
+
 ```yaml
 spec:
   rules:
-  - host: swimto.app
-    http:
-      paths:
-      # OAuth callback MUST go to frontend
-      - backend:
-          service:
-            name: swimto-web-service
-            port:
-              number: 3000
-        path: /auth/callback
-        pathType: Prefix
-      # API routes
-      - backend:
-          service:
-            name: swimto-api-service
-            port:
-              number: 8000
-        path: /api
-        pathType: Prefix
-      # Default to frontend
-      - backend:
-          service:
-            name: swimto-web-service
-            port:
-              number: 3000
-        path: /
-        pathType: Prefix
+    - host: swimto.app
+      http:
+        paths:
+          # OAuth callback MUST go to frontend
+          - backend:
+              service:
+                name: swimto-web-service
+                port:
+                  number: 3000
+            path: /auth/callback
+            pathType: Prefix
+          # API routes
+          - backend:
+              service:
+                name: swimto-api-service
+                port:
+                  number: 8000
+            path: /api
+            pathType: Prefix
+          # Default to frontend
+          - backend:
+              service:
+                name: swimto-web-service
+                port:
+                  number: 3000
+            path: /
+            pathType: Prefix
 ```
 
 **Note:** Path order matters in Kubernetes Ingress. More specific paths should come first.

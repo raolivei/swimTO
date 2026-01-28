@@ -128,6 +128,7 @@ async def google_callback(
     # Exchange code for token
     try:
         async with httpx.AsyncClient() as client:
+            logger.debug(f"Exchanging code for token with redirect_uri: {final_redirect_uri}")
             token_response = await client.post(
                 "https://oauth2.googleapis.com/token",
                 data={
@@ -138,8 +139,36 @@ async def google_callback(
                     "grant_type": "authorization_code",
                 }
             )
-            token_response.raise_for_status()
             token_data = token_response.json()
+            
+            # Check for error in response (Google may return 200 with error body)
+            if "error" in token_data:
+                error_desc = token_data.get("error_description", token_data["error"])
+                logger.error(f"Google OAuth token error: {token_data['error']} - {error_desc}")
+                if token_data["error"] == "redirect_uri_mismatch":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"OAuth redirect URI mismatch. The redirect_uri ({final_redirect_uri}) must match what's registered in Google Cloud Console."
+                    )
+                elif token_data["error"] == "invalid_grant":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="OAuth code expired or already used. Please try logging in again."
+                    )
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Google authentication failed: {error_desc}"
+                )
+            
+            token_response.raise_for_status()
+            
+            if "access_token" not in token_data:
+                logger.error(f"No access_token in Google response: {token_data.keys()}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Invalid response from Google authentication"
+                )
+            
             access_token = token_data["access_token"]
             
             # Get user info from Google
@@ -149,42 +178,67 @@ async def google_callback(
             )
             user_response.raise_for_status()
             google_user = user_response.json()
+            
+            if "id" not in google_user or "email" not in google_user:
+                logger.error(f"Missing required fields in Google user info: {google_user.keys()}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Could not retrieve user information from Google"
+                )
+    except HTTPException:
+        raise  # Re-raise our own exceptions
     except httpx.HTTPError as e:
-        logger.error(f"Google OAuth error: {e}")
+        logger.error(f"Google OAuth HTTP error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Failed to authenticate with Google"
         )
+    except Exception as e:
+        logger.error(f"Unexpected error during Google OAuth: {type(e).__name__}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred during authentication"
+        )
     
     # Get or create user
-    user = db.query(User).filter(User.google_id == google_user["id"]).first()
-    
-    if not user:
-        # Check if email already exists (shouldn't happen, but safety check)
-        existing_user = db.query(User).filter(User.email == google_user["email"]).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered with different account"
-            )
+    try:
+        user = db.query(User).filter(User.google_id == google_user["id"]).first()
         
-        # Create new user
-        user = User(
-            email=google_user["email"],
-            name=google_user.get("name"),
-            google_id=google_user["id"],
-            picture=google_user.get("picture")
+        if not user:
+            # Check if email already exists (shouldn't happen, but safety check)
+            existing_user = db.query(User).filter(User.email == google_user["email"]).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Email already registered with different account"
+                )
+            
+            # Create new user
+            user = User(
+                email=google_user["email"],
+                name=google_user.get("name"),
+                google_id=google_user["id"],
+                picture=google_user.get("picture")
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            logger.info(f"Created new user: {user.email}")
+        else:
+            # Update existing user info
+            user.name = google_user.get("name") or user.name
+            user.picture = google_user.get("picture") or user.picture
+            db.commit()
+            db.refresh(user)
+    except HTTPException:
+        raise  # Re-raise our own exceptions
+    except Exception as e:
+        logger.error(f"Database error during user creation/update: {type(e).__name__}: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to save user information"
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        logger.info(f"Created new user: {user.email}")
-    else:
-        # Update existing user info
-        user.name = google_user.get("name") or user.name
-        user.picture = google_user.get("picture") or user.picture
-        db.commit()
-        db.refresh(user)
     
     # Create JWT token (sub must be string)
     token = create_access_token(data={"sub": str(user.id)})
