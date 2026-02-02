@@ -24,6 +24,8 @@ export interface Session {
   start_time: string
   end_time: string
   notes: string | null
+  age_min: number | null
+  age_max: number | null
   source: string | null
   created_at: string
   facility?: Facility
@@ -43,6 +45,7 @@ export interface ScheduleFilters {
   date_to?: string
   time_from?: string
   time_to?: string
+  age_max?: number
   limit?: number
   offset?: number
 }

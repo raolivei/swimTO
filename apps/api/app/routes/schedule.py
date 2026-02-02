@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.orm import Session
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 from app.database import get_db
 from app.models import Session as SessionModel, Facility
@@ -27,6 +27,7 @@ async def get_schedule(
     date_to: Optional[date_type] = Query(None, description="End date (YYYY-MM-DD)"),
     time_from: Optional[time_type] = Query(None, description="Earliest start time (HH:MM)"),
     time_to: Optional[time_type] = Query(None, description="Latest end time (HH:MM)"),
+    age_max: Optional[int] = Query(None, description="Filter for sessions suitable for this age (e.g., 3 for infants)"),
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db)
@@ -62,6 +63,19 @@ async def get_schedule(
     
     if time_to:
         filters.append(SessionModel.end_time <= time_to)
+    
+    # Age-based filtering: show sessions where the given age falls within the allowed range
+    if age_max is not None:
+        # Session's minimum age must be <= the person's age (or no restriction)
+        filters.append(or_(
+            SessionModel.age_min.is_(None),
+            SessionModel.age_min <= age_max
+        ))
+        # Session's maximum age must be >= the person's age (or no restriction)
+        filters.append(or_(
+            SessionModel.age_max.is_(None),
+            SessionModel.age_max >= age_max
+        ))
     
     if filters:
         query = query.filter(and_(*filters))

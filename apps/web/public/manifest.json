@@ -15,6 +15,9 @@
       "purpose": "any"
     }
   ],
-  "categories": ["health", "lifestyle", "sports"]
+  "categories": [
+    "health",
+    "lifestyle",
+    "sports"
+  ]
 }
-

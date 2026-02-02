@@ -404,12 +404,27 @@ class TorontoDropInAPI:
         if location:
             facility_name = self.get_field(location, 'Location Name', 'LocationName', 'Location_Name') or facility_name
         
-        # Build notes
+        # Parse age as integers for filtering
+        age_min_raw = self.get_field(program, 'Age Min', 'AgeMin', 'Age_Min')
+        age_max_raw = self.get_field(program, 'Age Max', 'AgeMax', 'Age_Max')
+        
+        age_min_int = None
+        age_max_int = None
+        try:
+            if age_min_raw and age_min_raw != 'None' and age_min_raw.strip():
+                age_min_int = int(float(age_min_raw))
+            if age_max_raw and age_max_raw != 'None' and age_max_raw.strip():
+                age_max_int = int(float(age_max_raw))
+        except (ValueError, TypeError):
+            logger.debug(f"Could not parse age values: min={age_min_raw}, max={age_max_raw}")
+        
+        # Build notes (keep age info in notes for display)
         notes_parts = []
-        age_min = self.get_field(program, 'Age Min', 'AgeMin', 'Age_Min')
-        age_max = self.get_field(program, 'Age Max', 'AgeMax', 'Age_Max')
-        if age_min or age_max:
-            notes_parts.append(f"Age: {age_min}-{age_max}" if age_max and age_max != 'None' else f"Age: {age_min}+")
+        if age_min_int is not None or age_max_int is not None:
+            if age_max_int is not None:
+                notes_parts.append(f"Age: {age_min_int or 0}-{age_max_int}")
+            else:
+                notes_parts.append(f"Age: {age_min_int}+")
         section = self.get_field(program, 'Section')
         if section:
             notes_parts.append(f"{section}")
@@ -428,6 +443,8 @@ class TorontoDropInAPI:
                     'start_time': start_time,
                     'end_time': end_time,
                     'notes': notes,
+                    'age_min': age_min_int,
+                    'age_max': age_max_int,
                     'source': 'toronto_open_data',
                     'source_url': self.DROP_IN_PROGRAMS_URL,
                     'raw_program': program

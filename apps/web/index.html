@@ -47,7 +47,7 @@
     <meta name="apple-mobile-web-app-title" content="SwimTO" />
     <link rel="apple-touch-icon" href="/swimto-logo-512.png" />
     
-    <!-- Structured Data (JSON-LD) -->
+    <!-- Structured Data (JSON-LD) - WebApplication -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -65,12 +65,65 @@
       "author": {
         "@type": "Organization",
         "name": "SwimTO"
-      },
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.8",
-        "ratingCount": "50"
       }
+    }
+    </script>
+    
+    <!-- Structured Data (JSON-LD) - FAQ -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is SwimTO free to use?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! SwimTO is completely free to use. We believe everyone should have easy access to public pool schedules."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How accurate is the schedule data?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Our data comes directly from the City of Toronto Open Data Portal and is updated daily. However, we always recommend confirming with the facility for any last-minute changes."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What types of swim sessions are available?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "We show all drop-in swim types including Lane Swim, Recreational Swim, Adult Swim, and Senior Swim. You can filter by type in the schedule view."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need to create an account?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No account is required to browse schedules! However, signing in with Google lets you save favorite pools for quick access across devices."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I add sessions to my calendar?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes! Each session has an 'Add to Calendar' button that creates an event in Google Calendar with all the details."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Why can't I find a specific pool?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "SwimTO currently shows City of Toronto community center pools that offer drop-in lane swim. Private pools and some specialized facilities may not be included."
+          }
+        }
+      ]
     }
     </script>
     

@@ -2,7 +2,7 @@
 from datetime import datetime
 from sqlalchemy import (
     Column, String, Boolean, DateTime, Date, Time, 
-    BigInteger, Double, Text, ForeignKey, UniqueConstraint
+    BigInteger, Integer, Double, Text, ForeignKey, UniqueConstraint
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.declarative import declarative_base
@@ -50,6 +50,8 @@ class Session(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     notes = Column(Text)
+    age_min = Column(Integer, nullable=True)  # Minimum age in years
+    age_max = Column(Integer, nullable=True)  # Maximum age in years
     source = Column(String(50))
     hash = Column(String(64), unique=True)  # For deduplication
     created_at = Column(DateTime, default=datetime.utcnow)

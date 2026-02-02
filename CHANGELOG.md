@@ -14,6 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.4] - 2026-01-27
+
+### Fixed
+
+- **🔐 OAuth Error Handling**: Improved Google OAuth callback error handling
+  - Added detailed error messages for common OAuth failures (redirect_uri_mismatch, invalid_grant)
+  - Added proper handling for unexpected Google API responses
+  - Added database error handling with proper rollback
+  - Now returns specific error messages instead of generic 500 errors
+  - Added troubleshooting documentation for OAuth 500 errors
+
+---
+
 ## [0.7.3] - 2026-01-20
 
 ### Fixed
@@ -137,7 +150,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Supports `swimto.eldertree.xyz` (public), `swimto.eldertree.local` (internal), and `localhost` (dev)
   - Frontend passes origin to backend for correct redirect URI construction
   - Redirect URI stored in sessionStorage for callback verification
-  
 - **⚙️ User Preferences**: New preferences system for personalized experience
   - New `UserPreferences` database model with view, location, and notification preferences
   - REST API endpoints: GET/PUT/PATCH/DELETE `/preferences`

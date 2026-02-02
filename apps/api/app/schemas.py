@@ -47,6 +47,8 @@ class SessionBase(BaseModel):
     start_time: time
     end_time: time
     notes: Optional[str] = None
+    age_min: Optional[int] = None
+    age_max: Optional[int] = None
 
 
 class SessionCreate(SessionBase):

@@ -79,6 +79,8 @@ class Session(Base):
     start_time = Column(Time, nullable=False)
     end_time = Column(Time, nullable=False)
     notes = Column(Text)
+    age_min = Column(Integer, nullable=True)  # Minimum age in years
+    age_max = Column(Integer, nullable=True)  # Maximum age in years
     source = Column(String(50))
     hash = Column(String(64), unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
