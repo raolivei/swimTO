@@ -232,6 +232,8 @@ def ingest_official_schedules(db_session):
                         start_time=session_data['start_time'],
                         end_time=session_data['end_time'],
                         notes=session_data.get('notes'),
+                        age_min=session_data.get('age_min'),
+                        age_max=session_data.get('age_max'),
                         source='toronto_open_data',
                         hash=session_hash
                     )
@@ -347,6 +349,8 @@ def ingest_json_api_schedules(db_session):
                             start_time=session_data['start_time'],
                             end_time=session_data['end_time'],
                             notes=session_data.get('notes'),
+                            age_min=session_data.get('age_min'),
+                            age_max=session_data.get('age_max'),
                             source='toronto_parks_json_api',
                             hash=session_hash
                         )
