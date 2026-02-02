@@ -1105,7 +1105,7 @@ export default function ScheduleView() {
                           className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
                         >
                           {/* Facility Header */}
-                          <div className="p-3 bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
+                          <div className="p-3 bg-primary-50 dark:bg-gray-700 border-b border-primary-100 dark:border-gray-600">
                             <div className="flex items-start gap-2">
                               <button
                                 onClick={() =>
@@ -1122,12 +1122,12 @@ export default function ScheduleView() {
                                   className={`w-5 h-5 ${
                                     favorites.has(data.facility?.facility_id || "")
                                       ? "fill-yellow-400 text-yellow-400"
-                                      : "text-gray-300 dark:text-gray-600 hover:text-yellow-400"
+                                      : "text-gray-400 dark:text-gray-500 hover:text-yellow-400"
                                   }`}
                                 />
                               </button>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-gray-900 dark:text-gray-100 text-sm leading-tight">
+                                <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
                                   {data.facility?.website ? (
                                     <a
                                       href={data.facility.website}
@@ -1160,7 +1160,7 @@ export default function ScheduleView() {
                                       )}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[180px]"
+                                      className="text-xs text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[200px]"
                                     >
                                       {data.facility.address}
                                     </a>
