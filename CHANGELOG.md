@@ -14,6 +14,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.5] - 2026-02-02
+
+### Changed
+
+- **📱 Mobile Schedule View**: Improved layout groups sessions by facility
+  - Sessions are now grouped under facility headers instead of repeating facility name for each time slot
+  - Compact 2-column grid displays time slots within each facility card
+  - More efficient use of screen space on mobile devices
+
+### Fixed
+
+- **🌙 Dark Mode Styling**: Fixed facility header visibility in dark mode
+  - Changed invalid `dark:bg-gray-750` to valid `dark:bg-gray-700` Tailwind class
+  - Improved text contrast for facility names (`dark:text-white`)
+  - Better address text visibility (`dark:text-gray-300`)
+
+---
+
 ## [0.7.4] - 2026-01-27
 
 ### Fixed
