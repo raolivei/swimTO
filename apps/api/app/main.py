@@ -63,6 +63,21 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
+# Trailing slash middleware - strip trailing slashes to avoid 404s
+# (redirect_slashes=False is set to prevent CORS issues with 307 redirects)
+class TrailingSlashMiddleware(BaseHTTPMiddleware):
+    """Strip trailing slashes from request paths to avoid 404s."""
+    
+    async def dispatch(self, request: Request, call_next):
+        # Strip trailing slash from path (except for root "/")
+        if request.url.path != "/" and request.url.path.endswith("/"):
+            # Modify the scope to remove trailing slash
+            scope = request.scope.copy()
+            scope["path"] = request.url.path.rstrip("/")
+            request = Request(scope, request.receive)
+        return await call_next(request)
+
+
 # Security headers middleware
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     """Add security headers to all responses."""
@@ -83,6 +98,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 # Add middleware (order matters - first added = last executed)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(TrailingSlashMiddleware)  # Strip trailing slashes before routing
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
