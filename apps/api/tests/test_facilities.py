@@ -3,7 +3,7 @@
 
 def test_get_facilities(client, sample_facility):
     """Test getting all facilities."""
-    response = client.get("/facilities/")
+    response = client.get("/facilities")
     assert response.status_code == 200
     data = response.json()
     assert isinstance(data, list)
@@ -28,7 +28,7 @@ def test_get_nonexistent_facility(client):
 
 def test_filter_facilities_by_district(client, sample_facility):
     """Test filtering facilities by district."""
-    response = client.get("/facilities/?district=Test")
+    response = client.get("/facilities?district=Test")
     assert response.status_code == 200
     data = response.json()
     assert len(data) >= 1
