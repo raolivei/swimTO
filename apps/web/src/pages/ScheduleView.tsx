@@ -831,7 +831,7 @@ export default function ScheduleView() {
               className="min-h-[44px] flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               <Filter className="w-5 h-5" />
-              Filters
+              Swim Types
             </button>
 
             <div className="flex flex-col sm:flex-row gap-4 flex-1">
@@ -960,7 +960,30 @@ export default function ScheduleView() {
             </div>
           )}
 
-          <div className={`${showFilters ? "block" : "hidden"} md:block`}>
+          {/* Age Filter Chips - Always visible (new feature for parents) */}
+          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
+            <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
+              {[
+                { key: "all", label: "All Ages" },
+                { key: "infant", label: "Infant (0-3)" },
+                { key: "child", label: "Child (4-12)" },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setAgeFilter(key as AgeFilter)}
+                  className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
+                    ageFilter === key
+                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
             {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
               <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
@@ -981,29 +1004,6 @@ export default function ScheduleView() {
                     }`}
                   >
                     {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Age Filter Chips */}
-            <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide mt-2">
-              <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
-                {[
-                  { key: "all", label: "All Ages" },
-                  { key: "infant", label: "Infant (0-3)" },
-                  { key: "child", label: "Child (4-12)" },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setAgeFilter(key as AgeFilter)}
-                    className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
-                      ageFilter === key
-                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    {label}
                   </button>
                 ))}
               </div>
