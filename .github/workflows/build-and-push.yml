@@ -2,186 +2,37 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches:
-      - main
-      - dev
+    branches: [main]
     paths:
       - "apps/api/**"
       - "apps/web/**"
       - "VERSION"
       - ".github/workflows/build-and-push.yml"
   pull_request:
-    branches:
-      - main
+    branches: [main]
     paths:
       - "apps/api/**"
       - "apps/web/**"
-      - "VERSION"
-      - ".github/workflows/build-and-push.yml"
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Image tag (e.g., v1.0.0)"
-        required: false
-        default: "latest"
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_NAME_API: ghcr.io/raolivei/swimto-api
-  IMAGE_NAME_WEB: ghcr.io/raolivei/swimto-web
-
 jobs:
-  prepare:
-    name: Prepare Build Metadata
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    outputs:
-      version: ${{ steps.package-version.outputs.version }}
-      api-tags: ${{ steps.meta-api.outputs.tags }}
-      api-labels: ${{ steps.meta-api.outputs.labels }}
-      web-tags: ${{ steps.meta-web.outputs.tags }}
-      web-labels: ${{ steps.meta-web.outputs.labels }}
-      api-sha-tag: ${{ steps.get-sha-tags.outputs.api_tag }}
-      web-sha-tag: ${{ steps.get-sha-tags.outputs.web_tag }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Extract version
-        id: package-version
-        run: |
-          VERSION=$(cat VERSION | tr -d '[:space:]')
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Version: v$VERSION"
-
-      - name: Extract metadata for API
-        id: meta-api
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME_API }}
-          tags: |
-            type=semver,pattern=v{{version}},value=v${{ steps.package-version.outputs.version }}
-            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.package-version.outputs.version }}
-            type=semver,pattern=v{{major}},value=v${{ steps.package-version.outputs.version }}
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
-
-      - name: Extract metadata for Web
-        id: meta-web
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME_WEB }}
-          tags: |
-            type=semver,pattern=v{{version}},value=v${{ steps.package-version.outputs.version }}
-            type=semver,pattern=v{{major}}.{{minor}},value=v${{ steps.package-version.outputs.version }}
-            type=semver,pattern=v{{major}},value=v${{ steps.package-version.outputs.version }}
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-,enable={{is_default_branch}}
-            type=raw,value=${{ github.event.inputs.tag }},enable=${{ github.event.inputs.tag != '' }}
-
-      - name: Get SHA tags for deployment
-        id: get-sha-tags
-        if: github.event_name != 'pull_request'
-        run: |
-          # Extract SHA tag (format: branch-sha) from tags
-          API_TAG=$(echo "${{ steps.meta-api.outputs.tags }}" | tr ' ' '\n' | grep -E '[a-z]+-[a-f0-9]{7,}' | head -1 || echo "${{ github.sha }}")
-          WEB_TAG=$(echo "${{ steps.meta-web.outputs.tags }}" | tr ' ' '\n' | grep -E '[a-z]+-[a-f0-9]{7,}' | head -1 || echo "${{ github.sha }}")
-          echo "api_tag=${API_TAG}" >> $GITHUB_OUTPUT
-          echo "web_tag=${WEB_TAG}" >> $GITHUB_OUTPUT
-
   build-api:
-    name: Build and Push API Image
-    runs-on: ubuntu-24.04-arm # Native ARM64 runner - no QEMU needed
-    needs: prepare
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push API image
-        id: build-api
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./apps/api/Dockerfile
-          platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ needs.prepare.outputs.api-tags }}
-          labels: ${{ needs.prepare.outputs.api-labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Output image info
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "API image pushed with digest ${{ steps.build-api.outputs.digest }}"
-          echo "API image tags:"
-          echo "${{ needs.prepare.outputs.api-tags }}" | tr ' ' '\n'
+    uses: raolivei/github-workflows/.github/workflows/docker-build.yml@main
+    with:
+      image-name: swimto-api
+      context: .
+      dockerfile: apps/api/Dockerfile
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-web:
-    name: Build and Push Web Image
-    runs-on: ubuntu-24.04-arm # Native ARM64 runner - no QEMU needed
-    needs: prepare
-    timeout-minutes: 15
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.CR_PAT }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build and push Web image
-        id: build-web
-        uses: docker/build-push-action@v5
-        with:
-          context: ./apps/web
-          file: ./apps/web/Dockerfile
-          platforms: linux/arm64
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ needs.prepare.outputs.web-tags }}
-          labels: ${{ needs.prepare.outputs.web-labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_URL=${{ secrets.API_URL }}
-            APP_VERSION=${{ needs.prepare.outputs.version }}
-
-      - name: Output image info
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "Web image pushed with digest ${{ steps.build-web.outputs.digest }}"
-          echo "Web image tags:"
-          echo "${{ needs.prepare.outputs.web-tags }}" | tr ' ' '\n'
+    uses: raolivei/github-workflows/.github/workflows/docker-build.yml@main
+    with:
+      image-name: swimto-web
+      context: ./apps/web
+    secrets:
+      REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
