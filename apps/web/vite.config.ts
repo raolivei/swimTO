@@ -18,22 +18,12 @@ export default defineConfig({
     },
     proxy: {
       "/api": {
-        // In docker-compose, use the API service name; locally use localhost
-        // If VITE_API_URL is set, use it; otherwise use docker service name (works in docker-compose)
-        // For local dev without docker, set VITE_API_URL=http://localhost:8000
-        target: process.env.VITE_API_URL || "http://api:8000",
+        // For local dev: proxy to production API (default)
+        // For docker-compose: set VITE_API_URL=http://api:8000
+        target: process.env.VITE_API_URL || "https://api.swimto.app",
         changeOrigin: true,
+        secure: true,
         rewrite: (path) => path.replace(/^\/api/, ""),
-        configure: (proxy, _options) => {
-          proxy.on("proxyReq", (proxyReq, req, _res) => {
-            // Add trailing slash to paths that need it (FastAPI routes)
-            const url = req.url || "";
-            if (url.match(/^\/(schedule|facilities)(\?.*)?$/)) {
-              const [path, query] = url.split("?");
-              proxyReq.path = path + "/" + (query ? "?" + query : "");
-            }
-          });
-        },
       },
     },
   },
