@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import {
@@ -319,17 +319,18 @@ export default function ScheduleView() {
     }
   };
 
+  // Fetch all sessions (no swim_type filter) to compute available types
+  // Filter by swimType client-side for better UX
   const {
-    data: sessions,
+    data: allSessions,
     isLoading,
     error,
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ["schedule", swimType, ageFilter],
+    queryKey: ["schedule", ageFilter],
     queryFn: () =>
       scheduleApi.getSchedule({
-        swim_type: swimType === "ALL" ? undefined : swimType,
         date_from: yesterday.toISOString().split("T")[0], // Request from yesterday
         date_to: weekAhead.toISOString().split("T")[0], // Request up to a week ahead
         age_max: getAgeMaxFromFilter(ageFilter),
@@ -338,6 +339,19 @@ export default function ScheduleView() {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Compute available swim types from fetched data
+  const availableSwimTypes = useMemo(() => {
+    if (!allSessions?.length) return new Set<string>();
+    return new Set(allSessions.map((s) => s.swim_type));
+  }, [allSessions]);
+
+  // Filter sessions by selected swimType (client-side)
+  const sessions = useMemo(() => {
+    if (!allSessions) return undefined;
+    if (swimType === "ALL") return allSessions;
+    return allSessions.filter((s) => s.swim_type === swimType);
+  }, [allSessions, swimType]);
 
   // Handle toggling favorites
   const handleToggleFavorite = async (facilityId: string | undefined) => {
@@ -456,9 +470,12 @@ export default function ScheduleView() {
     // Check if session date string is in the visible dates (using pre-computed array)
     const isInRange = visibleDateStrings.includes(sessionDateString);
 
-    // If "happening now" filter is active, only show sessions happening right now
+    // If "happening now" filter is active, show all sessions for today
+    // (yellow highlight for sessions literally happening now is handled in render)
     if (prioritizeHappeningNow) {
-      return isInRange && isHappeningNow(session);
+      const todayStr = new Date().toISOString().split("T")[0];
+      const isToday = session.date === todayStr;
+      return isInRange && isToday;
     }
 
     return isInRange;
@@ -960,40 +977,36 @@ export default function ScheduleView() {
             </div>
           )}
 
-          {/* Age Filter Chips - Always visible (new feature for parents) */}
-          <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
-            <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
-              {[
-                { key: "all", label: "All Ages" },
-                { key: "infant", label: "Infant (0-3)" },
-                { key: "child", label: "Child (4-12)" },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => setAgeFilter(key as AgeFilter)}
-                  className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
-                    ageFilter === key
-                      ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30"
-                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+          {/* Age Filter Chips - Hidden for adult/senior-only swim types */}
+          {swimType !== "ADULT_SWIM" && swimType !== "SENIOR_SWIM" && (
+            <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
+              <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
+                {[
+                  { key: "all", label: "All Ages" },
+                  { key: "infant", label: "Infant (0-3)" },
+                  { key: "child", label: "Child (4-12)" },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setAgeFilter(key as AgeFilter)}
+                    className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
+                      ageFilter === key
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30"
+                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
             {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
               <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
-                {[
-                  "ALL",
-                  "LANE_SWIM",
-                  "RECREATIONAL",
-                  "ADULT_SWIM",
-                  "SENIOR_SWIM",
-                ].map((type) => (
+                {["ALL", ...Array.from(availableSwimTypes)].map((type) => (
                   <button
                     key={type}
                     onClick={() => setSwimType(type as SwimType | "ALL")}
