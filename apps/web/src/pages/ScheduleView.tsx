@@ -597,6 +597,14 @@ export default function ScheduleView() {
     const isFavB = facilityB?.facility_id
       ? isFavorite(facilityB.facility_id)
       : false;
+    
+    // Prioritize facilities with sessions happening now
+    const allSessionsA = Object.values(a[1].sessions).flat();
+    const allSessionsB = Object.values(b[1].sessions).flat();
+    const hasHappeningNowA = allSessionsA.some(isHappeningNow);
+    const hasHappeningNowB = allSessionsB.some(isHappeningNow);
+    if (hasHappeningNowA && !hasHappeningNowB) return -1;
+    if (!hasHappeningNowA && hasHappeningNowB) return 1;
 
     // Sort by distance mode: pure distance sorting (no favorites priority)
     if (sortMode === "distance" && userLocation) {
@@ -1080,6 +1088,12 @@ export default function ScheduleView() {
               const sortedFacilities = Object.entries(sessionsByFacility).sort(([, a], [, b]) => {
                 const isFavA = a.facility?.facility_id ? isFavorite(a.facility.facility_id) : false;
                 const isFavB = b.facility?.facility_id ? isFavorite(b.facility.facility_id) : false;
+                
+                // Prioritize facilities with sessions happening now
+                const hasHappeningNowA = a.sessions.some(isHappeningNow);
+                const hasHappeningNowB = b.sessions.some(isHappeningNow);
+                if (hasHappeningNowA && !hasHappeningNowB) return -1;
+                if (!hasHappeningNowA && hasHappeningNowB) return 1;
 
                 if (sortMode === "distance" && userLocation) {
                   const distA = a.distance;
@@ -1191,9 +1205,15 @@ export default function ScheduleView() {
                             </div>
                           </div>
 
-                          {/* Time Slots Grid */}
+                          {/* Time Slots Grid - sorted with happening now first */}
                           <div className="p-2 grid grid-cols-2 gap-2">
-                            {data.sessions.map((session) => {
+                            {[...data.sessions].sort((a, b) => {
+                              const aHappening = isHappeningNow(a);
+                              const bHappening = isHappeningNow(b);
+                              if (aHappening && !bHappening) return -1;
+                              if (!aHappening && bHappening) return 1;
+                              return a.start_time.localeCompare(b.start_time);
+                            }).map((session) => {
                               const happeningNow = isHappeningNow(session);
                               return (
                                 <div
