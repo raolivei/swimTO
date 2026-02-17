@@ -35,7 +35,7 @@ export interface SessionWithFacility extends Session {
   facility: Facility
 }
 
-export type SwimType = 'LANE_SWIM' | 'RECREATIONAL' | 'ADULT_SWIM' | 'SENIOR_SWIM' | 'OTHER'
+export type SwimType = 'LANE_SWIM' | 'RECREATIONAL' | 'ADULT_SWIM' | 'SENIOR_SWIM' | 'AQUATIC_FITNESS' | 'OTHER'
 
 export interface ScheduleFilters {
   facility_id?: string

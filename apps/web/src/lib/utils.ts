@@ -54,6 +54,7 @@ export function getSwimTypeLabel(type: string): string {
     RECREATIONAL: "Recreational Swim",
     ADULT_SWIM: "Adult Swim",
     SENIOR_SWIM: "Senior Swim",
+    AQUATIC_FITNESS: "Aquatic Fitness",
     OTHER: "Other",
   };
   return labels[type] || type;
@@ -68,6 +69,7 @@ export function getSwimTypeLabelAbbreviated(type: string): string {
     RECREATIONAL: "Rec",
     ADULT_SWIM: "Adult",
     SENIOR_SWIM: "Senior",
+    AQUATIC_FITNESS: "Fitness",
     OTHER: "Other",
   };
   return labels[type] || type;
@@ -79,6 +81,7 @@ export function getSwimTypeColor(type: string): string {
     RECREATIONAL: "bg-green-100 text-green-800",
     ADULT_SWIM: "bg-purple-100 text-purple-800",
     SENIOR_SWIM: "bg-orange-100 text-orange-800",
+    AQUATIC_FITNESS: "bg-cyan-100 text-cyan-800",
     OTHER: "bg-gray-100 text-gray-800",
   };
   return colors[type] || colors.OTHER;
