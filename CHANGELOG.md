@@ -14,6 +14,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.6] - 2026-02-17
+
+### Added
+
+- **Dynamic Filter Buttons**: Filter buttons now show only swim types that exist in the data
+  - Computed dynamically from API response instead of hardcoded list
+  - Added `AQUATIC_FITNESS` swim type with label, abbreviation, and cyan color styling
+
+### Changed
+
+- **Improved "Happening Now" Filter**: Now shows all of today's sessions
+  - Sessions literally in progress still highlighted in yellow
+  - Sessions happening later today display with normal styling
+- **Smart Age Filters**: Hide infant/child age filters when adult/senior swim types are selected
+
+### Fixed
+
+- **Local Development**: Simplified Vite proxy configuration
+  - Default proxy target now points to production API for easier local development
+  - Removed trailing slash logic that was causing 404 errors
+- **API Tests**: Fixed test URLs to not use trailing slashes (matching API routes)
+- **Trailing Slash Handling**: Added TrailingSlashMiddleware to API
+  - Strips trailing slashes from request paths to prevent 404 errors
+- **Mobile UI**: Age filter chips now always visible, renamed "Filters" to "Swim Types"
+
+---
+
 ## [0.7.5] - 2026-02-02
 
 ### Changed
