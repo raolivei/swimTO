@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.7] - 2026-02-17
+
+### Fixed
+
+- **Happening Now Filter**: Hide sessions that have already ended
+  - Only shows sessions currently in progress (yellow highlight) or starting later today
+  - Previously showed all of today's sessions including past ones
+
+---
+
 ## [0.7.6] - 2026-02-17
 
 ### Added
