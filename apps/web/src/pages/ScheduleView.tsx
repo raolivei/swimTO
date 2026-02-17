@@ -470,12 +470,20 @@ export default function ScheduleView() {
     // Check if session date string is in the visible dates (using pre-computed array)
     const isInRange = visibleDateStrings.includes(sessionDateString);
 
-    // If "happening now" filter is active, show all sessions for today
+    // If "happening now" filter is active, show today's sessions that haven't ended yet
     // (yellow highlight for sessions literally happening now is handled in render)
     if (prioritizeHappeningNow) {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const todayStr = now.toISOString().split("T")[0];
       const isToday = session.date === todayStr;
-      return isInRange && isToday;
+      
+      // Check if session has already ended
+      const [endHour, endMinute] = session.end_time.split(":").map(Number);
+      const sessionEnd = new Date(now);
+      sessionEnd.setHours(endHour, endMinute, 0, 0);
+      const hasEnded = now > sessionEnd;
+      
+      return isInRange && isToday && !hasEnded;
     }
 
     return isInRange;
