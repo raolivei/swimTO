@@ -14,6 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.8] - 2026-02-17
+
+### Changed
+
+- **Happening Now Sorting**: Sessions happening now appear at the top
+  - Facilities with currently active sessions are prioritized first
+  - Within each facility, happening-now sessions sorted before upcoming ones
+  - Secondary sort by start time for consistent ordering
+
+---
+
 ## [0.7.7] - 2026-02-17
 
 ### Fixed
