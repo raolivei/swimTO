@@ -161,7 +161,7 @@ function MapClickHandler({ facilities, onSelect }: MapClickHandlerProps) {
     click(e) {
       const clickPx = map.latLngToContainerPoint(e.latlng);
       let nearest: FacilityWithDistance | null = null;
-      let minDist = 44; // 44 px hit-area radius — generous for touch
+      let minDist = 80; // 80 px hit-area — catches clicks near but not exactly on circles
 
       for (const facility of facilities) {
         if (!facility.latitude || !facility.longitude) continue;
@@ -611,7 +611,7 @@ export default function MapView() {
               const isSelected = highlightedFacilityId === facility.facility_id;
               const variant = getMarkerVariant(availability, isFavorited);
               const color = MARKER_COLORS[variant];
-              const radius = isSelected ? 12 : 8;
+              const radius = isSelected ? 14 : 10;
 
               return (
                 <CircleMarker
