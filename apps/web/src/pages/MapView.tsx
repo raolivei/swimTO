@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
 import {
@@ -30,7 +30,7 @@ import type { Facility } from "../types";
 
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
 
-// ─── Marker icons ────────────────────────────────────────────────────────────
+// ─── Marker colours ───────────────────────────────────────────────────────────
 
 type MarkerVariant = "happening-now" | "today" | "no-sessions" | "favorite" | "user";
 
@@ -42,53 +42,16 @@ const MARKER_COLORS: Record<MarkerVariant, string> = {
   user: "#0ea5e9",
 };
 
-/**
- * Build a DivIcon for a given variant.
- * Icons are created once at call time and cached in ICON_CACHE so react-leaflet
- * receives the same object reference between renders, preventing unnecessary
- * marker DOM re-initialisation (which can swallow clicks).
- */
-function buildCircleIcon(variant: MarkerVariant, selected: boolean): DivIcon {
-  const color = MARKER_COLORS[variant];
-  const dot = selected ? 20 : 14;
-  const border = selected ? 3 : 2.5;
-  const pulse = variant === "happening-now" && !selected;
-
-  // 44 px transparent hit area keeps touch targets accessible
-  const hit = 44;
-
-  const inner = pulse
-    ? `<div style="position:relative;width:${dot}px;height:${dot}px">
-         <div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:0.35;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite;transform:scale(2)"></div>
-         <div style="position:absolute;inset:0;border-radius:50%;background:${color};border:${border}px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4)"></div>
-       </div>`
-    : `<div style="width:${dot}px;height:${dot}px;border-radius:50%;background:${color};border:${border}px solid white;box-shadow:0 1px 6px rgba(0,0,0,${selected ? 0.5 : 0.35})"></div>`;
-
-  const html = `<div style="width:${hit}px;height:${hit}px;display:flex;align-items:center;justify-content:center;cursor:pointer">${inner}</div>`;
-
+// User-location dot still uses a DivIcon so it looks distinct (filled dot with ring)
+function buildUserIcon(): DivIcon {
   return new DivIcon({
     className: "",
-    html,
-    iconSize: [hit, hit],
-    iconAnchor: [hit / 2, hit / 2],
+    html: `<div style="width:14px;height:14px;border-radius:50%;background:#0ea5e9;border:3px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.4)"></div>`,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 }
-
-// Pre-built icon cache — stable references mean react-leaflet won't
-// recreate marker DOM elements on every render.
-const ICON_CACHE = (() => {
-  const variants: MarkerVariant[] = ["happening-now", "today", "no-sessions", "favorite", "user"];
-  const cache: Partial<Record<string, DivIcon>> = {};
-  for (const v of variants) {
-    cache[v] = buildCircleIcon(v, false);
-    cache[`${v}-selected`] = buildCircleIcon(v, true);
-  }
-  return cache as Record<string, DivIcon>;
-})();
-
-function getIcon(variant: MarkerVariant, selected: boolean): DivIcon {
-  return ICON_CACHE[selected ? `${variant}-selected` : variant];
-}
+const USER_ICON = buildUserIcon();
 
 // ─── Availability helper ─────────────────────────────────────────────────────
 
@@ -592,24 +555,31 @@ export default function MapView() {
             {userLocation && (
               <Marker
                 position={[userLocation.latitude, userLocation.longitude]}
-                icon={getIcon("user", false)}
+                icon={USER_ICON}
               />
             )}
 
-            {/* Pool markers — no <Popup>, bottom sheet handles details */}
+            {/* Pool markers — CircleMarker (SVG vector) for reliable clicks */}
             {validFacilities.map((facility) => {
               const availability = getSessionAvailability(facility);
               const isFavorited = isFavorite(facility.facility_id);
               const isSelected = highlightedFacilityId === facility.facility_id;
               const variant = getMarkerVariant(availability, isFavorited);
+              const color = MARKER_COLORS[variant];
+              const radius = isSelected ? 12 : 8;
 
               return (
-                <Marker
+                <CircleMarker
                   key={facility.facility_id}
-                  position={[facility.latitude!, facility.longitude!]}
-                  icon={getIcon(variant, isSelected)}
+                  center={[facility.latitude!, facility.longitude!]}
+                  radius={radius}
+                  pathOptions={{
+                    color: "white",
+                    weight: isSelected ? 3 : 2,
+                    fillColor: color,
+                    fillOpacity: 1,
+                  }}
                   eventHandlers={{ click: () => handleSelectFacility(facility) }}
-                  zIndexOffset={isSelected ? 1000 : 0}
                 />
               );
             })}
