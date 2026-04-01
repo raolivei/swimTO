@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, CircleMarker, useMap, useMapEvents } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
 import {
@@ -137,6 +137,45 @@ function MapController({
     });
     map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
   }, [userLocation, facilities, map]);
+
+  return null;
+}
+
+// ─── Map-level click handler ─────────────────────────────────────────────────
+//
+// Instead of per-marker eventHandlers (fragile across browsers/touch devices),
+// we listen for any genuine map click, convert both the click point and every
+// facility position to screen pixels, and select the nearest one within 44 px.
+// This is guaranteed to fire because Leaflet always emits 'click' on a tap that
+// didn't move (i.e. is not a pan).
+
+interface MapClickHandlerProps {
+  facilities: FacilityWithDistance[];
+  onSelect: (facility: FacilityWithDistance) => void;
+}
+
+function MapClickHandler({ facilities, onSelect }: MapClickHandlerProps) {
+  const map = useMap();
+
+  useMapEvents({
+    click(e) {
+      const clickPx = map.latLngToContainerPoint(e.latlng);
+      let nearest: FacilityWithDistance | null = null;
+      let minDist = 44; // 44 px hit-area radius — generous for touch
+
+      for (const facility of facilities) {
+        if (!facility.latitude || !facility.longitude) continue;
+        const fPx = map.latLngToContainerPoint([facility.latitude, facility.longitude]);
+        const d = Math.hypot(fPx.x - clickPx.x, fPx.y - clickPx.y);
+        if (d < minDist) {
+          minDist = d;
+          nearest = facility;
+        }
+      }
+
+      if (nearest) onSelect(nearest);
+    },
+  });
 
   return null;
 }
@@ -551,6 +590,12 @@ export default function MapView() {
             <MapController userLocation={userLocation} facilities={validFacilities} />
             <MapRefSetter mapRef={mapRef} />
 
+            {/* Map-level click → nearest-circle selection (most reliable approach) */}
+            <MapClickHandler
+              facilities={validFacilities}
+              onSelect={handleSelectFacility}
+            />
+
             {/* User location dot */}
             {userLocation && (
               <Marker
@@ -559,7 +604,7 @@ export default function MapView() {
               />
             )}
 
-            {/* Pool markers — CircleMarker (SVG vector) for reliable clicks */}
+            {/* Pool markers — CircleMarker (SVG vector), visual only */}
             {validFacilities.map((facility) => {
               const availability = getSessionAvailability(facility);
               const isFavorited = isFavorite(facility.facility_id);
@@ -579,7 +624,6 @@ export default function MapView() {
                     fillColor: color,
                     fillOpacity: 1,
                   }}
-                  eventHandlers={{ click: () => handleSelectFacility(facility) }}
                 />
               );
             })}
