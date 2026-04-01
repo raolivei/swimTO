@@ -126,9 +126,12 @@ export const authApi = {
           timeout: 10000, // 10 seconds - should be instant, but allow some buffer
           params: { origin },
         });
-        // Store redirect_uri for use in callback
+        // Store redirect_uri for use in callback.
+        // Use localStorage (not sessionStorage) so it survives the OAuth
+        // redirect — Google navigates away and back, clearing sessionStorage
+        // on some browsers/devices.
         if (data.redirect_uri) {
-          sessionStorage.setItem("swimto_oauth_redirect_uri", data.redirect_uri);
+          localStorage.setItem("swimto_oauth_redirect_uri", data.redirect_uri);
         }
         return data;
       } catch (error) {
@@ -154,10 +157,17 @@ export const authApi = {
   },
 
   googleCallback: async (code: string): Promise<TokenResponse> => {
-    // Get the redirect_uri that was used when generating the auth URL
-    const redirect_uri = sessionStorage.getItem("swimto_oauth_redirect_uri");
-    sessionStorage.removeItem("swimto_oauth_redirect_uri"); // Clean up
-    
+    // Retrieve the redirect_uri that was used when generating the auth URL.
+    // Stored in localStorage so it survives the Google OAuth redirect.
+    const stored = localStorage.getItem("swimto_oauth_redirect_uri");
+    localStorage.removeItem("swimto_oauth_redirect_uri"); // Clean up
+
+    // Fall back to constructing from current origin if localStorage was cleared
+    const redirect_uri =
+      stored ?? (typeof window !== "undefined"
+        ? `${window.location.origin}/auth/callback`
+        : undefined);
+
     const { data } = await api.post("/auth/google-callback", null, {
       params: { code, redirect_uri },
     });

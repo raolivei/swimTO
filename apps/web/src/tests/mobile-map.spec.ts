@@ -61,27 +61,26 @@ test.describe("Mobile Map View", () => {
     console.log(`✅ ${markerCount} facility markers loaded`);
   });
 
-  test("clicking marker should show facility popup", async ({ page }) => {
+  test("clicking marker should show facility panel", async ({ page }) => {
     await page.goto("/map");
     
     // Wait for markers
     await page.waitForSelector('.leaflet-marker-icon', { timeout: 15000 });
     
-    // Click first marker
+    // Click first marker (markers now have a 44px hit area)
     const marker = page.locator('.leaflet-marker-icon').first();
     await marker.click();
     
-    // Wait for popup
-    await page.waitForSelector('.leaflet-popup', { timeout: 5000 });
+    // Wait for the VISIBLE Close button — on desktop the sidebar is visible (hidden md:flex),
+    // on mobile the bottom sheet is visible (md:hidden). Use :visible to skip the hidden sibling.
+    const closeBtn = page.locator('button[aria-label="Close"]').filter({ visible: true });
+    await expect(closeBtn).toBeVisible({ timeout: 5000 });
     
-    const popup = page.locator('.leaflet-popup');
-    await expect(popup).toBeVisible();
+    // Verify panel has meaningful text (facility name)
+    const panelText = await closeBtn.locator('../../..').first().textContent();
+    expect(panelText!.length).toBeGreaterThan(5);
     
-    // Verify popup has facility name
-    const popupContent = await popup.textContent();
-    expect(popupContent!.length).toBeGreaterThan(5);
-    
-    console.log(`✅ Marker popup displayed: ${popupContent?.substring(0, 50)}...`);
+    console.log(`✅ Facility panel displayed: ${panelText?.substring(0, 50)}...`);
   });
 
   test("should handle API failure gracefully", async ({ page }) => {
@@ -90,32 +89,33 @@ test.describe("Mobile Map View", () => {
     
     await page.goto("/map");
     
-    // Should show error message
-    await expect(page.locator('text=Failed to Load Facilities')).toBeVisible({ timeout: 10000 });
+    // Should show retry button (stable regardless of error title wording)
+    await expect(page.locator('button:has-text("Try Again")')).toBeVisible({ timeout: 10000 });
     
-    // Should show retry button
-    await expect(page.locator('button:has-text("Try Again")')).toBeVisible();
+    // Should show an AlertCircle error indicator (error state rendered)
+    await expect(page.locator('.border-red-500')).toBeVisible({ timeout: 10000 });
     
-    console.log(`✅ API failure handled with error message`);
+    console.log(`✅ API failure handled with error state and retry button`);
   });
 
-  test("sidebar should list facilities", async ({ page }) => {
+  test("map controls should be visible", async ({ page }) => {
     await page.goto("/map");
+    await page.waitForSelector('.leaflet-container', { timeout: 15000 });
     
-    // Wait for facilities to load
-    await page.waitForTimeout(5000);
+    // Search pill should be visible
+    await expect(page.locator('button:has-text("Search pools")')).toBeVisible();
     
-    // Look for facility list items (cards with facility names)
-    const facilityCards = page.locator('[class*="bg-white"]').filter({ hasText: /Community Centre|Pool|Recreation Centre/i });
-    const cardCount = await facilityCards.count();
+    // Locate FAB should be visible
+    await expect(page.locator('button[aria-label="Enable location"]')).toBeVisible();
     
-    if (cardCount > 0) {
-      console.log(`✅ Sidebar shows ${cardCount} facilities`);
-      expect(cardCount).toBeGreaterThan(0);
-    } else {
-      // Might be in a different layout
-      console.log(`⚠️ Facility list format may have changed`);
-    }
+    // Legend button should be visible
+    await expect(page.locator('button[aria-label="Map legend"]')).toBeVisible();
+    
+    // Zoom controls should be visible
+    await expect(page.locator('button[aria-label="Zoom in"]')).toBeVisible();
+    await expect(page.locator('button[aria-label="Zoom out"]')).toBeVisible();
+    
+    console.log(`✅ All map controls visible`);
   });
 
   test("sort by distance button should be functional", async ({ page, context }) => {
@@ -185,7 +185,7 @@ test.describe("Mobile Map View", () => {
   });
 
   test("map should show loading state", async ({ page }) => {
-    // Delay API response
+    // Delay API response so loading UI is visible long enough to assert
     await page.route('**/facilities*', async route => {
       await new Promise(resolve => setTimeout(resolve, 2000));
       route.continue();
@@ -193,9 +193,10 @@ test.describe("Mobile Map View", () => {
     
     const loadingPromise = page.goto("/map");
     
-    // Should show loading indicator
-    const loading = page.locator('text=Loading, text=loading').first();
-    await expect(loading).toBeVisible({ timeout: 3000 });
+    // Should show "Loading pools..." spinner text
+    await expect(
+      page.locator('text=Loading pools').or(page.locator('text=Loading...'))
+    ).toBeVisible({ timeout: 5000 });
     
     await loadingPromise;
     await page.waitForLoadState('networkidle');
