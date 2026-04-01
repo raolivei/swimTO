@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.9] - 2026-02-01
+
+### Fixed
+
+- **Map marker clicks**: Overlay containers (search bar, zoom controls, FABs) were positioned at z-index 10 with large invisible transparent areas that intercepted every click/tap before it could reach Leaflet markers beneath them. Fixed by adding `pointer-events: none` to each container and `pointer-events: auto` to interactive children only.
+- **Touch tap reliability on iOS**: Changed `.leaflet-container` `touch-action` from `none` to `manipulation`, eliminating the 300 ms double-tap delay so Leaflet's click synthesis fires immediately on tap — swipe-back navigation still suppressed via `overscroll-behavior: none`.
+- **OAuth redirect_uri persistence**: Stored `swimto_oauth_redirect_uri` in `localStorage` instead of `sessionStorage` so it survives cross-origin redirects on iOS Safari.
+
+---
+
 ## [0.7.8] - 2026-02-17
 
 ### Changed
