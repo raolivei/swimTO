@@ -14,6 +14,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-02-01
+
+### Fixed
+
+- Map marker circles enlarged (radius 10 normal / 14 selected) for easier tapping on touch devices
+- Increased click hit-radius on `MapClickHandler` from 44px to 80px, catching taps near (not just on) circles
+- Lowered header `z-index` from `z-[2000]` to `z-[800]` to prevent it intercepting map clicks on circles near the top of the viewport
+
+---
+
 ## [0.8.0] - 2026-04-01
 
 ### Fixed
