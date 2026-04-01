@@ -14,6 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2026-04-01
+
+### Fixed
+
+- **Map marker clicks (definitive fix)**: Replaced `Marker` + `DivIcon` with `CircleMarker` for all pool markers. `CircleMarker` renders as a native SVG `<circle>` in Leaflet's overlay pane — click/tap events are always reliable without any transparent-div, z-index, or pointer-events complexity.
+
+---
+
 ## [0.7.9] - 2026-02-01
 
 ### Fixed
