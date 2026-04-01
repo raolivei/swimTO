@@ -68,10 +68,12 @@ code {
 .leaflet-container {
   height: 100%;
   width: 100%;
-  /* Enable smooth touch scrolling and pinch zoom on mobile */
-  touch-action: pan-y pinch-zoom;
-  /* Smooth animations for map movements */
-  transition: all 0.3s ease-in-out;
+  /* manipulation: allows scroll/pinch but skips double-tap delay, so Leaflet
+     can synthesise a reliable click event on tap — prevents iOS swipe-back
+     while still letting the browser fire click after touchend */
+  touch-action: manipulation;
+  /* Block overscroll bounce / back-swipe on iOS Safari */
+  overscroll-behavior: none;
 }
 
 /* Improve popup appearance */
@@ -82,6 +84,14 @@ code {
 
 .leaflet-popup-tip {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Pulse animation for circle markers (happening-now) */
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 /* Better zoom controls */
