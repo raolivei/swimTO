@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.1] - 2026-04-01
+
+### Fixed
+
+- **Map marker clicks — definitive fix**: Added `MapClickHandler` component using `useMapEvents('click')` at the Leaflet map level. Leaflet fires a reliable `click` for every genuine tap/click (not a pan), so the handler catches clicks on circles across all browsers. Finds the nearest facility within a 44 px radius and opens the facility panel.
+- **Diagnostic test framework**: Added `map-click-debug.spec.ts` (6 tests, Chromium + WebKit) that progressively tests SVG existence → CSS pointer-events → DOM click detection → panel appearance → full end-to-end. All 12 pass.
+
+---
+
 ## [0.8.0] - 2026-04-01
 
 ### Fixed
