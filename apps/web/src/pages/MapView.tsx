@@ -551,9 +551,10 @@ export default function MapView() {
   return (
     <div ref={containerRef} className="h-[calc(100dvh-8rem)] relative overflow-hidden">
       {/* ── Map ─────────────────────────────────────────────────────── */}
-      {/* `isolate` creates a stacking context so Leaflet's pane z-indices (200/400/600)
-          are contained here and don't compete with the panel's z-20 in the outer context */}
-      <div className="absolute inset-0 isolate">
+      {/* z-0 gives the map wrapper an explicit stacking context (position + non-auto z-index).
+          Leaflet's internal pane z-indices (200/400/600) are contained here and cannot
+          compete with the search bar (z-10), controls (z-10), or panel (z-20) above. */}
+      <div className="absolute inset-0 z-0">
         {isLoading ? (
           <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900">
             <div className="text-center">

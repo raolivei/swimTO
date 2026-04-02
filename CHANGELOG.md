@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.3] - 2026-04-02
+
+### Fixed
+
+- **Search bar and all map overlays hidden behind map tiles**: `isolation: isolate` (no z-index) leaves the map wrapper at z-index `auto`, which some browsers handle inconsistently. Replaced with explicit `z-0` (`z-index: 0`) — any positioned element with a non-auto z-index creates a proper stacking context, so Leaflet's internal 200/400/600 pane z-indices are fully contained and all UI overlays (search `z-10`, controls `z-10`, panel `z-20`) render unambiguously above the map.
+
+---
+
 ## [0.8.2] - 2026-04-02
 
 ### Fixed
