@@ -14,38 +14,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.8.1] - 2026-02-01
+## [0.8.1] - 2026-04-02
 
 ### Fixed
 
-- Map marker circles enlarged (radius 10 normal / 14 selected) for easier tapping on touch devices
-- Increased click hit-radius on `MapClickHandler` from 44px to 80px, catching taps near (not just on) circles
-- Lowered header `z-index` from `z-[2000]` to `z-[800]` to prevent it intercepting map clicks on circles near the top of the viewport
+- **Map overlays hidden behind tiles (search bar, controls, panel)**: Leaflet's internal panes have CSS z-indices of 200/400/600. The map wrapper now has explicit `z-0` (`z-index: 0`), creating a proper stacking context that contains those z-indices. All UI overlays sit unambiguously above: search bar `z-10`, zoom controls `z-10`, facility panel `z-20`.
+- **Facility panel anchored to clicked circle**: On desktop the panel now floats directly above (or below) the circle that was tapped, follows the circle as the map pans/zooms, and is clamped so it never overflows the map edges or clips behind the search bar.
+- **Circle clicks unreliable at high zoom levels**: Reverted from `MapClickHandler` (pixel-distance approach, broken after panning) back to direct `eventHandlers` on each `CircleMarker` — simpler and fully reliable at every zoom level.
+- **Scroll truncating panel content**: Added `min-h-0` to the flex chain inside the floating card so the panel body correctly overflows and scrolls rather than clipping.
+- **CI: Playwright specs picked up by Vitest**: Configured `vitest.config.ts` to include only `*.test.ts/tsx` and exclude `src/tests/**`, preventing the 6 Playwright spec files from failing the unit-test step.
 
----
+### Added
 
-## [0.8.3] - 2026-04-02
-
-### Fixed
-
-- **Search bar and all map overlays hidden behind map tiles**: `isolation: isolate` (no z-index) leaves the map wrapper at z-index `auto`, which some browsers handle inconsistently. Replaced with explicit `z-0` (`z-index: 0`) — any positioned element with a non-auto z-index creates a proper stacking context, so Leaflet's internal 200/400/600 pane z-indices are fully contained and all UI overlays (search `z-10`, controls `z-10`, panel `z-20`) render unambiguously above the map.
-
----
-
-## [0.8.2] - 2026-04-02
-
-### Fixed
-
-- **Map circles not clickable when zoomed in**: `MapClickHandler` (pixel-distance approach) was unreliable after panning at high zoom levels, because panning gestures prevent Leaflet from emitting a clean `click`. Reverted to direct `eventHandlers` on each `CircleMarker` — now that the panel z-index is fixed (`isolate` stacking context), direct per-circle click handlers are simple and fully reliable at all zoom levels.
-
----
-
-## [0.8.1] - 2026-04-01
-
-### Fixed
-
-- **Map marker clicks — definitive fix**: Added `MapClickHandler` component using `useMapEvents('click')` at the Leaflet map level. Leaflet fires a reliable `click` for every genuine tap/click (not a pan), so the handler catches clicks on circles across all browsers. Finds the nearest facility within a 44 px radius and opens the facility panel.
-- **Diagnostic test framework**: Added `map-click-debug.spec.ts` (6 tests, Chromium + WebKit) that progressively tests SVG existence → CSS pointer-events → DOM click detection → panel appearance → full end-to-end. All 12 pass.
+- **Map click diagnostic test suite** (`map-click-debug.spec.ts`): 6 progressive Playwright tests (Chromium + WebKit) — SVG circle existence → CSS pointer-events → DOM click detection → facility panel appearance → full end-to-end. All 12 pass.
 
 ---
 

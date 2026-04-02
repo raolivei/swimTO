@@ -224,7 +224,7 @@ function FacilityPanel({
   }[availability];
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Drag handle (mobile only) */}
       <div className="md:hidden flex justify-center pt-2 pb-1">
         <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -279,7 +279,7 @@ function FacilityPanel({
       </div>
 
       {/* Scrollable body */}
-      <div className="overflow-y-auto flex-1 px-4 pb-4 space-y-3">
+      <div className="overflow-y-auto flex-1 min-h-0 px-4 pb-4 space-y-3">
         {/* Address */}
         {facility.address && (
           <div className="flex gap-2 text-sm">
@@ -720,31 +720,37 @@ export default function MapView() {
           {panelAnchor && (() => {
             const cw = containerRef.current?.clientWidth ?? 800;
             const ch = containerRef.current?.clientHeight ?? 600;
-            const W = 288; // w-72
-            const GAP = 18;
-            const MARGIN = 8;
-            const left = Math.max(MARGIN, Math.min(panelAnchor.x - W / 2, cw - W - MARGIN));
-            // Show above the circle if it's in the lower 55% of the container, else below
-            const showAbove = panelAnchor.y > ch * 0.45;
-            const style: React.CSSProperties = {
-              left,
-              top: showAbove ? panelAnchor.y - GAP : panelAnchor.y + GAP,
-              transform: showAbove ? "translateY(-100%)" : "none",
-              width: W,
-              maxHeight: Math.min(ch * 0.65, 420),
-            };
+            const W = 300;
+            const GAP = 16;
+            // Top margin accounts for the search bar row (≈56px) + padding
+            const TOP_MARGIN = 64;
+            const SIDE_MARGIN = 8;
+            const maxH = Math.min(ch - TOP_MARGIN - GAP * 2, 400);
+
+            const left = Math.max(SIDE_MARGIN, Math.min(panelAnchor.x - W / 2, cw - W - SIDE_MARGIN));
+
+            // Prefer above the circle; fall back to below if it doesn't fit
+            const topIfAbove = panelAnchor.y - GAP - maxH;
+            const top = topIfAbove >= TOP_MARGIN
+              ? topIfAbove                    // fits above
+              : Math.min(panelAnchor.y + GAP, ch - maxH - SIDE_MARGIN); // below, clamped
+
+            const style: React.CSSProperties = { left, top, width: W, height: maxH };
             return (
               <div
                 className="hidden md:flex absolute z-20 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden"
                 style={style}
               >
-                <FacilityPanel
-                  facility={selectedFacility}
-                  isFavorited={isFavorite(selectedFacility.facility_id)}
-                  onToggleFavorite={() => handleToggleFavorite(selectedFacility.facility_id)}
-                  onOpenMaps={setMapsModalAddress}
-                  onClose={handleClose}
-                />
+                {/* min-h-0 lets the scrollable body actually shrink and scroll */}
+                <div className="flex flex-col flex-1 min-h-0">
+                  <FacilityPanel
+                    facility={selectedFacility}
+                    isFavorited={isFavorite(selectedFacility.facility_id)}
+                    onToggleFavorite={() => handleToggleFavorite(selectedFacility.facility_id)}
+                    onOpenMaps={setMapsModalAddress}
+                    onClose={handleClose}
+                  />
+                </div>
               </div>
             );
           })()}
