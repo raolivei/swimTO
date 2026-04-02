@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.2] - 2026-04-02
+
+### Fixed
+
+- **Map circles not clickable when zoomed in**: `MapClickHandler` (pixel-distance approach) was unreliable after panning at high zoom levels, because panning gestures prevent Leaflet from emitting a clean `click`. Reverted to direct `eventHandlers` on each `CircleMarker` — now that the panel z-index is fixed (`isolate` stacking context), direct per-circle click handlers are simple and fully reliable at all zoom levels.
+
+---
+
 ## [0.8.1] - 2026-04-01
 
 ### Fixed
