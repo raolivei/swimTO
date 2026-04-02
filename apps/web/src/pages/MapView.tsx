@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { MapContainer, TileLayer, Marker, CircleMarker, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
 import {
@@ -141,44 +141,6 @@ function MapController({
   return null;
 }
 
-// ─── Map-level click handler ─────────────────────────────────────────────────
-//
-// Instead of per-marker eventHandlers (fragile across browsers/touch devices),
-// we listen for any genuine map click, convert both the click point and every
-// facility position to screen pixels, and select the nearest one within 44 px.
-// This is guaranteed to fire because Leaflet always emits 'click' on a tap that
-// didn't move (i.e. is not a pan).
-
-interface MapClickHandlerProps {
-  facilities: FacilityWithDistance[];
-  onSelect: (facility: FacilityWithDistance) => void;
-}
-
-function MapClickHandler({ facilities, onSelect }: MapClickHandlerProps) {
-  const map = useMap();
-
-  useMapEvents({
-    click(e) {
-      const clickPx = map.latLngToContainerPoint(e.latlng);
-      let nearest: FacilityWithDistance | null = null;
-      let minDist = 80; // 80 px hit-area — catches clicks near but not exactly on circles
-
-      for (const facility of facilities) {
-        if (!facility.latitude || !facility.longitude) continue;
-        const fPx = map.latLngToContainerPoint([facility.latitude, facility.longitude]);
-        const d = Math.hypot(fPx.x - clickPx.x, fPx.y - clickPx.y);
-        if (d < minDist) {
-          minDist = d;
-          nearest = facility;
-        }
-      }
-
-      if (nearest) onSelect(nearest);
-    },
-  });
-
-  return null;
-}
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
 
@@ -424,8 +386,10 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
     queryKey: ["facilities", "lane-swim"],
@@ -441,6 +405,32 @@ export default function MapView() {
   useEffect(() => {
     if (showSearch) searchRef.current?.focus();
   }, [showSearch]);
+
+  // Track the selected circle's pixel position so the desktop card follows it
+  const updateAnchor = useCallback(() => {
+    if (!mapRef.current || !selectedFacility?.latitude || !selectedFacility?.longitude) return;
+    const pt = mapRef.current.latLngToContainerPoint([
+      selectedFacility.latitude,
+      selectedFacility.longitude,
+    ]);
+    setPanelAnchor({ x: Math.round(pt.x), y: Math.round(pt.y) });
+  }, [selectedFacility]);
+
+  useEffect(() => {
+    if (!selectedFacility?.latitude || !selectedFacility?.longitude) {
+      setPanelAnchor(null);
+      return;
+    }
+    updateAnchor();
+    const map = mapRef.current;
+    if (!map) return;
+    map.on("move", updateAnchor);
+    map.on("zoomend", updateAnchor);
+    return () => {
+      map.off("move", updateAnchor);
+      map.off("zoomend", updateAnchor);
+    };
+  }, [selectedFacility, updateAnchor]);
 
   const handleToggleFavorite = async (facilityId: string | undefined) => {
     if (!facilityId) return;
@@ -526,6 +516,7 @@ export default function MapView() {
   const handleClose = () => {
     setSelectedFacility(null);
     setHighlightedFacilityId(null);
+    setPanelAnchor(null);
   };
 
   if (error) {
@@ -558,7 +549,7 @@ export default function MapView() {
   }
 
   return (
-    <div className="h-[calc(100dvh-8rem)] relative overflow-hidden">
+    <div ref={containerRef} className="h-[calc(100dvh-8rem)] relative overflow-hidden">
       {/* ── Map ─────────────────────────────────────────────────────── */}
       {/* `isolate` creates a stacking context so Leaflet's pane z-indices (200/400/600)
           are contained here and don't compete with the panel's z-20 in the outer context */}
@@ -592,12 +583,6 @@ export default function MapView() {
             <MapController userLocation={userLocation} facilities={validFacilities} />
             <MapRefSetter mapRef={mapRef} />
 
-            {/* Map-level click → nearest-circle selection (most reliable approach) */}
-            <MapClickHandler
-              facilities={validFacilities}
-              onSelect={handleSelectFacility}
-            />
-
             {/* User location dot */}
             {userLocation && (
               <Marker
@@ -606,7 +591,7 @@ export default function MapView() {
               />
             )}
 
-            {/* Pool markers — CircleMarker (SVG vector), visual only */}
+            {/* Pool markers — CircleMarker (SVG vector) with direct click handler */}
             {validFacilities.map((facility) => {
               const availability = getSessionAvailability(facility);
               const isFavorited = isFavorite(facility.facility_id);
@@ -626,6 +611,7 @@ export default function MapView() {
                     fillColor: color,
                     fillOpacity: 1,
                   }}
+                  eventHandlers={{ click: () => handleSelectFacility(facility) }}
                 />
               );
             })}
@@ -715,10 +701,10 @@ export default function MapView() {
         )}
       </div>
 
-      {/* ── Facility panel: bottom sheet (mobile) / sidebar (desktop) ─ */}
+      {/* ── Facility panel: bottom sheet (mobile) / floating card (desktop) ─ */}
       {selectedFacility && (
         <>
-          {/* Mobile bottom sheet */}
+          {/* Mobile: full-width bottom sheet */}
           <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up">
             <FacilityPanel
               facility={selectedFacility}
@@ -729,16 +715,38 @@ export default function MapView() {
             />
           </div>
 
-          {/* Desktop right sidebar */}
-          <div className="hidden md:flex absolute top-3 right-3 z-20 w-80 bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 flex-col max-h-[calc(100%-1.5rem)]">
-            <FacilityPanel
-              facility={selectedFacility}
-              isFavorited={isFavorite(selectedFacility.facility_id)}
-              onToggleFavorite={() => handleToggleFavorite(selectedFacility.facility_id)}
-              onOpenMaps={setMapsModalAddress}
-              onClose={handleClose}
-            />
-          </div>
+          {/* Desktop: floating card anchored to the selected circle */}
+          {panelAnchor && (() => {
+            const cw = containerRef.current?.clientWidth ?? 800;
+            const ch = containerRef.current?.clientHeight ?? 600;
+            const W = 288; // w-72
+            const GAP = 18;
+            const MARGIN = 8;
+            const left = Math.max(MARGIN, Math.min(panelAnchor.x - W / 2, cw - W - MARGIN));
+            // Show above the circle if it's in the lower 55% of the container, else below
+            const showAbove = panelAnchor.y > ch * 0.45;
+            const style: React.CSSProperties = {
+              left,
+              top: showAbove ? panelAnchor.y - GAP : panelAnchor.y + GAP,
+              transform: showAbove ? "translateY(-100%)" : "none",
+              width: W,
+              maxHeight: Math.min(ch * 0.65, 420),
+            };
+            return (
+              <div
+                className="hidden md:flex absolute z-20 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden"
+                style={style}
+              >
+                <FacilityPanel
+                  facility={selectedFacility}
+                  isFavorited={isFavorite(selectedFacility.facility_id)}
+                  onToggleFavorite={() => handleToggleFavorite(selectedFacility.facility_id)}
+                  onOpenMaps={setMapsModalAddress}
+                  onClose={handleClose}
+                />
+              </div>
+            );
+          })()}
         </>
       )}
 
