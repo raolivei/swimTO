@@ -560,7 +560,9 @@ export default function MapView() {
   return (
     <div className="h-[calc(100dvh-8rem)] relative overflow-hidden">
       {/* ── Map ─────────────────────────────────────────────────────── */}
-      <div className="absolute inset-0">
+      {/* `isolate` creates a stacking context so Leaflet's pane z-indices (200/400/600)
+          are contained here and don't compete with the panel's z-20 in the outer context */}
+      <div className="absolute inset-0 isolate">
         {isLoading ? (
           <div className="h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900">
             <div className="text-center">
