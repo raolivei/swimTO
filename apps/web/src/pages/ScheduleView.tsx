@@ -15,6 +15,7 @@ import {
   type UserLocation,
 } from "@/lib/utils";
 import { useFavorites } from "@/hooks/useFavorites";
+import { TimeRangeSlider } from "@/components/TimeRangeSlider";
 import {
   Filter,
   MapPin,
@@ -256,6 +257,12 @@ export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
+  // Time-of-day filter: default is full day [5am, 11pm]
+  const TIME_MIN = 5 * 60;
+  const TIME_MAX = 23 * 60;
+  const [timeStart, setTimeStart] = useState<number>(TIME_MIN);
+  const [timeEnd, setTimeEnd] = useState<number>(TIME_MAX);
+  const isTimeDefault = timeStart === TIME_MIN && timeEnd === TIME_MAX;
   const [showFilters, setShowFilters] = useState(false);
   // Default to list view on mobile (< 768px), table view on desktop
   const [viewMode, setViewMode] = useState<ViewMode>(
@@ -276,20 +283,19 @@ export default function ScheduleView() {
   const [isMobile, setIsMobile] = useState(false); // Track if we're on mobile
   const [countdownTick, setCountdownTick] = useState(0); // Force re-render for countdown
 
-  // Track window size for responsive table layout and force list view on mobile
+  // Track window size for responsive layout. We do NOT mutate `viewMode` here
+  // — it stores the user's desktop preference. The effective view mode is
+  // computed at render time as: mobile ? "list" : viewMode. This way a brief
+  // mobile-width resize doesn't wipe out the user's table/list choice.
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      // Force list view on mobile - table view is not optimized for small screens
-      if (mobile) {
-        setViewMode("list");
-      }
-    };
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Effective view mode: list on mobile, otherwise the user's chosen mode
+  const effectiveViewMode: ViewMode = isMobile ? "list" : viewMode;
 
   // Update countdown every minute
   useEffect(() => {
@@ -346,12 +352,25 @@ export default function ScheduleView() {
     return new Set(allSessions.map((s) => s.swim_type));
   }, [allSessions]);
 
-  // Filter sessions by selected swimType (client-side)
+  // Filter sessions by swimType and selected time-of-day range (client-side)
   const sessions = useMemo(() => {
     if (!allSessions) return undefined;
-    if (swimType === "ALL") return allSessions;
-    return allSessions.filter((s) => s.swim_type === swimType);
-  }, [allSessions, swimType]);
+    let filtered = allSessions;
+    if (swimType !== "ALL") {
+      filtered = filtered.filter((s) => s.swim_type === swimType);
+    }
+    if (!isTimeDefault) {
+      filtered = filtered.filter((s) => {
+        const [sh, sm] = s.start_time.split(":").map(Number);
+        const [eh, em] = s.end_time.split(":").map(Number);
+        const sessionStart = sh * 60 + (sm || 0);
+        const sessionEnd = eh * 60 + (em || 0);
+        // Show sessions that overlap the selected window
+        return sessionStart < timeEnd && sessionEnd > timeStart;
+      });
+    }
+    return filtered;
+  }, [allSessions, swimType, isTimeDefault, timeStart, timeEnd]);
 
   // Handle toggling favorites
   const handleToggleFavorite = async (facilityId: string | undefined) => {
@@ -1018,6 +1037,26 @@ export default function ScheduleView() {
             </div>
           )}
 
+          {/* Time-of-day range slider */}
+          <div className="mt-3 mb-1 px-2 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+            <TimeRangeSlider
+              start={timeStart}
+              end={timeEnd}
+              minMinute={TIME_MIN}
+              maxMinute={TIME_MAX}
+              step={30}
+              isDefault={isTimeDefault}
+              onChange={(s, e) => {
+                setTimeStart(s);
+                setTimeEnd(e);
+              }}
+              onReset={() => {
+                setTimeStart(TIME_MIN);
+                setTimeEnd(TIME_MAX);
+              }}
+            />
+          </div>
+
           <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
             {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
@@ -1060,7 +1099,7 @@ export default function ScheduleView() {
               Try adjusting your filters
             </p>
           </div>
-        ) : viewMode === "list" || isMobile ? (
+        ) : effectiveViewMode === "list" ? (
           <div className="space-y-6">
             {sortedDates.map((date) => {
               let dateSessions = sessionsByDate[date];
