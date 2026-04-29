@@ -1,4 +1,5 @@
 """Main FastAPI application."""
+import asyncio
 import os
 import sys
 
@@ -7,15 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 from loguru import logger
+from prometheus_client import Gauge
 from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
+from sqlalchemy import func
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
-from app.database import engine
-from app.models import Base
+from app.database import SessionLocal, engine
+from app.models import Base, User
 from app.routes import facilities, schedule, update, health, auth, favorites, preferences
 
 # Initialize Sentry if DSN is configured
@@ -110,6 +113,27 @@ app.add_middleware(
 # Initialize Prometheus instrumentation
 Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
+# Product / DB KPIs (low-cardinality; scraped with other /metrics)
+swimto_db_users_total = Gauge(
+    "swimto_db_users_total",
+    "Registered users in the SwimTO database (refreshed periodically)",
+)
+
+
+async def _refresh_business_metrics_loop() -> None:
+    while True:
+        try:
+            db = SessionLocal()
+            try:
+                n = db.query(func.count(User.id)).scalar()
+                swimto_db_users_total.set(float(n or 0))
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning("Business metrics refresh failed: {}", e)
+        await asyncio.sleep(300)
+
+
 # Include routers
 app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["auth"])
@@ -144,6 +168,7 @@ async def startup_event():
         logger.info("Database tables verified/created")
     except Exception as e:
         logger.warning(f"Could not create database tables (may already exist): {e}")
+    asyncio.create_task(_refresh_business_metrics_loop())
 
 
 @app.on_event("shutdown")
