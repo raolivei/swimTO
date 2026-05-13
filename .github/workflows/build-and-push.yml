@@ -16,7 +16,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  # Required by raolivei/github-workflows docker-build.yml (nested job may request contents: write).
+  contents: write
   packages: write
 
 concurrency:
