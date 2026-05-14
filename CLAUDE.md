@@ -1,5 +1,7 @@
 # SwimTO - AI Assistant Context
 
+> **Note**: This file works with Claude Code. See workspace [CLAUDE.md](../CLAUDE.md) for workspace-wide conventions and memory system details.
+
 ## Quick Reference
 
 - **Project Type**: Commercial web application (proprietary)
