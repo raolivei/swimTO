@@ -56,6 +56,7 @@ class Facility(Base):
     phone = Column(String(20))
     website = Column(Text)
     source = Column(String(50))
+    is_free_entry = Column(Boolean, default=False, nullable=False)
     raw = Column(JSONType)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
