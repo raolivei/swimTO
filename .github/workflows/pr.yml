@@ -1,0 +1,10 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  version-check:
+    name: VERSION Check
+    uses: raolivei/github-workflows/.github/workflows/version-check.yml@main
