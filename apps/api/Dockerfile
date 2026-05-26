@@ -1,5 +1,5 @@
 # Stage 1: Dependencies (cached unless requirements change)
-FROM python:3.11-slim AS dependencies
+FROM python:3.14-slim AS dependencies
 
 WORKDIR /app
 
