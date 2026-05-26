@@ -9,7 +9,7 @@ python-multipart==0.0.18
 redis==4.6.0
 fastapi-cache2[redis]==0.2.2
 loguru==0.7.3
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 python-dotenv==1.0.1
 httpx==0.27.2
