@@ -173,7 +173,7 @@ const CalendarButton = ({ session }: { session: Session }) => {
     const url = generateCalendarUrl(session);
     window.open(url, '_blank', 'noopener,noreferrer');
   };
-  
+
   return (
     <button
       onClick={handleAddToCalendar}
@@ -183,6 +183,15 @@ const CalendarButton = ({ session }: { session: Session }) => {
     >
       <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
     </button>
+  );
+};
+
+// Free Entry Badge Component
+const FreeEntryBadge = () => {
+  return (
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700">
+      FREE
+    </span>
   );
 };
 
@@ -257,6 +266,7 @@ export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
+  const [showFreeOnly, setShowFreeOnly] = useState(false);
   // Time-of-day filter: default is full day [5am, 11pm]
   const TIME_MIN = 5 * 60;
   const TIME_MAX = 23 * 60;
@@ -352,12 +362,15 @@ export default function ScheduleView() {
     return new Set(allSessions.map((s) => s.swim_type));
   }, [allSessions]);
 
-  // Filter sessions by swimType and selected time-of-day range (client-side)
+  // Filter sessions by swimType, free entry, and selected time-of-day range (client-side)
   const sessions = useMemo(() => {
     if (!allSessions) return undefined;
     let filtered = allSessions;
     if (swimType !== "ALL") {
       filtered = filtered.filter((s) => s.swim_type === swimType);
+    }
+    if (showFreeOnly) {
+      filtered = filtered.filter((s) => s.facility?.is_free_entry === true);
     }
     if (!isTimeDefault) {
       filtered = filtered.filter((s) => {
@@ -370,7 +383,7 @@ export default function ScheduleView() {
       });
     }
     return filtered;
-  }, [allSessions, swimType, isTimeDefault, timeStart, timeEnd]);
+  }, [allSessions, swimType, showFreeOnly, isTimeDefault, timeStart, timeEnd]);
 
   // Handle toggling favorites
   const handleToggleFavorite = async (facilityId: string | undefined) => {
@@ -1057,6 +1070,21 @@ export default function ScheduleView() {
             />
           </div>
 
+          {/* Free Entry Filter */}
+          <div className="mt-3 mb-1">
+            <label className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showFreeOnly}
+                onChange={(e) => setShowFreeOnly(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Show free pools only
+              </span>
+            </label>
+          </div>
+
           <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
             {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
@@ -1214,6 +1242,9 @@ export default function ScheduleView() {
                                   ) : (
                                     data.facility?.name
                                   )}
+                                  {data.facility?.is_free_entry && (
+                                    <FreeEntryBadge />
+                                  )}
                                 </h3>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {data.distance !== undefined && (
@@ -1370,6 +1401,9 @@ export default function ScheduleView() {
                                       </a>
                                     ) : (
                                       session.facility?.name
+                                    )}
+                                    {session.facility?.is_free_entry && (
+                                      <span className="ml-2 inline-block"><FreeEntryBadge /></span>
                                     )}
                                     {session.distance !== undefined &&
                                       session.facility?.address && (
@@ -1592,6 +1626,9 @@ export default function ScheduleView() {
                                 </a>
                               ) : (
                                 data.facility?.name || "Unknown"
+                              )}
+                              {data.facility?.is_free_entry && (
+                                <span className="ml-2 inline-block"><FreeEntryBadge /></span>
                               )}
                             </div>
                             {data.distance !== undefined &&

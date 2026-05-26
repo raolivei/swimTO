@@ -16,6 +16,7 @@ class FacilityBase(BaseModel):
     is_indoor: bool = True
     phone: Optional[str] = None
     website: Optional[str] = None
+    is_free_entry: bool = False
 
 
 class FacilityCreate(FacilityBase):

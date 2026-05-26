@@ -14,6 +14,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Free vs Paid Pool Tagging**: Users can now identify free pools at a glance with a "FREE" badge displayed on pool listings. A "Show free pools only" filter checkbox allows filtering to display only pools with free entry. This feature addresses user feedback from Reddit requesting the ability to distinguish between free and paid pools. (#105)
+  - Added `is_free_entry` boolean field to `Facility` model (API and data-pipeline)
+  - Added database migration `002_add_is_free_entry.sql` with index for efficient filtering
+  - Added `?is_free=true` query parameter to `/api/v1/facilities` endpoint
+  - Added visual "FREE" badge component displayed next to facility names in both list and table views
+  - Added "Show free pools only" checkbox filter in the schedule view
+  - Note: Phase 1 defaults all pools to paid (`is_free_entry=false`). Future work will research and map actual free Toronto pools.
+
+---
+
 ## [0.8.1] - 2026-04-02
 
 ### Fixed
