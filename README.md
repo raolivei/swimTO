@@ -1,14 +1,16 @@
 # 🏊‍♂️ SwimTO
 
+![Version](https://img.shields.io/badge/version-0.8.2-blue.svg)
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![Node](https://img.shields.io/badge/node-20+-green.svg)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)
-![React](https://img.shields.io/badge/React-18.2-61DAFB.svg?logo=react)
+![React](https://img.shields.io/badge/React-18.3-61DAFB.svg?logo=react)
 ![PR Checks](https://github.com/raolivei/swimTO/actions/workflows/pr.yml/badge.svg)
 ![Build](https://github.com/raolivei/swimTO/actions/workflows/build-and-push.yml/badge.svg)
 
-**SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
+**SwimTO** is a Toronto public pool schedule platform serving real users. Aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
+> **Live at:** https://swimto.eldertree.xyz  
 > **Open Source:** MIT Licensed. Free to use, modify, and deploy. See [LICENSE](LICENSE) for details.
 
 ## 🎯 Overview
@@ -19,8 +21,15 @@ SwimTO collects, normalizes, and presents lane swim schedules from Toronto's com
 
 - 🗺️ **Interactive Map View** - Toronto-focused map showing all community centers with lane swim sessions
 - 📅 **Schedule View** - Calendar-style layout with weekday + time slots for lane swim programs
+- 💰 **Free Pool Filtering** - Filter to show only pools with free entry (badge + checkbox filter)
+- ⭐ **Favorites** - Star facilities to save favorites, displayed with gold markers on map
 - 🔄 **Auto-refresh** - Daily updates from City of Toronto Open Data sources
 - 📱 **Mobile-First Design** - Fully responsive with PWA support, tested on iOS and Android
+- 🌙 **Dark Mode** - Auto-detection with manual toggle, WCAG AA compliant
+- 📍 **Smart Location** - Distance sorting and filtering by radius when location enabled
+- 🕐 **Happening Now** - Filter to show only currently active swim sessions
+- 🎨 **Swim Type Filters** - Filter by lane swim, family swim, adult swim, aquatic fitness
+- 🔐 **Google OAuth** - Optional login to sync favorites and preferences across devices
 - 🧪 **Comprehensive Testing** - Automated mobile testing with Playwright across multiple devices
 - 🏗️ **Self-hosted** - Runs on Raspberry Pi k3s cluster
 
@@ -64,6 +73,9 @@ docker-compose up -d
 - Frontend: http://localhost:5173
 - API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
+
+**Production:**
+- Live Site: https://swimto.eldertree.xyz
 
 **Benefits:**
 - Consistent environment (matches production)
@@ -124,9 +136,9 @@ curl -X POST http://localhost:8000/update \
 
 **Frontend:**
 
-- React 18
+- React 18.3
 - TypeScript
-- Vite
+- Vite 6.4
 - Leaflet (maps)
 - TanStack Query
 - Tailwind CSS
@@ -183,6 +195,25 @@ SwimTO is open-source software. You're free to run your own instance, contribute
 - Toronto community centers for maintaining accurate schedules
 
 ---
+
+## 🔧 Current Status
+
+**Version:** 0.8.2  
+**Status:** In active development, serving real users  
+**Live Site:** https://swimto.eldertree.xyz  
+
+**Recent Updates:**
+- Free vs paid pool tagging infrastructure (Phase 1 complete)
+- Interactive map with reliable click/tap handling
+- Happening now filter with smart sorting
+- Mobile-optimized UI with accessibility improvements
+- OAuth support across multiple domains
+- Rate limiting, metrics, and security headers
+
+**Next Milestones:**
+- Phase 2: Research and tag actual free Toronto pools
+- Enhanced user preferences and notifications
+- Performance optimizations for mobile devices
 
 ## 🚀 Next Steps
 
