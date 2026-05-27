@@ -1,49 +1,56 @@
 # 🏊‍♂️ SwimTO — Project Strategy & Business Model
 
-**Version:** 2.0  
-**Last Updated:** November 5, 2025  
-**Status:** Commercial Product - Private Repository
+**Version:** 3.0  
+**Last Updated:** May 26, 2026  
+**Status:** Open Source Project - MIT Licensed
 
 ---
 
 ## 📋 Executive Summary
 
-SwimTO is a **commercial mobile application** that provides Toronto residents with reliable, up-to-date indoor pool drop-in swim schedules. The app aggregates data from the City of Toronto Open Data Portal and presents it in an intuitive, mobile-first interface.
+SwimTO is an **open-source web application** that provides Toronto residents with reliable, up-to-date indoor pool drop-in swim schedules. The app aggregates data from the City of Toronto Open Data Portal and presents it in an intuitive, mobile-first interface.
 
 ---
 
-## 🎯 Business Model
+## 🎯 Project Model
 
-### Revenue Model
+### Open Source Strategy
 
-**Monetization Strategy:**
-- **Price:** $0.99 one-time purchase
-- **No subscriptions:** One-time payment for lifetime access
-- **No ads:** Clean, focused user experience
-- **No tracking:** Privacy-first approach respects user data
+**Why Open Source:**
+- **Community Value:** Pool schedules are public data — the tool should be too
+- **Service Model:** Value is in the hosted, maintained service at swimto.eldertree.xyz
+- **Trust & Transparency:** Open code builds credibility for civic tech
+- **Educational:** Share patterns for data aggregation and self-hosting
+- **Discoverability:** AI tools (Claude Code, Cursor, etc.) can learn from the codebase
+
+**Monetization (Optional Future):**
+- Hosted service remains free for Toronto
+- Potential "SwimTO Pro" for other cities (Ottawa, Montreal, Vancouver)
+- White-label deployments for other municipalities
+- Sponsorships from community organizations
 
 ### Distribution Channels
 
-1. **QR Codes at Facilities**
+1. **Self-Hosted Production**
+   - Primary instance: https://swimto.eldertree.xyz
+   - Free for all Toronto residents
+   - No ads, no tracking, no payment required
+
+2. **QR Codes at Facilities**
    - Place QR codes at participating Toronto community pools
-   - Direct link to purchase/download page
-   - Simple user journey: Scan → Purchase → Use
+   - Direct link to free web app
+   - Simple user journey: Scan → Use
 
-2. **App Stores** (Future)
-   - Apple App Store (iOS)
-   - Google Play Store (Android)
-   - Standard app store monetization
-
-3. **Word of Mouth**
-   - Organic growth through user recommendations
-   - Community center partnerships
-   - Local swimming groups and clubs
+3. **Open Source Community**
+   - GitHub repository for contributions
+   - Other cities can fork and deploy
+   - Community-driven improvements
 
 ---
 
 ## 💡 Value Proposition
 
-### What Users Get for $0.99:
+### What Users Get (Free):
 
 ✅ **Reliable Data**
 - Daily updates from official City of Toronto sources
@@ -73,47 +80,34 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 
 ### Repository Status
 
-**Current:** PRIVATE GitHub repository
-- Protects intellectual property
-- Controls access to codebase
-- Prevents unauthorized distribution
-- Enables commercial development
+**Current:** PUBLIC GitHub repository (MIT Licensed)
+- Open for contributions and community improvements
+- Transparent development process
+- Forkable for other cities/use cases
+- Indexed by AI coding tools (TomeVault, Cursor rules, etc.)
 
 ### Licensing Approach
 
-**Fully Proprietary:**
+**MIT License:**
 
-- All code under proprietary license from inception
-- Commercial use only with explicit permission
-- All rights reserved by Rafael Oliveira
-- No open-source release planned for initial versions
+- Free to use, modify, and distribute
+- Commercial use allowed
+- Attribution required (copyright notice)
+- No warranty (standard for open source)
 
 **Rationale:**
-- Built as commercial product from day one
-- Protects intellectual property
-- Enables sustainable business model
-- Provides flexibility for future licensing decisions
+- **Civic tech should be open:** Pool schedules are public data
+- **Service value > code value:** Hosted instance is the product, not the codebase
+- **Community-driven improvement:** Contributors can help maintain scrapers as pool sites change
+- **Educational value:** Share self-hosting and data aggregation patterns
+- **Trust & credibility:** Open source builds trust for public-data aggregation
+- **AI tool discoverability:** TomeVault and similar tools can index CLAUDE.md for better developer experience
 
-### Future Open Source Considerations
+### What Remains Proprietary
 
-**Possible Future Options:**
-
-1. **Open Source Components**
-   - May open-source specific libraries/tools
-   - Core app remains proprietary
-   - Contribute back to community selectively
-
-2. **Source Available**
-   - Make source code viewable (not forkable)
-   - Transparency without losing IP
-   - Similar to many commercial apps
-
-3. **Remain Fully Proprietary**
-   - Most likely path for sustainability
-   - Standard for commercial mobile apps
-   - Protects competitive advantage
-
-**Decision Point:** Evaluate after establishing user base and revenue (12+ months)
+- **swimto.eldertree.xyz domain and branding**
+- **Operational infrastructure** (K8s configs, secrets, deployment pipelines)
+- **Future "SwimTO Pro"** commercial features (if developed)
 
 ---
 
@@ -162,6 +156,7 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 - Automatic updates
 - Interactive map visualization
 - Superior UX
+- **Open source** — forkable for other cities/use cases
 
 ---
 
@@ -214,38 +209,37 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 
 ---
 
-## 💰 Financial Projections
+## 💰 Cost Structure & Sustainability
 
-### Revenue Scenarios (Year 1)
+### Infrastructure Costs (Year 1)
 
-**Conservative:**
-- 500 users × $0.99 = $495
-
-**Moderate:**
-- 2,000 users × $0.99 = $1,980
-
-**Optimistic:**
-- 5,000 users × $0.99 = $4,950
-
-### Cost Structure
-
-**Infrastructure:**
-- Raspberry Pi hardware: $200 (one-time)
-- Electricity: ~$5/month
+**Current Self-Hosted Setup:**
+- Raspberry Pi hardware: $200 (one-time, already owned)
+- Electricity: ~$5/month ($60/year)
 - Domain name: $15/year
-- Total: ~$275/year
+- **Total Annual Cost: ~$75/year**
 
 **Development:**
-- Self-funded (personal project)
+- Self-funded personal project
 - Time investment: ~5-10 hours/month maintenance
-- Major updates: As needed
+- Community contributions (future)
 
 **Distribution:**
-- Payment processing fees: ~3% of revenue
 - QR code printing: $50-100 (one-time)
-- App store fees: $99/year (Apple) + $25 (Google, one-time)
+- No payment processing fees (free service)
+- No app store fees (web app)
 
-**Net Margin:** ~85-90% after costs
+### Sustainability Model
+
+**Primary Goal:** Free civic tech for Toronto residents
+
+**Potential Future Revenue (Optional):**
+- "SwimTO Pro" for other cities ($5-10/month per municipality)
+- White-label deployments for municipalities
+- Sponsorships from community organizations
+- Donations/GitHub Sponsors
+
+**Current Status:** Self-funded passion project with minimal operating costs
 
 ---
 
@@ -283,11 +277,11 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 
 ### Key Performance Indicators (KPIs)
 
-**Financial:**
-- Number of paying users
-- Revenue (monthly/yearly)
-- Customer acquisition cost
-- Net margin
+**Growth:**
+- Number of active users
+- Community contributions (PRs, issues)
+- Other cities deploying forks
+- GitHub stars/engagement
 
 **Product:**
 - Daily active users
@@ -334,22 +328,30 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 - Contributing to open data ecosystem
 - Partnership with community centers
 
+**6. Open Source by Default**
+- Civic tech should be publicly accessible
+- Community contributions improve the product
+- Transparency builds trust
+- Educational value for other developers
+
 ---
 
 ## 🔮 Future Roadmap
 
 ### Short Term (3-6 months)
-- [ ] Complete payment integration
+- [x] Open-source under MIT License
 - [ ] QR code distribution network
 - [ ] User feedback mechanism
-- [ ] Basic analytics implementation
+- [ ] Basic analytics implementation (privacy-respecting)
+- [ ] Community contribution guidelines
 
 ### Medium Term (6-12 months)
-- [ ] App store distribution
-- [ ] User accounts (optional)
+- [ ] PWA improvements (offline mode, install prompts)
+- [ ] User accounts (optional, for favorites)
 - [ ] Favorite facilities feature
-- [ ] Push notifications for schedule changes
-- [ ] Expand to more facility types
+- [ ] Schedule change notifications
+- [ ] Expand to more facility types (arenas, tennis, etc.)
+- [ ] Community contributions and PRs
 
 ### Long Term (12+ months)
 - [ ] Expand to other cities (Ottawa, Montreal, Vancouver)
@@ -372,9 +374,11 @@ SwimTO is a **commercial mobile application** that provides Toronto residents wi
 
 ## 📝 Change Log
 
+- **v3.0** (May 26, 2026): Open-sourced under MIT License, shifted to free service model
+- **v2.0** (Nov 5, 2025): Updated proprietary commercial strategy
 - **v1.0** (Nov 5, 2025): Initial strategy document - proprietary commercial project
 
 ---
 
-**Note:** This document is confidential and intended for internal use and potential investors/partners only.
+**Note:** This document is public as part of the open-source repository.
 

@@ -9,7 +9,7 @@
 
 **SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
-> **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.
+> **Open Source:** MIT Licensed. Free to use, modify, and deploy. See [LICENSE](LICENSE) for details.
 
 ## 🎯 Overview
 
@@ -43,12 +43,10 @@ swimto/
 
 ### Local Development
 
-**Note:** This is a private repository. Access is restricted to authorized developers only.
-
 #### Recommended: Docker Compose (Primary Method)
 
 ```bash
-# If you have access, clone the repository
+# Clone the repository
 git clone git@github.com:raolivei/swimTO.git
 cd swimTO
 
@@ -165,15 +163,19 @@ This project uses **official data** from the [City of Toronto Open Data Portal](
 
 ## 🤝 Contributing
 
-This is a private commercial project. Contributions are not currently accepted from external developers.
+Contributions are welcome! See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
 
-For authorized developers, see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
+Please follow the existing code style and conventions. All PRs require:
+- Passing tests
+- Type checking (TypeScript)
+- Linting (ESLint, Ruff)
+- Clear commit messages
 
 ## 📄 License
 
-**Proprietary License** - All rights reserved. See [LICENSE](LICENSE) and [COPYRIGHT](COPYRIGHT) files for full details.
+**MIT License** - Free to use, modify, and distribute. See [LICENSE](LICENSE) for full details.
 
-This software is commercial and may not be copied, modified, or distributed without explicit written permission from Rafael Oliveira.
+SwimTO is open-source software. You're free to run your own instance, contribute improvements, or fork the project.
 
 ## 🙏 Acknowledgments
 
