@@ -196,6 +196,13 @@ SwimTO is open-source software. You're free to run your own instance, contribute
 
 ---
 
+## 📈 Observability (Eldertree production)
+
+Production metrics and Grafana dashboards are **not** in this repo — they live in [`pi-fleet`](https://github.com/raolivei/pi-fleet) (DRY). See [`workspace-config/docs/OBSERVABILITY_STANDARDS.md`](../workspace-config/docs/OBSERVABILITY_STANDARDS.md).
+
+- API scrape: `prometheus.io/*` on the SwimTO Service in `pi-fleet/clusters/eldertree/swimto/`
+- Dashboard: `https://grafana.eldertree.local/d/swimto-dashboard`
+
 ## 🔧 Current Status
 
 **Version:** 0.8.2  
