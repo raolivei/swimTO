@@ -9,6 +9,7 @@ export interface Facility {
   is_indoor: boolean
   phone: string | null
   website: string | null
+  is_free_entry: boolean
   source: string | null
   created_at: string
   updated_at: string

@@ -24,16 +24,20 @@ async def get_facilities(
     request: Request,  # Required for rate limiting
     district: Optional[str] = Query(None, description="Filter by district"),
     has_lane_swim: bool = Query(False, description="Only facilities with lane swim"),
+    is_free: Optional[bool] = Query(None, description="Filter by free entry"),
     db: Session = Depends(get_db)
 ):
     """Get all facilities with enriched session data."""
     try:
-        logger.info(f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim})")
-        
+        logger.info(f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim}, is_free={is_free})")
+
         query = db.query(Facility).filter(Facility.is_indoor.is_(True))
-        
+
         if district:
             query = query.filter(Facility.district.ilike(f"%{district}%"))
+
+        if is_free is not None:
+            query = query.filter(Facility.is_free_entry == is_free)
         
         facilities = query.all()
         logger.debug(f"Found {len(facilities)} facilities")
