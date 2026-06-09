@@ -42,7 +42,7 @@ test.describe("Map facility panel", () => {
       await markers.first().click({ force: true });
     }
 
-    const panel = page.getByTestId("facility-panel");
+    const panel = page.getByTestId("facility-panel-desktop");
     await expect(panel).toBeVisible({ timeout: 5000 });
 
     const panelBox = await panel.boundingBox();
@@ -57,6 +57,19 @@ test.describe("Map facility panel", () => {
       );
       expect(panelBox.width).toBeGreaterThan(200);
     }
+  });
+
+  test("mobile: panel visible after selecting a marker", async ({ page }) => {
+    test.skip(
+      (await page.viewportSize()?.width ?? 0) >= 768,
+      "Mobile-only panel test"
+    );
+
+    const markers = page.locator("path.leaflet-interactive");
+    await markers.first().click({ force: true });
+
+    const panel = page.getByTestId("facility-panel-mobile");
+    await expect(panel).toBeVisible({ timeout: 5000 });
   });
 
   test("pool type filter requests outdoor from API", async ({ page }) => {

@@ -316,7 +316,7 @@ function FacilityPanel({
     hasIndoor && hasOutdoor ? "Indoor & outdoor" : hasOutdoor ? "Outdoor" : "Indoor";
 
   return (
-    <div className="flex flex-col flex-1 min-h-0" data-testid="facility-panel">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Drag handle (mobile only) */}
       <div className="md:hidden flex justify-center pt-2 pb-1">
         <div className="w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -841,7 +841,10 @@ export default function MapView() {
       {selectedFacility && (
         <>
           {/* Mobile: full-width bottom sheet */}
-          <div className="md:hidden absolute bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up">
+          <div
+            data-testid="facility-panel-mobile"
+            className="md:hidden absolute bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up"
+          >
             <FacilityPanel
               facility={selectedFacility}
               isFavorited={isFavorite(selectedFacility.facility_id)}
@@ -885,6 +888,7 @@ export default function MapView() {
             };
             return (
               <div
+                data-testid="facility-panel-desktop"
                 className="hidden md:flex absolute z-[1000] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden pointer-events-auto"
                 style={style}
               >
