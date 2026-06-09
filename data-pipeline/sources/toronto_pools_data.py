@@ -471,6 +471,8 @@ TORONTO_INDOOR_POOLS = [
         "phone": "416-392-0751",
         "website": "https://www.toronto.ca/explore-enjoy/parks-recreation/places-spaces/parks-and-recreation-facilities/location/?id=70",
         "is_indoor": False,  # Outdoor pool per toronto.ca
+        "has_indoor": False,
+        "has_outdoor": True,
         "has_lane_swim": True,
     },
     {
@@ -595,12 +597,45 @@ TORONTO_INDOOR_POOLS = [
         "is_indoor": True,
         "has_lane_swim": True,
     },
+    {
+        "name": "Ourland Park Outdoor Pool",
+        "address": "18 Ourland Ave, Toronto, ON M8Z 1N4",
+        "postal_code": "M8Z 1N4",
+        "district": "Etobicoke York",
+        "latitude": 43.6186374,
+        "longitude": -79.5091642,
+        "phone": "416-394-8700",
+        "website": "https://www.toronto.ca/explore-enjoy/parks-recreation/places-spaces/parks-and-recreation-facilities/location/?id=857&title=Ourland-Park",
+        "is_indoor": False,
+        "has_indoor": False,
+        "has_outdoor": True,
+        "has_lane_swim": True,
+    },
 ]
+
+
+def resolve_pool_type_flags(facility_data: dict) -> tuple[bool, bool]:
+    """Derive has_indoor/has_outdoor from explicit keys or legacy is_indoor."""
+    has_indoor = facility_data.get("has_indoor")
+    has_outdoor = facility_data.get("has_outdoor")
+    if has_indoor is None and has_outdoor is None:
+        is_indoor = facility_data.get("is_indoor", True)
+        return is_indoor, not is_indoor
+    if has_indoor is None:
+        return not has_outdoor, has_outdoor
+    if has_outdoor is None:
+        return has_indoor, not has_indoor
+    return has_indoor, has_outdoor
 
 
 def get_all_indoor_pools():
     """Return list of all indoor pools."""
     return [p for p in TORONTO_INDOOR_POOLS if p.get("is_indoor", False)]
+
+
+def get_all_swim_pools():
+    """Return curated pools with lane swim (indoor and outdoor)."""
+    return [p for p in TORONTO_INDOOR_POOLS if p.get("has_lane_swim", False)]
 
 
 def get_lane_swim_pools():

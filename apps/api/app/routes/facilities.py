@@ -1,5 +1,5 @@
 """Facilities endpoints."""
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import date as date_type
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -25,13 +25,31 @@ async def get_facilities(
     district: Optional[str] = Query(None, description="Filter by district"),
     has_lane_swim: bool = Query(False, description="Only facilities with lane swim"),
     is_free: Optional[bool] = Query(None, description="Filter by free entry"),
+    pool_type: Literal["all", "indoor", "outdoor"] = Query(
+        "all", description="Filter by pool type (indoor, outdoor, or all)"
+    ),
+    include_outdoor: Optional[bool] = Query(
+        None,
+        description="Deprecated: use pool_type. False maps to indoor, True maps to all",
+    ),
     db: Session = Depends(get_db)
 ):
     """Get all facilities with enriched session data."""
     try:
-        logger.info(f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim}, is_free={is_free})")
+        effective_pool_type = pool_type
+        if include_outdoor is not None:
+            effective_pool_type = "all" if include_outdoor else "indoor"
 
-        query = db.query(Facility).filter(Facility.is_indoor.is_(True))
+        logger.info(
+            f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim}, "
+            f"is_free={is_free}, pool_type={effective_pool_type})"
+        )
+
+        query = db.query(Facility)
+        if effective_pool_type == "indoor":
+            query = query.filter(Facility.has_indoor.is_(True))
+        elif effective_pool_type == "outdoor":
+            query = query.filter(Facility.has_outdoor.is_(True))
 
         if district:
             query = query.filter(Facility.district.ilike(f"%{district}%"))

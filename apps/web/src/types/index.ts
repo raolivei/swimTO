@@ -7,6 +7,8 @@ export interface Facility {
   latitude: number | null
   longitude: number | null
   is_indoor: boolean
+  has_indoor?: boolean
+  has_outdoor?: boolean
   phone: string | null
   website: string | null
   is_free_entry: boolean

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
-import { facilityApi, getApiErrorMessage } from "../lib/api";
+import { facilityApi, getApiErrorMessage, type PoolTypeFilter } from "../lib/api";
 import {
   formatTimeRange,
   formatDate,
@@ -24,11 +24,39 @@ import {
   Search,
   X,
   Info,
+  Sun,
+  Building2,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/DarkModeContext";
 import type { Facility } from "../types";
 
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
+
+const POOL_TYPE_OPTIONS: {
+  value: PoolTypeFilter;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
+  { value: "all", label: "All", icon: MapPin },
+  { value: "indoor", label: "Indoor", icon: Building2 },
+  { value: "outdoor", label: "Outdoor", icon: Sun },
+];
+
+const OUTDOOR_MARKER_STROKE = "#f59e0b";
+
+function poolFlags(facility: Facility): { hasIndoor: boolean; hasOutdoor: boolean } {
+  if (facility.has_indoor !== undefined || facility.has_outdoor !== undefined) {
+    return {
+      hasIndoor: facility.has_indoor ?? false,
+      hasOutdoor: facility.has_outdoor ?? false,
+    };
+  }
+  return { hasIndoor: facility.is_indoor, hasOutdoor: !facility.is_indoor };
+}
+const PANEL_TOP_MARGIN = 64;
+const PANEL_GAP = 16;
+const PANEL_WIDTH = 300;
+const PANEL_MAX_HEIGHT = 400;
 
 // ─── Marker colours ───────────────────────────────────────────────────────────
 
@@ -144,6 +172,52 @@ function MapController({
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
 
+function PoolTypeFilterControl({
+  value,
+  onChange,
+}: {
+  value: PoolTypeFilter;
+  onChange: (next: PoolTypeFilter) => void;
+}) {
+  return (
+    <div
+      data-testid="map-pool-type-filter"
+      className="pointer-events-auto flex flex-col gap-1.5"
+    >
+      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 px-1 hidden sm:block">
+        Outdoor pools open for summer
+      </p>
+      <div
+        role="group"
+        aria-label="Pool type filter"
+        className="flex bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700 p-1"
+      >
+        {POOL_TYPE_OPTIONS.map(({ value: option, label, icon: Icon }) => {
+          const active = value === option;
+          return (
+            <button
+              key={option}
+              type="button"
+              data-testid={`pool-type-${option}`}
+              onClick={() => onChange(option)}
+              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                active
+                  ? option === "outdoor"
+                    ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
+                    : "bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-200"
+                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function MapLegend() {
   const [open, setOpen] = useState(false);
 
@@ -164,7 +238,7 @@ function MapLegend() {
         <Info className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute bottom-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[180px]">
+        <div className="absolute bottom-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[200px]">
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Legend
           </p>
@@ -182,6 +256,20 @@ function MapLegend() {
                 <span className="text-xs text-gray-600 dark:text-gray-400">{label}</span>
               </div>
             ))}
+            <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+              <div
+                className="flex-shrink-0 rounded-full border-2 shadow"
+                style={{
+                  width: 12,
+                  height: 12,
+                  background: MARKER_COLORS.today,
+                  borderColor: OUTDOOR_MARKER_STROKE,
+                }}
+              />
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Outdoor pool (amber ring)
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -223,6 +311,10 @@ function FacilityPanel({
     "no-sessions": null,
   }[availability];
 
+  const { hasIndoor, hasOutdoor } = poolFlags(facility);
+  const poolTypeLabel =
+    hasIndoor && hasOutdoor ? "Indoor & outdoor" : hasOutdoor ? "Outdoor" : "Indoor";
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Drag handle (mobile only) */}
@@ -249,6 +341,16 @@ function FacilityPanel({
               )}
             </h2>
             {availabilityBadge}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                hasOutdoor
+                  ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              }`}
+            >
+              {hasOutdoor && <Sun className="w-3 h-3" />}
+              {poolTypeLabel}
+            </span>
           </div>
           {facility.district && (
             <p className="text-xs text-gray-500 dark:text-gray-400">{facility.district}</p>
@@ -386,14 +488,15 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [poolType, setPoolType] = useState<PoolTypeFilter>("all");
   const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ["facilities", "lane-swim"],
-    queryFn: () => facilityApi.getAll(true),
+    queryKey: ["facilities", "lane-swim", poolType],
+    queryFn: () => facilityApi.getAll(true, poolType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
@@ -508,9 +611,31 @@ export default function MapView() {
     }
   };
 
+  const panMapForPanel = useCallback((facility: FacilityWithDistance) => {
+    const map = mapRef.current;
+    if (!map || !facility.latitude || !facility.longitude) return;
+    if (typeof window !== "undefined" && window.innerWidth < 768) return;
+
+    const point = map.latLngToContainerPoint([facility.latitude, facility.longitude]);
+    const size = map.getSize();
+    const roomAbove = point.y - PANEL_TOP_MARGIN;
+    const roomNeeded = PANEL_MAX_HEIGHT + PANEL_GAP;
+
+    if (roomAbove < roomNeeded) {
+      const panY = roomNeeded - roomAbove + 24;
+      map.panBy([0, panY], { animate: true });
+    } else if (point.y > size.y - 120) {
+      map.panBy([0, -80], { animate: true });
+    }
+  }, []);
+
   const handleSelectFacility = (facility: FacilityWithDistance) => {
     setSelectedFacility(facility);
     setHighlightedFacilityId(facility.facility_id);
+    panMapForPanel(facility);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => updateAnchor());
+    });
   };
 
   const handleClose = () => {
@@ -600,6 +725,10 @@ export default function MapView() {
               const variant = getMarkerVariant(availability, isFavorited);
               const color = MARKER_COLORS[variant];
               const radius = isSelected ? 14 : 10;
+              const { hasIndoor, hasOutdoor } = poolFlags(facility);
+              const isOutdoorPool = hasOutdoor && !hasIndoor;
+              const isBothPools = hasIndoor && hasOutdoor;
+              const strokeColor = isOutdoorPool || isBothPools ? OUTDOOR_MARKER_STROKE : "white";
 
               return (
                 <CircleMarker
@@ -607,8 +736,9 @@ export default function MapView() {
                   center={[facility.latitude!, facility.longitude!]}
                   radius={radius}
                   pathOptions={{
-                    color: "white",
-                    weight: isSelected ? 3 : 2,
+                    color: strokeColor,
+                    weight: isSelected ? 3 : isOutdoorPool ? 3 : 2,
+                    dashArray: isBothPools ? "4 2" : undefined,
                     fillColor: color,
                     fillOpacity: 1,
                   }}
@@ -675,6 +805,11 @@ export default function MapView() {
         </button>
       </div>
 
+      {/* ── Bottom-left: pool type filter ───────────────────────────── */}
+      <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)]">
+        <PoolTypeFilterControl value={poolType} onChange={setPoolType} />
+      </div>
+
       {/* ── Bottom-right: FABs (locate + legend) ────────────────────── */}
       <div className="absolute bottom-4 right-3 z-10 flex flex-col gap-2 items-end pointer-events-none">
         <MapLegend />
@@ -706,7 +841,10 @@ export default function MapView() {
       {selectedFacility && (
         <>
           {/* Mobile: full-width bottom sheet */}
-          <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up">
+          <div
+            data-testid="facility-panel-mobile"
+            className="md:hidden absolute bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up"
+          >
             <FacilityPanel
               facility={selectedFacility}
               isFavorited={isFavorite(selectedFacility.facility_id)}
@@ -720,25 +858,38 @@ export default function MapView() {
           {panelAnchor && (() => {
             const cw = containerRef.current?.clientWidth ?? 800;
             const ch = containerRef.current?.clientHeight ?? 600;
-            const W = 300;
-            const GAP = 16;
-            // Top margin accounts for the search bar row (≈56px) + padding
-            const TOP_MARGIN = 64;
             const SIDE_MARGIN = 8;
-            const maxH = Math.min(ch - TOP_MARGIN - GAP * 2, 400);
+            const maxH = Math.min(ch - PANEL_TOP_MARGIN - PANEL_GAP * 2, PANEL_MAX_HEIGHT);
 
-            const left = Math.max(SIDE_MARGIN, Math.min(panelAnchor.x - W / 2, cw - W - SIDE_MARGIN));
+            const left = Math.max(
+              SIDE_MARGIN,
+              Math.min(panelAnchor.x - PANEL_WIDTH / 2, cw - PANEL_WIDTH - SIDE_MARGIN)
+            );
 
-            // Prefer above the circle; fall back to below if it doesn't fit
-            const topIfAbove = panelAnchor.y - GAP - maxH;
-            const top = topIfAbove >= TOP_MARGIN
-              ? topIfAbove                    // fits above
-              : Math.min(panelAnchor.y + GAP, ch - maxH - SIDE_MARGIN); // below, clamped
+            const topIfAbove = panelAnchor.y - PANEL_GAP - maxH;
+            const topIfBelow = panelAnchor.y + PANEL_GAP;
+            let top: number;
+            if (topIfAbove >= PANEL_TOP_MARGIN) {
+              top = topIfAbove;
+            } else if (topIfBelow + maxH <= ch - SIDE_MARGIN) {
+              top = topIfBelow;
+            } else {
+              top = Math.max(
+                PANEL_TOP_MARGIN,
+                Math.min(topIfBelow, ch - maxH - SIDE_MARGIN)
+              );
+            }
 
-            const style: React.CSSProperties = { left, top, width: W, height: maxH };
+            const style: React.CSSProperties = {
+              left,
+              top,
+              width: PANEL_WIDTH,
+              height: maxH,
+            };
             return (
               <div
-                className="hidden md:flex absolute z-20 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden"
+                data-testid="facility-panel-desktop"
+                className="hidden md:flex absolute z-[1000] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden pointer-events-auto"
                 style={style}
               >
                 {/* min-h-0 lets the scrollable body actually shrink and scroll */}

@@ -24,6 +24,8 @@ class Facility(Base):
     latitude = Column(Double)
     longitude = Column(Double)
     is_indoor = Column(Boolean, default=True)
+    has_indoor = Column(Boolean, default=True, nullable=False)
+    has_outdoor = Column(Boolean, default=False, nullable=False)
     phone = Column(String(20))
     website = Column(Text)
     source = Column(String(50))

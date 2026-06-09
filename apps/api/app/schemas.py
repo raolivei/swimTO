@@ -14,6 +14,8 @@ class FacilityBase(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_indoor: bool = True
+    has_indoor: bool = True
+    has_outdoor: bool = False
     phone: Optional[str] = None
     website: Optional[str] = None
     is_free_entry: bool = False
