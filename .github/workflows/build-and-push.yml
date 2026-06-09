@@ -39,5 +39,7 @@ jobs:
     with:
       image-name: swimto-web
       context: ./apps/web
+      # ARC Pi runners hit npm flake/timeouts; web is static nginx — build on GitHub-hosted.
+      runs-on: ubuntu-latest
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}

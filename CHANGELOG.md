@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **CI web image build**: `build-web` uses `ubuntu-latest` instead of ARC self-hosted runners (npm flake on Pi).
+
 ## [0.8.3] - 2026-06-09
 
 ### Added
