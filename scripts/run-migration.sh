@@ -60,7 +60,7 @@ else
     kubectl cp "$MIGRATION_FILE" "swimto/$POD:/tmp/migration.sql"
     
     # Run migration
-    kubectl exec -n swimto "$POD" -- psql -U swimto -d swimto -f /tmp/migration.sql
+    kubectl exec -n swimto "$POD" -- psql -U postgres -d pools -f /tmp/migration.sql
     
     # Clean up
     kubectl exec -n swimto "$POD" -- rm /tmp/migration.sql
