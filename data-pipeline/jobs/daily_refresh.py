@@ -16,7 +16,7 @@ from models import Base, Facility, Session
 from sources.open_data import OpenDataClient
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
-from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
 from sources.toronto_drop_in_api import TorontoDropInAPI
 from sources.toronto_parks_json_api import TorontoParksJSONAPI
 from sources.curated_json_facilities import get_json_api_facilities
@@ -50,7 +50,7 @@ def ingest_curated_facilities(db_session):
     """Ingest curated facility data from toronto_pools_data."""
     logger.info("Ingesting curated facility data")
     
-    facilities = get_all_indoor_pools()
+    facilities = get_all_swim_pools()
     
     ingested = 0
     updated = 0
@@ -61,6 +61,9 @@ def ingest_curated_facilities(db_session):
         # Check if exists
         existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         
+        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
+        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+
         if existing:
             # Update
             existing.name = facility_data.get('name', existing.name)
@@ -69,7 +72,9 @@ def ingest_curated_facilities(db_session):
             existing.district = facility_data.get('district', existing.district)
             existing.latitude = facility_data.get('latitude', existing.latitude)
             existing.longitude = facility_data.get('longitude', existing.longitude)
-            existing.is_indoor = facility_data.get('is_indoor', existing.is_indoor)
+            existing.is_indoor = is_indoor
+            existing.has_indoor = has_indoor
+            existing.has_outdoor = has_outdoor
             existing.phone = facility_data.get('phone', existing.phone)
             existing.website = facility_data.get('website', existing.website)
             existing.updated_at = datetime.utcnow()
@@ -84,7 +89,9 @@ def ingest_curated_facilities(db_session):
                 district=facility_data.get('district'),
                 latitude=facility_data.get('latitude'),
                 longitude=facility_data.get('longitude'),
-                is_indoor=facility_data.get('is_indoor', True),
+                is_indoor=is_indoor,
+                has_indoor=has_indoor,
+                has_outdoor=has_outdoor,
                 phone=facility_data.get('phone'),
                 website=facility_data.get('website'),
                 source='curated',

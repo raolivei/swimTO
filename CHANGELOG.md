@@ -16,7 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.3] - 2026-06-09
+
 ### Added
+
+- **Outdoor Pools (summer feature)**: Map view adds an **All / Indoor / Outdoor** segmented filter with amber outdoor markers and pool-type badges on facility panels. Schema adds `has_indoor` and `has_outdoor` so a site can offer both pool types. API `GET /facilities` accepts `pool_type=all|indoor|outdoor` (`include_outdoor` deprecated). Migration `003_add_pool_type_flags.sql`. PR CI runs core Playwright tests (`map-panel.spec.ts`).
+- **Ourland Park Outdoor Pool (toronto.ca id=857)**: Ingest lane and leisure swim schedules via the Toronto Parks JSON API. Added facility metadata, JSON API allowlist entry, and `get_all_swim_pools()` so outdoor pools with lane swim are seeded during daily refresh.
+
+### Fixed
+
+- **Map panel hidden for northern pools (desktop)**: Selecting markers near the top of the map now auto-pans to leave room for the schedule panel; panel z-index raised and clamp logic improved so the card stays fully visible above Leaflet tiles.
 
 - **Free vs Paid Pool Tagging**: Users can now identify free pools at a glance with a "FREE" badge displayed on pool listings. A "Show free pools only" filter checkbox allows filtering to display only pools with free entry. This feature addresses user feedback from Reddit requesting the ability to distinguish between free and paid pools. (#105)
   - Added `is_free_entry` boolean field to `Facility` model (API and data-pipeline)

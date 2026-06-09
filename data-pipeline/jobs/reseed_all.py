@@ -18,7 +18,7 @@ import hashlib
 
 from config import settings
 from models import Base, Facility, Session
-from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
 
 
 # Realistic swim times for different types
@@ -114,7 +114,7 @@ def seed_facilities(db_session):
     """Seed database with curated facility data."""
     logger.info("Seeding facilities...")
     
-    facilities = get_all_indoor_pools()
+    facilities = get_all_swim_pools()
     logger.info(f"Found {len(facilities)} indoor pool facilities")
     
     added = 0
@@ -122,6 +122,9 @@ def seed_facilities(db_session):
         # Generate consistent facility_id
         facility_id = normalize_facility_id(facility_data['name'])
         
+        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
+        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+
         # Insert new facility
         facility = Facility(
             facility_id=facility_id,
@@ -131,7 +134,9 @@ def seed_facilities(db_session):
             district=facility_data.get('district'),
             latitude=facility_data.get('latitude'),
             longitude=facility_data.get('longitude'),
-            is_indoor=facility_data.get('is_indoor', True),
+            is_indoor=is_indoor,
+            has_indoor=has_indoor,
+            has_outdoor=has_outdoor,
             phone=facility_data.get('phone'),
             website=facility_data.get('website'),
             source='curated',

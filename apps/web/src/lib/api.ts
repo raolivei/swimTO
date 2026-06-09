@@ -53,10 +53,18 @@ api.interceptors.response.use(
   }
 );
 
+export type PoolTypeFilter = "all" | "indoor" | "outdoor";
+
 export const facilityApi = {
-  getAll: async (hasLaneSwim = true): Promise<Facility[]> => {
+  getAll: async (
+    hasLaneSwim = true,
+    poolType: PoolTypeFilter = "all"
+  ): Promise<Facility[]> => {
     const { data } = await api.get("/facilities", {
-      params: { has_lane_swim: hasLaneSwim },
+      params: {
+        has_lane_swim: hasLaneSwim,
+        pool_type: poolType,
+      },
     });
     return data;
   },

@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from models import Base, Facility
-from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
 
 
 def setup_logging():
@@ -38,7 +38,7 @@ def seed_facilities(db_session):
     """Seed database with curated facility data."""
     logger.info("Seeding database with Toronto indoor pool facilities")
     
-    facilities = get_all_indoor_pools()
+    facilities = get_all_swim_pools()
     logger.info(f"Found {len(facilities)} indoor pool facilities to seed")
     
     added = 0
@@ -52,6 +52,9 @@ def seed_facilities(db_session):
         # Check if exists
         existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         
+        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
+        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+
         if existing:
             # Update existing facility
             logger.info(f"Updating: {facility_data['name']}")
@@ -61,7 +64,9 @@ def seed_facilities(db_session):
             existing.district = facility_data.get('district', existing.district)
             existing.latitude = facility_data.get('latitude', existing.latitude)
             existing.longitude = facility_data.get('longitude', existing.longitude)
-            existing.is_indoor = facility_data.get('is_indoor', existing.is_indoor)
+            existing.is_indoor = is_indoor
+            existing.has_indoor = has_indoor
+            existing.has_outdoor = has_outdoor
             existing.phone = facility_data.get('phone', existing.phone)
             existing.website = facility_data.get('website', existing.website)
             existing.source = 'curated'
@@ -78,7 +83,9 @@ def seed_facilities(db_session):
                 district=facility_data.get('district'),
                 latitude=facility_data.get('latitude'),
                 longitude=facility_data.get('longitude'),
-                is_indoor=facility_data.get('is_indoor', True),
+                is_indoor=is_indoor,
+                has_indoor=has_indoor,
+                has_outdoor=has_outdoor,
                 phone=facility_data.get('phone'),
                 website=facility_data.get('website'),
                 source='curated',

@@ -18,7 +18,13 @@ JSON_API_FACILITIES = {
         "name": "Norseman Community School and Pool",
         "url": "https://www.toronto.ca/explore-enjoy/parks-recreation/places-spaces/parks-and-recreation-facilities/location/?id=797&title=Norseman-Community-School-and-Pool"
     },
-    
+    # Ourland Park — outdoor pool; schedules via JSON API only (not in drop-in Open Data)
+    "ourland-park-outdoor-pool": {
+        "location_id": 857,
+        "name": "Ourland Park Outdoor Pool",
+        "url": "https://www.toronto.ca/explore-enjoy/parks-recreation/places-spaces/parks-and-recreation-facilities/location/?id=857&title=Ourland-Park"
+    },
+
     # Add more facilities here as they are discovered
     # Example format:
     # "facility-name": {
