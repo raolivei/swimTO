@@ -54,6 +54,9 @@ def seed_facilities(db_session):
         
         has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
         is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+        # All City of Toronto outdoor pools are free drop-in during operating season.
+        is_free_entry = facility_data.get('is_free_entry', has_outdoor and not has_indoor)
+        toronto_location_id = facility_data.get('toronto_location_id')
 
         if existing:
             # Update existing facility
@@ -67,6 +70,9 @@ def seed_facilities(db_session):
             existing.is_indoor = is_indoor
             existing.has_indoor = has_indoor
             existing.has_outdoor = has_outdoor
+            existing.is_free_entry = is_free_entry
+            if toronto_location_id is not None:
+                existing.toronto_location_id = toronto_location_id
             existing.phone = facility_data.get('phone', existing.phone)
             existing.website = facility_data.get('website', existing.website)
             existing.source = 'curated'
@@ -86,6 +92,8 @@ def seed_facilities(db_session):
                 is_indoor=is_indoor,
                 has_indoor=has_indoor,
                 has_outdoor=has_outdoor,
+                is_free_entry=is_free_entry,
+                toronto_location_id=toronto_location_id,
                 phone=facility_data.get('phone'),
                 website=facility_data.get('website'),
                 source='curated',

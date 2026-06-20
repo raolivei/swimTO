@@ -42,9 +42,9 @@ Base = declarative_base()
 
 class Facility(Base):
     """Community pool facility."""
-    
+
     __tablename__ = "facilities"
-    
+
     facility_id = Column(String, primary_key=True)
     name = Column(Text, nullable=False)
     address = Column(Text)
@@ -59,6 +59,7 @@ class Facility(Base):
     website = Column(Text)
     source = Column(String(50))
     is_free_entry = Column(Boolean, default=False, nullable=False)
+    toronto_location_id = Column(Integer, nullable=True, index=True)
     raw = Column(JSONType)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

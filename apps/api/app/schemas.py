@@ -19,6 +19,7 @@ class FacilityBase(BaseModel):
     phone: Optional[str] = None
     website: Optional[str] = None
     is_free_entry: bool = False
+    toronto_location_id: Optional[int] = Field(None, description="Toronto Open Data LocationID for stable facility matching")
 
 
 class FacilityCreate(FacilityBase):
