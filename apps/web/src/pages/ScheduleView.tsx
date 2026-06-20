@@ -502,20 +502,10 @@ export default function ScheduleView() {
     // Check if session date string is in the visible dates (using pre-computed array)
     const isInRange = visibleDateStrings.includes(sessionDateString);
 
-    // If "happening now" filter is active, show today's sessions that haven't ended yet
-    // (yellow highlight for sessions literally happening now is handled in render)
+    // If "happening now" filter is active, only show sessions actually happening now
+    // (in the travel window: start - 30min ≤ now < end). Same logic as the yellow highlight.
     if (prioritizeHappeningNow) {
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
-      const isToday = session.date === todayStr;
-      
-      // Check if session has already ended
-      const [endHour, endMinute] = session.end_time.split(":").map(Number);
-      const sessionEnd = new Date(now);
-      sessionEnd.setHours(endHour, endMinute, 0, 0);
-      const hasEnded = now > sessionEnd;
-      
-      return isInRange && isToday && !hasEnded;
+      return isInRange && isHappeningNow(session);
     }
 
     return isInRange;
@@ -899,7 +889,7 @@ export default function ScheduleView() {
               Swim Types
             </button>
 
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+            <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-4 flex-1">
               {/* Location loading indicator */}
               {isLoadingLocation ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
@@ -984,8 +974,8 @@ export default function ScheduleView() {
                       : "text-blue-500 dark:text-blue-500 opacity-70"
                   }`}
                 />
-                <span className="text-blue-800 dark:text-blue-300 ml-2">
-                  Happening now
+                <span className="text-blue-800 dark:text-blue-300 ml-2 text-sm sm:text-base">
+                  <span className="hidden sm:inline">Happening </span>now
                 </span>
               </button>
 
