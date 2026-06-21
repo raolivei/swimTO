@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Map, Calendar, Sparkles, Clock, MapPin, Search, Star, Share2, ChevronDown, Shield, Smartphone } from "lucide-react";
+import { Map, Calendar, Sparkles, Clock, MapPin, Search, Star, Share2, ChevronDown, Shield, Smartphone, Database, RefreshCw, Waves } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { facilityApi, scheduleApi } from "../lib/api";
 import { useState } from "react";
@@ -82,6 +82,58 @@ export default function Home() {
                 <Calendar className="w-5 h-5 group-hover:animate-bounce" />
                 Browse Schedule
               </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Why swim with us */}
+      <section className="py-16 bg-white dark:bg-gray-900 transition-colors duration-300">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+              Skip the runaround.
+            </h2>
+            <p className="mt-3 text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Every Toronto drop-in swim, on one screen — always current.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-blue-200 dark:hover:border-blue-600 transition-colors duration-300">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/50 dark:to-blue-800/50 rounded-xl flex items-center justify-center mb-4">
+                <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                All Toronto Pools, One Place
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Every City of Toronto community pool with drop-in swim, aggregated into a single map and schedule. No more hopping between facility pages.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-green-200 dark:hover:border-green-600 transition-colors duration-300">
+              <div className="w-12 h-12 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900/50 dark:to-green-800/50 rounded-xl flex items-center justify-center mb-4">
+                <RefreshCw className="w-6 h-6 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Always Fresh
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Schedules sync automatically from the City of Toronto Open Data Portal, so you see the latest hours without lifting a finger.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl border border-gray-100 dark:border-gray-700 hover:border-purple-200 dark:hover:border-purple-600 transition-colors duration-300">
+              <div className="w-12 h-12 bg-gradient-to-br from-purple-100 to-purple-200 dark:from-purple-900/50 dark:to-purple-800/50 rounded-xl flex items-center justify-center mb-4">
+                <Waves className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
+                Indoor + Outdoor
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Full coverage of indoor community centres and seasonal outdoor pools. Filter by pool type to find exactly what you're after.
+              </p>
             </div>
           </div>
         </div>
