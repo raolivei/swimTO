@@ -16,14 +16,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Why-swimTO advantages section on the homepage** ([#219]): three-card grid (Database / RefreshCw / Waves icons) under a new "Skip the runaround." headline summarising what swimTO does — aggregates every Toronto drop-in swim, sources kept fresh automatically from the City Open Data Portal, indoor + outdoor coverage.
+- **Coverage summary at the end of `daily_refresh`** ([#185]): one-block log after every refresh listing facility counts by source and pool type, sessions in the next 7 days, facilities with zero upcoming sessions (warning), and the curated/DB/Open-Data layer counts. Greppable on `COVERAGE SUMMARY`.
+- **Weekly `swimto-discover-facilities` CronJob** ([#183]): runs `discover_swim_facilities.py` Mondays 11:00 UTC, diffs the report against `facilities.toronto_location_id`, and emits a `logger.warning` when the City adds new pool locations the registry hasn't picked up. Manifest in `k8s/cronjob-discover.yaml`; GitOps wiring tracked in pi-fleet#237.
+- **`validate_facility_urls` JSON-available-not-registered drift check** ([#184]): the weekly URL validator now also probes the Parks JSON API for every Open-Data pool location and emits `::warning::` annotations for swim-active locations missing from the registry. Output footer reads `X registered, Y JSON-available-not-registered, Z 404s`.
+
 ### Changed
 
-- **Sanitized codebase to fix lint/type-check failures**: split React Context constants and the `useDarkMode` hook into their own files (`AuthContextValue.ts`, `DarkModeContextValue.ts`, `useDarkMode.ts`) so `react-refresh/only-export-components` is no longer warned. Cleared 28 ruff findings across `data-pipeline/` and `scripts/` (16 unused imports, 6 unused locals, 5 stray f-string prefixes, 1 SQLAlchemy `== True` → `.is_(True)`). `npm run lint -- --max-warnings 0`, `npm run type-check`, `npm run build`, `npm test`, and `ruff check .` all pass.
+- **`PROJECT_STRATEGY.md` rewritten for the public repo** ([#221]): the original 380-line doc was written when the repo was private and the plan was a $0.99 paid app — it claimed proprietary licensing, a "confidential, for investors" footer, and revenue projections that contradicted every other surface. Replaced with a 27-line public-friendly "why this exists" — what the app does, how it stays current, operating principles, Toronto OGL attribution. Old content preserved in git history.
+- **Sanitized codebase to fix lint/type-check failures** ([#220]): split React Context constants and the `useDarkMode` hook into their own files (`AuthContextValue.ts`, `DarkModeContextValue.ts`, `useDarkMode.ts`) so `react-refresh/only-export-components` is no longer warned. Cleared 29 ruff findings across `data-pipeline/` and `scripts/` (unused imports, unused locals, stray f-string prefixes, SQLAlchemy `== True` → `.is_(True)`, duplicate `import re`). `npm run lint -- --max-warnings 0`, `npm run type-check`, `npm run build`, `npm test`, and `ruff check .` all pass.
 
 ### Fixed
 
-- **Drop-in program facility matching (#181)**: `TorontoDropInAPI.match_facility` now resolves drop-in programs to facilities by `toronto_location_id` (integer) before falling back to name-based fuzzy matching. The curated facilities ingest in `daily_refresh` already persists this column (migration 004), but the schedule ingest still relied on fuzzy name matching, producing spurious "no match" warnings whenever the curated name differed by punctuation/suffix from the Open Data label. Backward-compatible: legacy facilities without a `toronto_location_id` still match by name. New `Matched by toronto_location_id=...` info log fires per matched program so the new path is visible in prod logs.
+- **Drop-in program facility matching** ([#181]): `TorontoDropInAPI.match_facility` now resolves drop-in programs to facilities by `toronto_location_id` (integer) before falling back to name-based fuzzy matching. Backward-compatible: legacy facilities without a `toronto_location_id` still match by name. New `Matched by toronto_location_id=...` info log fires per matched program so the new path is visible in prod logs.
+- **Flaky mobile Playwright test** ([#222]): `map-panel.spec.ts` `beforeEach` waited on `path.leaflet-interactive` to be visible, but Leaflet renders all SVG marker paths with `d="M0 0"` until the initial fitBounds completes — a 393×851 mobile viewport in CI ran past the 20s timeout. Replaced with a `waitForFunction` that polls until at least one path has a non-zero `d` attribute, and tightened the per-test marker locator with `path.leaflet-interactive:not([d="M0 0"])`. Mobile suite went from 21s × 3-retry timeouts to under 5s end-to-end.
 - **Aquafit filter on /schedule only showed Norseman pool**: the two ingestion parsers were tagging the same activity differently — `data-pipeline/sources/toronto_drop_in_api.py` used `AQUAFIT` while `data-pipeline/sources/toronto_parks_json_api.py` and the frontend `SwimType` enum used `AQUATIC_FITNESS`. The drop-in parser now also writes `AQUATIC_FITNESS`, so aquafit sessions from every indoor pool surface under the "Aquatic Fitness" filter button. Existing rows can be relabeled with `UPDATE sessions SET swim_type = 'AQUATIC_FITNESS' WHERE swim_type = 'AQUAFIT';` (no-op on prod where the count is currently 0, but kept for completeness).
+
+[#181]: https://github.com/raolivei/swimTO/issues/181
+[#183]: https://github.com/raolivei/swimTO/issues/183
+[#184]: https://github.com/raolivei/swimTO/issues/184
+[#185]: https://github.com/raolivei/swimTO/issues/185
+[#219]: https://github.com/raolivei/swimTO/pull/219
+[#220]: https://github.com/raolivei/swimTO/pull/220
+[#221]: https://github.com/raolivei/swimTO/pull/221
+[#222]: https://github.com/raolivei/swimTO/pull/222
 
 ## [0.9.0] - 2026-06-21
 
