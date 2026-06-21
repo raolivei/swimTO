@@ -6,9 +6,9 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from loguru import logger
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
@@ -510,28 +510,146 @@ def ingest_schedules_legacy(db_session):
     logger.info(f"Processed {total_sessions} sessions, inserted {total_inserted} new sessions")
 
 
+def log_coverage_summary(db_session):
+    """Log a one-line summary of data coverage after refresh.
+
+    Emits a grep-friendly block (look for ``COVERAGE SUMMARY``) so we can
+    confirm at a glance that the refresh produced healthy data:
+    facility totals by source, pool type breakdown, sessions in the next
+    7 days, facilities with zero upcoming sessions (red flag), and the
+    three-layer counts referenced in issue #178 (curated entries vs
+    facilities-in-DB vs Open-Data swim locations).
+    """
+    today = date.today()
+    week_end = today + timedelta(days=7)
+
+    # Layer 1: curated entries (in-code source of truth)
+    try:
+        curated_entries = len(get_all_swim_pools())
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"Could not count curated entries: {exc}")
+        curated_entries = -1
+
+    # Layer 2: facilities in the database, by source
+    total_facilities = db_session.query(func.count(Facility.facility_id)).scalar() or 0
+    by_source_rows = (
+        db_session.query(Facility.source, func.count(Facility.facility_id))
+        .group_by(Facility.source)
+        .all()
+    )
+    by_source = {(src or "unknown"): count for src, count in by_source_rows}
+
+    # Pool type breakdown (uses has_indoor / has_outdoor — both can be true)
+    indoor_only = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(True), Facility.has_outdoor.is_(False))
+        .scalar()
+        or 0
+    )
+    outdoor_only = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(False), Facility.has_outdoor.is_(True))
+        .scalar()
+        or 0
+    )
+    both = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(True), Facility.has_outdoor.is_(True))
+        .scalar()
+        or 0
+    )
+    neither = total_facilities - indoor_only - outdoor_only - both
+
+    # Sessions in the next 7 days
+    sessions_next_7 = (
+        db_session.query(func.count(Session.id))
+        .filter(Session.date >= today, Session.date < week_end)
+        .scalar()
+        or 0
+    )
+
+    # Facilities with zero sessions in the next 7 days (red flag)
+    facilities_with_sessions = (
+        db_session.query(Session.facility_id)
+        .filter(Session.date >= today, Session.date < week_end)
+        .distinct()
+        .count()
+    )
+    facilities_zero_sessions = total_facilities - facilities_with_sessions
+
+    # Layer 3: Open-Data swim locations (distinct facilities sourced from
+    # toronto_open_data ingest — proxy for "matched in Open Data API")
+    open_data_locations = (
+        db_session.query(Session.facility_id)
+        .filter(Session.source == "toronto_open_data")
+        .distinct()
+        .count()
+    )
+
+    # Render the summary block
+    rule = "=" * 70
+    logger.success(rule)
+    logger.success("COVERAGE SUMMARY (post-refresh)")
+    logger.success(rule)
+    logger.success(f"Facilities (DB total): {total_facilities}")
+    if by_source:
+        source_str = ", ".join(
+            f"{src}={count}" for src, count in sorted(by_source.items())
+        )
+        logger.success(f"  by source: {source_str}")
+    logger.success(
+        f"Pool type: indoor_only={indoor_only}, outdoor_only={outdoor_only}, "
+        f"both={both}, neither={neither}"
+    )
+    logger.success(
+        f"Sessions next 7 days ({today} -> {week_end - timedelta(days=1)}): "
+        f"{sessions_next_7}"
+    )
+    if facilities_zero_sessions > 0:
+        logger.warning(
+            f"Facilities with ZERO sessions next 7 days: "
+            f"{facilities_zero_sessions} / {total_facilities} (red flag)"
+        )
+    else:
+        logger.success(
+            f"Facilities with zero sessions next 7 days: 0 / {total_facilities}"
+        )
+    logger.success(
+        f"Layers (issue #178): curated={curated_entries}, "
+        f"facilities_in_db={total_facilities}, "
+        f"open_data_swim_locations={open_data_locations}"
+    )
+    logger.success(rule)
+
+
 def main():
     """Main entry point."""
     setup_logging()
     logger.info("=" * 60)
     logger.info("Starting daily refresh job")
     logger.info("=" * 60)
-    
+
     db_session = setup_database()
-    
+
     try:
         # Step 1: Ingest curated facility data
         ingest_curated_facilities(db_session)
-        
+
         # Step 2: Update facility metadata from XML
         ingest_facilities(db_session)
-        
+
         # Step 3: Update schedules from official Toronto Open Data API
         ingest_official_schedules(db_session)
-        
+
         # Step 4: Update schedules from Toronto Parks JSON API (for facilities not in Open Data)
         ingest_json_api_schedules(db_session)
-        
+
+        # Step 5: Emit a coverage summary so we can confirm data health at a glance
+        try:
+            log_coverage_summary(db_session)
+        except Exception as exc:
+            logger.warning(f"Could not emit coverage summary: {exc}")
+
         logger.info("=" * 60)
         logger.success("✓ Daily refresh completed successfully!")
         logger.info("=" * 60)
