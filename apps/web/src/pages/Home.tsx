@@ -87,15 +87,15 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The SwimTO Advantage */}
+      {/* Why swim with us */}
       <section className="py-16 bg-white dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-10">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-gray-100 mb-3">
-              The SwimTO Advantage
+            <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+              Skip the runaround.
             </h2>
-            <p className="text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              One place for every drop-in swim across the city
+            <p className="mt-3 text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
+              Every Toronto drop-in swim, on one screen — always current.
             </p>
           </div>
 
