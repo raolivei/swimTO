@@ -99,7 +99,6 @@ def fetch_pool_locations(pool_type_filter: str = "all"):
         entry["district"] = loc.get("District") or ""
         entry["postal_code"] = loc.get("Postal Code") or loc.get("PostalCode") or ""
         # Build a basic address from street parts
-        street_no = loc.get("Street No", "")
         street = " ".join(
             x for x in [
                 loc.get("Street No"),

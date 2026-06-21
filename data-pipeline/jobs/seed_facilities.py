@@ -43,8 +43,7 @@ def seed_facilities(db_session):
     
     added = 0
     updated = 0
-    skipped = 0
-    
+
     for facility_data in facilities:
         # Generate facility_id from name (normalized)
         facility_id = facility_data['name'].lower().replace(' ', '-').replace("'", '').replace('.', '')
@@ -107,7 +106,7 @@ def seed_facilities(db_session):
     # Commit all changes
     db_session.commit()
     
-    logger.success(f"✓ Seeding complete!")
+    logger.success("✓ Seeding complete!")
     logger.info(f"  Added: {added} new facilities")
     logger.info(f"  Updated: {updated} existing facilities")
     logger.info(f"  Total facilities in database: {db_session.query(Facility).count()}")

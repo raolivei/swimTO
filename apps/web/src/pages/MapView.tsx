@@ -27,7 +27,7 @@ import {
   Sun,
   Building2,
 } from "lucide-react";
-import { useDarkMode } from "../contexts/DarkModeContext";
+import { useDarkMode } from "../contexts/useDarkMode";
 import type { Facility } from "../types";
 
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];

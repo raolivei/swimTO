@@ -6,7 +6,7 @@ This ensures facilities and schedules are properly populated with consistent IDs
 import sys
 from pathlib import Path
 from datetime import datetime, date, time, timedelta
-from random import choice, randint, sample
+from random import randint, sample
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -243,7 +243,7 @@ def verify_data(db_session):
     ).count()
     
     # Check unique times across all lane swim sessions
-    from sqlalchemy import func, distinct
+    from sqlalchemy import distinct
     lane_swim_times = db_session.query(
         distinct(Session.start_time)
     ).filter(
@@ -300,10 +300,10 @@ def main():
         clear_existing_data(db_session)
         
         # Step 2: Seed facilities
-        facility_count = seed_facilities(db_session)
-        
+        seed_facilities(db_session)
+
         # Step 3: Seed schedules with varied times
-        session_count = seed_demo_schedules(db_session)
+        seed_demo_schedules(db_session)
         
         # Step 4: Verify the data
         if verify_data(db_session):

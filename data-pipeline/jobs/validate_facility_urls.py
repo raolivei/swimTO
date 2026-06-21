@@ -9,26 +9,32 @@ This job:
    - Checks URL is accessible (HTTP 200)
    - Verifies location ID matches Toronto Open Data
    - Ensures facility name matches
-4. Reports any mismatches or broken links
-5. Exits with non-zero code if validation fails
+4. Probes the Toronto Parks JSON API for every Open-Data pool location
+   and flags those with hasPrograms=true that are NOT in our registry
+   (drift detection — early signal that the City added a new pool).
+5. Reports any mismatches, broken links, or unregistered swim-active locations
+6. Exits with non-zero code if validation fails
 
 Run weekly via Kubernetes CronJob.
 """
+import re
 import sys
 import csv
 from pathlib import Path
 from io import StringIO
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
 from difflib import SequenceMatcher
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import requests
+from loguru import logger
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from models import Base, Facility
+from sources.toronto_pools_data import TORONTO_INDOOR_POOLS
 
 
 # Toronto Open Data CSV URL
@@ -127,7 +133,6 @@ def download_toronto_facilities() -> Dict[str, Dict]:
 
 def extract_location_id(url: str) -> Optional[str]:
     """Extract location ID from Toronto.ca URL."""
-    import re
     match = re.search(r'id=(\d+)', url)
     return match.group(1) if match else None
 
@@ -140,6 +145,121 @@ def validate_url_accessible(url: str) -> tuple[bool, int]:
     except Exception as e:
         print(f"    ⚠️  Error checking URL: {e}")
         return False, 0
+
+
+def collect_registered_location_ids(db_session) -> Set[str]:
+    """
+    Collect all location IDs that are registered, from both:
+      - The curated TORONTO_INDOOR_POOLS list (toronto_location_id field
+        and id=... in website URLs)
+      - The DB Facility table (toronto_location_id and id=... in website URLs)
+
+    Returns a set of location IDs as strings.
+    """
+    registered: Set[str] = set()
+
+    # From curated list
+    for pool in TORONTO_INDOOR_POOLS:
+        loc_id = pool.get("toronto_location_id")
+        if loc_id is not None:
+            registered.add(str(loc_id))
+        website = pool.get("website") or ""
+        url_id = extract_location_id(website)
+        if url_id:
+            registered.add(url_id)
+
+    # From DB facilities
+    try:
+        facilities = db_session.query(Facility).all()
+    except Exception as e:
+        logger.warning(f"Could not query Facility table: {e}")
+        facilities = []
+
+    for f in facilities:
+        loc_id = getattr(f, "toronto_location_id", None)
+        if loc_id is not None:
+            registered.add(str(loc_id))
+        website = getattr(f, "website", None) or ""
+        url_id = extract_location_id(website)
+        if url_id:
+            registered.add(url_id)
+
+    return registered
+
+
+def check_json_available_not_registered(db_session) -> List[Dict]:
+    """
+    Probe the Toronto Parks JSON API for every Open-Data pool location.
+    Flag locations that report hasPrograms=true but are NOT in our registry.
+
+    Emits ::warning:: GitHub Actions annotations and logger.warning lines
+    for each unregistered swim-active location.
+
+    Returns the list of unregistered swim-active locations (each a dict with
+    location_id, name, address, has_indoor, has_outdoor).
+    """
+    print("\n" + "=" * 70)
+    print("🔎 JSON-AVAILABLE-NOT-REGISTERED CHECK")
+    print("=" * 70 + "\n")
+
+    # Lazy import to avoid pulling discovery deps unless this check runs
+    try:
+        from jobs.discover_swim_facilities import fetch_pool_locations, probe_json_api
+        from sources.toronto_parks_json_api import TorontoParksJSONAPI
+    except Exception as e:
+        logger.warning(f"Could not import discovery helpers — skipping drift check: {e}")
+        return []
+
+    registered = collect_registered_location_ids(db_session)
+    logger.info(f"Registered location IDs (curated + DB): {len(registered)}")
+
+    try:
+        pools = fetch_pool_locations(pool_type_filter="all")
+    except Exception as e:
+        logger.warning(f"Could not fetch Open Data pool locations — skipping drift check: {e}")
+        return []
+
+    json_api = TorontoParksJSONAPI()
+    unregistered_swim_active: List[Dict] = []
+
+    for loc_id, entry in pools.items():
+        if str(loc_id) in registered:
+            continue
+
+        has_programs, weeks_count, err = probe_json_api(loc_id, json_api)
+        if err:
+            logger.debug(f"  Probe error for {loc_id}: {err}")
+            continue
+        if not has_programs:
+            continue
+
+        name = entry.get("name", "")
+        address = entry.get("address", "")
+        msg = (
+            f"JSON-available-not-registered: location_id={loc_id} name='{name}' "
+            f"address='{address}' weeks={weeks_count} "
+            f"(indoor={entry.get('has_indoor')}, outdoor={entry.get('has_outdoor')})"
+        )
+        # GitHub Actions annotation + logger
+        print(f"::warning title=JSON-available-not-registered::{msg}")
+        logger.warning(msg)
+
+        unregistered_swim_active.append(
+            {
+                "location_id": str(loc_id),
+                "name": name,
+                "address": address,
+                "has_indoor": entry.get("has_indoor", False),
+                "has_outdoor": entry.get("has_outdoor", False),
+                "weeks": weeks_count,
+            }
+        )
+
+    print(
+        f"\n🔎 Drift check: {len(unregistered_swim_active)} JSON-available-not-registered "
+        f"locations found.\n"
+    )
+    return unregistered_swim_active
 
 
 def validate_facilities(db_session) -> bool:
@@ -169,11 +289,12 @@ def validate_facilities(db_session) -> bool:
     ]
     
     print(f"📊 Validating {len(toronto_facilities)} Toronto facilities\n")
-    
+
     # Track validation results
     passed = []
     failed = []
     warnings = []
+    not_found_404 = []  # subset of failed: URLs returning 404
     
     for facility in toronto_facilities:
         facility_name = facility.name
@@ -186,7 +307,7 @@ def validate_facilities(db_session) -> bool:
                 'issue': 'No website URL in database'
             })
             print(f"⚠️  {facility_name}")
-            print(f"    Issue: No website URL")
+            print("    Issue: No website URL")
             print()
             continue
         
@@ -198,7 +319,7 @@ def validate_facilities(db_session) -> bool:
                 'issue': f'Invalid URL format: {our_url}'
             })
             print(f"❌ {facility_name}")
-            print(f"    Issue: Cannot extract location ID from URL")
+            print("    Issue: Cannot extract location ID from URL")
             print(f"    URL: {our_url}")
             print()
             continue
@@ -206,11 +327,21 @@ def validate_facilities(db_session) -> bool:
         # Check if URL is accessible
         is_accessible, status_code = validate_url_accessible(our_url)
         if not is_accessible:
-            failed.append({
+            entry = {
                 'facility': facility_name,
                 'issue': f'URL not accessible (HTTP {status_code})',
-                'url': our_url
-            })
+                'url': our_url,
+                'status_code': status_code,
+            }
+            failed.append(entry)
+            if status_code == 404:
+                not_found_404.append(entry)
+                # GitHub Actions annotation for 404s
+                print(
+                    f"::warning title=Registry-URL-404::"
+                    f"{facility_name} returns 404 — {our_url}"
+                )
+                logger.warning(f"Registry URL 404: {facility_name} — {our_url}")
             print(f"❌ {facility_name}")
             print(f"    Issue: URL returns HTTP {status_code}")
             print(f"    URL: {our_url}")
@@ -233,11 +364,11 @@ def validate_facilities(db_session) -> bool:
                     'note': 'This may be expected if Toronto uses different naming'
                 })
                 print(f"⚠️  {facility_name}")
-                print(f"    Info: Name differs from Toronto Open Data")
+                print("    Info: Name differs from Toronto Open Data")
                 print(f"    Our name: {facility_name}")
                 print(f"    Open Data name: {toronto_facility['name']}")
                 print(f"    Similarity: {similarity:.2f}")
-                print(f"    Note: URL is accessible, so this may be expected")
+                print("    Note: URL is accessible, so this may be expected")
                 print()
         else:
             # Location ID not in Open Data - that's okay if URL works
@@ -248,7 +379,7 @@ def validate_facilities(db_session) -> bool:
             })
             print(f"⚠️  {facility_name}")
             print(f"    Info: Location ID {our_location_id} not in Open Data CSV")
-            print(f"    Note: URL is accessible, so this is expected for some facilities")
+            print("    Note: URL is accessible, so this is expected for some facilities")
             print()
         
         # All critical checks passed (URL accessible and valid format)
@@ -275,16 +406,24 @@ def validate_facilities(db_session) -> bool:
             print(f"  • {failure['facility']}: {failure['issue']}")
         print()
     
+    # Drift check: JSON-API has hasPrograms=true at locations not in the registry.
+    drift = check_json_available_not_registered(db_session)
+
     # Determine overall result
     all_valid = len(failed) == 0
-    
+
+    print(
+        f"\n{len(passed)} registered, {len(drift)} JSON-available-not-registered, "
+        f"{len(failed)} 404s"
+    )
+
     if all_valid:
         print("✅ All facility URLs are valid and match Toronto Open Data!")
     else:
         print("❌ Some facility URLs have issues - please review and fix!")
-    
+
     print("="*70 + "\n")
-    
+
     return all_valid
 
 
