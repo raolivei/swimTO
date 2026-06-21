@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-21
+
 ### Added
 
 - **Why-swimTO advantages section on the homepage** ([#219]): three-card grid (Database / RefreshCw / Waves icons) under a new "Skip the runaround." headline summarising what swimTO does — aggregates every Toronto drop-in swim, sources kept fresh automatically from the City Open Data Portal, indoor + outdoor coverage.
