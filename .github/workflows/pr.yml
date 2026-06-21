@@ -8,6 +8,11 @@ jobs:
   version-check:
     name: VERSION Check
     uses: raolivei/github-workflows/.github/workflows/version-check.yml@main
+    with:
+      # swimTO source layout — keep this list in sync with the paths the
+      # build-and-push workflow watches. Defaults in the reusable workflow
+      # don't include data-pipeline/ or scripts/.
+      content-paths: 'apps/,data-pipeline/,scripts/,Dockerfile'
 
   web-e2e:
     name: Web E2E (Playwright)
