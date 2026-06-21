@@ -20,7 +20,7 @@ spec:
           restartPolicy: Never
           containers:
             - name: discover
-              image: ghcr.io/raolivei/swimto-api:v0.5.2
+              image: ghcr.io/raolivei/swimto-api:v0.9.0 # {"$imagepolicy": "swimto:swimto-api-policy"}
               imagePullPolicy: IfNotPresent
               command:
                 - /bin/sh
