@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Drop-in program facility matching (#181)**: `TorontoDropInAPI.match_facility` now resolves drop-in programs to facilities by `toronto_location_id` (integer) before falling back to name-based fuzzy matching. The curated facilities ingest in `daily_refresh` already persists this column (migration 004), but the schedule ingest still relied on fuzzy name matching, producing spurious "no match" warnings whenever the curated name differed by punctuation/suffix from the Open Data label. Backward-compatible: legacy facilities without a `toronto_location_id` still match by name. New `Matched by toronto_location_id=...` info log fires per matched program so the new path is visible in prod logs.
 - **Aquafit filter on /schedule only showed Norseman pool**: the two ingestion parsers were tagging the same activity differently — `data-pipeline/sources/toronto_drop_in_api.py` used `AQUAFIT` while `data-pipeline/sources/toronto_parks_json_api.py` and the frontend `SwimType` enum used `AQUATIC_FITNESS`. The drop-in parser now also writes `AQUATIC_FITNESS`, so aquafit sessions from every indoor pool surface under the "Aquatic Fitness" filter button. Existing rows can be relabeled with `UPDATE sessions SET swim_type = 'AQUATIC_FITNESS' WHERE swim_type = 'AQUAFIT';` (no-op on prod where the count is currently 0, but kept for completeness).
 
 ## [0.9.0] - 2026-06-21
