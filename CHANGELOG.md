@@ -16,8 +16,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-06-21
+
+### Added
+
+- **Full Toronto outdoor pool coverage (#178/#179)**: Outdoor pool count goes from 2 to 56 — every active outdoor public pool location in the City of Toronto. New `data-pipeline/jobs/discover_swim_facilities.py` pulls Toronto Open Data Facilities + Locations, classifies pool tank types, and probes the Parks JSON API. 48 new entries auto-generated; 6 existing entries (High Park, McGregor, Oriole, Goulding, Grandravine, Weston Lions) corrected from indoor-only to outdoor-only.
+- **Outdoor pools default to free**: City of Toronto outdoor drop-in is free during operating season, so `seed_facilities` and `daily_refresh` now set `is_free_entry=True` for outdoor-only pools. The "Show free pools only" toggle now returns results.
+- **`toronto_location_id` column** (migration 004) for stable facility matching.
+
 ### Fixed
 
+- **Mobile filter bar layout (/schedule)**: replaced `flex-col` mobile fallback with `flex-row flex-wrap`; "Happening now" label collapses to "now" under sm breakpoint.
+- **"Happening now" filter showed future-today sessions**: now uses the same predicate as the yellow highlight (`travel_window_start ≤ now < end`).
+- **Install prompt re-appeared on every reload**: dismissal persisted to `localStorage`.
 - **CI web image build**: `build-web` uses `ubuntu-latest` instead of ARC self-hosted runners (npm flake on Pi).
 
 ## [0.8.3] - 2026-06-09
