@@ -3,7 +3,6 @@
 Geocode all facility addresses to get accurate coordinates.
 This script updates the coordinates in toronto_pools_data.py using Nominatim (OpenStreetMap).
 """
-import json
 import re
 import time
 import sys
@@ -150,7 +149,7 @@ def main():
             
             updated_count += 1
         else:
-            print(f"   ❌ Failed to geocode (keeping existing coordinates)")
+            print("   ❌ Failed to geocode (keeping existing coordinates)")
             failed_count += 1
         
         # Rate limiting
@@ -166,11 +165,11 @@ def main():
     print(f"💾 Writing updated coordinates to {data_file.name}...")
     data_file.write_text(updated_content)
     
-    print(f"\n✅ Complete!")
+    print("\n✅ Complete!")
     print(f"   ✅ Updated: {updated_count} facilities")
     print(f"   ❌ Failed: {failed_count} facilities")
     print(f"   📦 Backup: {backup_file}")
-    print(f"\n💡 Next step: Run 'make reseed' to update the database")
+    print("\n💡 Next step: Run 'make reseed' to update the database")
 
 
 if __name__ == "__main__":

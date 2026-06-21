@@ -505,7 +505,6 @@ class TorontoDropInAPI:
         
         # Check if we have address info for better matching
         if location_data:
-            address = location_data.get('Address', '')
             postal_code = location_data.get('PostalCode', '')
             
             for facility in existing_facilities:

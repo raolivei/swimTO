@@ -13,7 +13,6 @@ from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from models import Base, Facility, Session
-from sources.open_data import OpenDataClient
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
 from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
@@ -327,7 +326,7 @@ def ingest_json_api_schedules(db_session):
         existing_facility = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         if not existing_facility:
             logger.warning(f"Facility not found in database: {facility_id}")
-            logger.warning(f"Please add it to toronto_pools_data.py first")
+            logger.warning("Please add it to toronto_pools_data.py first")
             continue
         
         try:
@@ -417,7 +416,7 @@ def ingest_schedules_legacy(db_session):
     # Get all facilities with websites
     facilities = db_session.query(Facility).filter(
         Facility.website.isnot(None),
-        Facility.is_indoor == True
+        Facility.is_indoor.is_(True)
     ).all()
     
     scraper = FacilityScraper()

@@ -12,7 +12,7 @@ This script is kept for local development and testing purposes only.
 """
 import sys
 from pathlib import Path
-from datetime import datetime, date, time, timedelta
+from datetime import date, time, timedelta
 from random import choice, randint
 
 # Add parent directory to path
