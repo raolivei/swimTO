@@ -15,7 +15,7 @@ import {
   Github,
   Home,
 } from "lucide-react";
-import { useDarkMode } from "../contexts/DarkModeContext";
+import { useDarkMode } from "../contexts/useDarkMode";
 import { useAuth } from "../contexts/useAuth";
 import { useState, useEffect } from "react";
 import { InstallPrompt } from "./InstallPrompt";

@@ -18,7 +18,7 @@ import sys
 import csv
 from pathlib import Path
 from io import StringIO
-from typing import Dict, List, Optional
+from typing import Dict, Optional
 from difflib import SequenceMatcher
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -186,7 +186,7 @@ def validate_facilities(db_session) -> bool:
                 'issue': 'No website URL in database'
             })
             print(f"⚠️  {facility_name}")
-            print(f"    Issue: No website URL")
+            print("    Issue: No website URL")
             print()
             continue
         
@@ -198,7 +198,7 @@ def validate_facilities(db_session) -> bool:
                 'issue': f'Invalid URL format: {our_url}'
             })
             print(f"❌ {facility_name}")
-            print(f"    Issue: Cannot extract location ID from URL")
+            print("    Issue: Cannot extract location ID from URL")
             print(f"    URL: {our_url}")
             print()
             continue
@@ -233,11 +233,11 @@ def validate_facilities(db_session) -> bool:
                     'note': 'This may be expected if Toronto uses different naming'
                 })
                 print(f"⚠️  {facility_name}")
-                print(f"    Info: Name differs from Toronto Open Data")
+                print("    Info: Name differs from Toronto Open Data")
                 print(f"    Our name: {facility_name}")
                 print(f"    Open Data name: {toronto_facility['name']}")
                 print(f"    Similarity: {similarity:.2f}")
-                print(f"    Note: URL is accessible, so this may be expected")
+                print("    Note: URL is accessible, so this may be expected")
                 print()
         else:
             # Location ID not in Open Data - that's okay if URL works
@@ -248,7 +248,7 @@ def validate_facilities(db_session) -> bool:
             })
             print(f"⚠️  {facility_name}")
             print(f"    Info: Location ID {our_location_id} not in Open Data CSV")
-            print(f"    Note: URL is accessible, so this is expected for some facilities")
+            print("    Note: URL is accessible, so this is expected for some facilities")
             print()
         
         # All critical checks passed (URL accessible and valid format)

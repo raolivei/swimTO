@@ -7,7 +7,7 @@ the data pipeline is working correctly and schedules match live sources.
 """
 import sys
 from pathlib import Path
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from typing import Dict, List, Set, Tuple
 
 # Add parent directory to path
@@ -18,7 +18,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from config import settings
-from models import Base, Facility, Session
+from models import Facility, Session
 from sources.toronto_drop_in_api import TorontoDropInAPI
 from sources.toronto_parks_json_api import TorontoParksJSONAPI
 from sources.curated_json_facilities import get_json_api_facilities

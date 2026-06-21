@@ -1,4 +1,4 @@
-import { createContext, useState, ReactNode } from "react";
+import { useState, ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import {
@@ -9,20 +9,7 @@ import {
 } from "@/lib/api";
 import { useNavigate, useLocation } from "react-router-dom";
 import { syncLocalFavoritesToBackend } from "@/lib/utils";
-
-type AuthContextType = {
-  user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  loginError: string | null;
-  isLoggingIn: boolean;
-  login: () => Promise<void>;
-  clearLoginError: () => void;
-  logout: () => void;
-  handleGoogleCallback: (code: string) => Promise<void>;
-};
-
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+import { AuthContext } from "./AuthContextValue";
 
 const AUTH_TOKEN_KEY = "swimto_auth_token";
 const USER_KEY = "swimto_user";

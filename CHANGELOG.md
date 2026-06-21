@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Sanitized codebase to fix lint/type-check failures**: split React Context constants and the `useDarkMode` hook into their own files (`AuthContextValue.ts`, `DarkModeContextValue.ts`, `useDarkMode.ts`) so `react-refresh/only-export-components` is no longer warned. Cleared 28 ruff findings across `data-pipeline/` and `scripts/` (16 unused imports, 6 unused locals, 5 stray f-string prefixes, 1 SQLAlchemy `== True` → `.is_(True)`). `npm run lint -- --max-warnings 0`, `npm run type-check`, `npm run build`, `npm test`, and `ruff check .` all pass.
+
 ### Fixed
 
 - **Drop-in program facility matching (#181)**: `TorontoDropInAPI.match_facility` now resolves drop-in programs to facilities by `toronto_location_id` (integer) before falling back to name-based fuzzy matching. The curated facilities ingest in `daily_refresh` already persists this column (migration 004), but the schedule ingest still relied on fuzzy name matching, producing spurious "no match" warnings whenever the curated name differed by punctuation/suffix from the Open Data label. Backward-compatible: legacy facilities without a `toronto_location_id` still match by name. New `Matched by toronto_location_id=...` info log fires per matched program so the new path is visible in prod logs.

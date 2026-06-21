@@ -65,7 +65,7 @@ def fix_facility_urls(db_session):
     for facility_id, name, website in facilities_to_fix:
         logger.info(f"  {name}")
         logger.info(f"    Current URL: {website}")
-        logger.info(f"    Will be set to: NULL")
+        logger.info("    Will be set to: NULL")
         logger.info("")
     
     # Proceed with fix (non-interactive mode)
