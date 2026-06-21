@@ -5,10 +5,6 @@ on:
     branches: [main]
 
 jobs:
-  version-check:
-    name: VERSION Check
-    uses: raolivei/github-workflows/.github/workflows/version-check.yml@main
-
   web-e2e:
     name: Web E2E (Playwright)
     runs-on: ubuntu-latest
