@@ -31,6 +31,9 @@ jobs:
       image-name: swimto-api
       context: .
       dockerfile: apps/api/Dockerfile
+      # Auto-bump PATCH from the highest existing git tag on every push
+      # to main; mirror as ``v$VERSION`` git tag for traceability.
+      create-git-tag: true
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -41,5 +44,8 @@ jobs:
       context: ./apps/web
       # ARC Pi runners hit npm flake/timeouts; web is static nginx — build on GitHub-hosted.
       runs-on: ubuntu-latest
+      # Same auto-bump logic; the second job's git push is a no-op
+      # (the first job creates the tag, idempotency is built-in).
+      create-git-tag: true
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
