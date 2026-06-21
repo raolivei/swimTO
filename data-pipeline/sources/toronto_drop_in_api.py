@@ -47,7 +47,12 @@ class TorontoDropInAPI:
             r'lane\s+swim', r'lap\s+swim', r'length\s+swim',
             r'adult\s+lane', r'senior\s+lane'
         ],
-        'AQUAFIT': [
+        # NOTE: keep this label aligned with the JSON parser
+        # (toronto_parks_json_api._classify_swim_type) and the frontend
+        # SwimType enum in apps/web/src/types/index.ts. Splitting "AQUAFIT"
+        # vs "AQUATIC_FITNESS" creates duplicate filter buttons in the UI
+        # and hides most pools' aquafit sessions from users.
+        'AQUATIC_FITNESS': [
             r'aqua\s*fit', r'water\s+fit', r'aqua\s*cise',
             r'aqua\s+aerobics', r'water\s+aerobics'
         ],
