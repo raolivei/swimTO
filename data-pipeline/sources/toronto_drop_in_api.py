@@ -474,15 +474,43 @@ class TorontoDropInAPI:
     ) -> Optional[str]:
         """
         Match a location from the API to an existing facility in our database.
-        
+
+        Resolution order:
+        1. Exact match on ``Facility.toronto_location_id`` (authoritative;
+           populated by the curated facility ingest in ``daily_refresh``).
+        2. Exact case-insensitive name match.
+        3. Fuzzy name match.
+        4. Postal-code match via ``location_data``.
+
         Returns facility_id if match found, None otherwise.
         """
+        # 1. Primary key: toronto_location_id (integer match).
+        # Curated facilities (see toronto_pools_data.py) carry the same
+        # Location ID Toronto's Open Data uses, so this should be the common
+        # path. Legacy facilities without a toronto_location_id still fall
+        # through to the fuzzy name logic below.
+        if location_id:
+            try:
+                location_id_int = int(str(location_id).strip())
+            except (ValueError, TypeError):
+                location_id_int = None
+
+            if location_id_int is not None:
+                for facility in existing_facilities:
+                    facility_loc_id = getattr(facility, 'toronto_location_id', None)
+                    if facility_loc_id is not None and facility_loc_id == location_id_int:
+                        logger.info(
+                            f"Matched by toronto_location_id={location_id_int}: "
+                            f"'{location_name}' -> '{facility.name}'"
+                        )
+                        return facility.facility_id
+
         if not location_name:
             return None
-        
+
         location_name_lower = location_name.lower().strip()
-        
-        # Try exact match first
+
+        # 2. Exact case-insensitive name match
         for facility in existing_facilities:
             if facility.name.lower().strip() == location_name_lower:
                 return facility.facility_id
