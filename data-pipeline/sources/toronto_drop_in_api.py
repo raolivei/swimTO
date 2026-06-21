@@ -32,11 +32,17 @@ class TorontoDropInAPI:
     LOCATIONS_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/datastore/dump/f23ac1ad-6f46-4b59-811f-eb34be9b1f7a"
     FACILITIES_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/datastore/dump/e16505dc-f106-4b58-a689-ed0a2b8b0b69"
     
-    # Swim activity keywords to filter drop-in programs
+    # Swim activity keywords to filter drop-in programs.
+    # NOTE: Toronto's actual Open Data CSV uses "Aquatic Fitness: ..." as the
+    # Course Title prefix (e.g. "Aquatic Fitness: Shallow", "Aquatic Fitness:
+    # Deep"). The colloquial "Aquafit"/"Aqua Fit" terms are kept for
+    # forward-compat in case Toronto changes the label, but "aquatic fitness"
+    # is what the live feed actually emits.
     SWIM_KEYWORDS = [
         'lane swim', 'lane swimming', 'lap swim', 'lap swimming',
         'leisure swim', 'recreational swim', 'family swim',
-        'adult swim', 'senior swim', 'aquafit', 'aqua fit',
+        'adult swim', 'senior swim',
+        'aquatic fitness', 'aquafit', 'aqua fit',
         'water fit', 'aquacise', 'aqua aerobics',
         'public swim', 'open swim', 'drop-in swim'
     ]
@@ -53,6 +59,7 @@ class TorontoDropInAPI:
         # vs "AQUATIC_FITNESS" creates duplicate filter buttons in the UI
         # and hides most pools' aquafit sessions from users.
         'AQUATIC_FITNESS': [
+            r'aquatic\s+fitness',
             r'aqua\s*fit', r'water\s+fit', r'aqua\s*cise',
             r'aqua\s+aerobics', r'water\s+aerobics'
         ],
