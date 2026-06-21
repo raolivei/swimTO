@@ -9,7 +9,23 @@ test.describe("Map facility panel", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/map");
     await page.waitForSelector(".leaflet-container", { timeout: 20000 });
-    await page.waitForSelector("path.leaflet-interactive", { timeout: 20000 });
+    // Leaflet renders ``path.leaflet-interactive`` elements with
+    // ``d="M0 0"`` before the initial fitBounds completes. Playwright's
+    // visibility check then fails (zero-size = not visible) and on a
+    // narrow mobile viewport in CI the fitBounds animation can run
+    // longer than 20s. Wait for the *first non-zero* path instead so
+    // we're guarded against that race rather than racing against it.
+    await page.waitForFunction(
+      () =>
+        Array.from(
+          document.querySelectorAll<SVGPathElement>("path.leaflet-interactive")
+        ).some((p) => {
+          const d = p.getAttribute("d") || "";
+          return d.length > 0 && d !== "M0 0";
+        }),
+      undefined,
+      { timeout: 30000 }
+    );
   });
 
   test("desktop: panel stays visible after selecting a marker", async ({ page }) => {
@@ -18,7 +34,9 @@ test.describe("Map facility panel", () => {
       "Desktop-only panel positioning test"
     );
 
-    const markers = page.locator("path.leaflet-interactive");
+    const markers = page.locator(
+      'path.leaflet-interactive:not([d="M0 0"])'
+    );
     const count = await markers.count();
     expect(count).toBeGreaterThan(0);
 
@@ -65,7 +83,9 @@ test.describe("Map facility panel", () => {
       "Mobile-only panel test"
     );
 
-    const markers = page.locator("path.leaflet-interactive");
+    const markers = page.locator(
+      'path.leaflet-interactive:not([d="M0 0"])'
+    );
     await markers.first().click({ force: true });
 
     const panel = page.getByTestId("facility-panel-mobile");
