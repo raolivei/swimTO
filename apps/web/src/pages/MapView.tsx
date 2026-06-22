@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
@@ -130,7 +130,12 @@ interface FacilityWithDistance extends Facility {
   distance?: number;
 }
 
-function MapController({
+// Fits the map to nearby facilities (within 10km of the user) ONCE, the
+// first time both user location and a non-empty facility list are
+// available. After that, the user owns the viewport — filter changes,
+// search, favorites, re-renders never re-fit. The "Recenter" button
+// triggers an explicit re-fit via fitToUserAndFacilities (below).
+function InitialFit({
   userLocation,
   facilities,
 }: {
@@ -138,35 +143,45 @@ function MapController({
   facilities: FacilityWithDistance[];
 }) {
   const map = useMap();
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFittedRef.current) return;
     if (!userLocation || facilities.length === 0) return;
-
-    const nearby = facilities.filter((f) => {
-      if (!f.latitude || !f.longitude) return false;
-      return (
-        calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          f.latitude,
-          f.longitude
-        ) <= 10
-      );
-    });
-
-    if (nearby.length === 0) {
-      map.setView([userLocation.latitude, userLocation.longitude], 12);
-      return;
-    }
-
-    const bounds = new LatLngBounds([[userLocation.latitude, userLocation.longitude]]);
-    nearby.forEach((f) => {
-      if (f.latitude && f.longitude) bounds.extend([f.latitude, f.longitude]);
-    });
-    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+    fitToUserAndFacilities(map, userLocation, facilities);
+    hasFittedRef.current = true;
   }, [userLocation, facilities, map]);
 
   return null;
+}
+
+function fitToUserAndFacilities(
+  map: LeafletMap,
+  userLocation: UserLocation,
+  facilities: FacilityWithDistance[],
+) {
+  const nearby = facilities.filter((f) => {
+    if (!f.latitude || !f.longitude) return false;
+    return (
+      calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        f.latitude,
+        f.longitude,
+      ) <= 10
+    );
+  });
+
+  if (nearby.length === 0) {
+    map.setView([userLocation.latitude, userLocation.longitude], 12);
+    return;
+  }
+
+  const bounds = new LatLngBounds([[userLocation.latitude, userLocation.longitude]]);
+  nearby.forEach((f) => {
+    if (f.latitude && f.longitude) bounds.extend([f.latitude, f.longitude]);
+  });
+  map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
 }
 
 
@@ -503,6 +518,10 @@ export default function MapView() {
 
   useEffect(() => {
     handleGetLocation();
+    // Only request location once on mount; handleGetLocation closes over
+    // mapRef and validFacilities, but we deliberately don't want this
+    // effect to re-fire when those change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -540,46 +559,60 @@ export default function MapView() {
     await toggleFavorite(facilityId);
   };
 
-  const facilitiesWithDistance: FacilityWithDistance[] =
-    facilities?.map((f) => {
-      if (userLocation && f.latitude && f.longitude) {
-        return {
-          ...f,
-          distance: calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            f.latitude,
-            f.longitude
-          ),
-        };
-      }
-      return f;
-    }) || [];
+  const facilitiesWithDistance = useMemo<FacilityWithDistance[]>(
+    () =>
+      facilities?.map((f) => {
+        if (userLocation && f.latitude && f.longitude) {
+          return {
+            ...f,
+            distance: calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              f.latitude,
+              f.longitude,
+            ),
+          };
+        }
+        return f;
+      }) || [],
+    [facilities, userLocation],
+  );
 
-  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
-    const isFavA = favorites.has(a.facility_id);
-    const isFavB = favorites.has(b.facility_id);
-    if (isFavA && !isFavB) return -1;
-    if (!isFavA && isFavB) return 1;
-    if (sortByDistance && userLocation) {
-      if (a.distance === undefined) return 1;
-      if (b.distance === undefined) return -1;
-      return a.distance - b.distance;
-    }
-    return 0;
-  });
+  const sortedFacilities = useMemo(
+    () =>
+      [...facilitiesWithDistance].sort((a, b) => {
+        const isFavA = favorites.has(a.facility_id);
+        const isFavB = favorites.has(b.facility_id);
+        if (isFavA && !isFavB) return -1;
+        if (!isFavA && isFavB) return 1;
+        if (sortByDistance && userLocation) {
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        }
+        return 0;
+      }),
+    [facilitiesWithDistance, favorites, sortByDistance, userLocation],
+  );
 
-  const visibleFacilities = sortedFacilities.filter((f) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      f.name.toLowerCase().includes(q) ||
-      f.address?.toLowerCase().includes(q) ||
-      f.district?.toLowerCase().includes(q)
-    );
-  });
+  const visibleFacilities = useMemo(
+    () =>
+      sortedFacilities.filter((f) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          f.name.toLowerCase().includes(q) ||
+          f.address?.toLowerCase().includes(q) ||
+          f.district?.toLowerCase().includes(q)
+        );
+      }),
+    [sortedFacilities, searchQuery],
+  );
 
-  const validFacilities = visibleFacilities.filter((f) => f.latitude && f.longitude);
+  const validFacilities = useMemo(
+    () => visibleFacilities.filter((f) => f.latitude && f.longitude),
+    [visibleFacilities],
+  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -603,6 +636,13 @@ export default function MapView() {
       const location = await getUserLocation();
       setUserLocation(location);
       setSortByDistance(true);
+      // If the map is already mounted (i.e. the user clicked Recenter
+      // after the initial fit), re-fit explicitly. The InitialFit
+      // useEffect only runs once, so this is the only way to recenter
+      // after the user has panned/zoomed away.
+      if (mapRef.current) {
+        fitToUserAndFacilities(mapRef.current, location, validFacilities);
+      }
     } catch (err) {
       setLocationError(err instanceof Error ? err.message : "Failed to get location");
       setSortByDistance(false);
@@ -706,7 +746,7 @@ export default function MapView() {
               maxZoom={20}
             />
 
-            <MapController userLocation={userLocation} facilities={validFacilities} />
+            <InitialFit userLocation={userLocation} facilities={validFacilities} />
             <MapRefSetter mapRef={mapRef} />
 
             {/* User location dot */}
