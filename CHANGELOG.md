@@ -18,7 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Automatic SQL migrations on api startup** ([#229]): new `app/migrate.py` runner applies any pending `apps/api/migrations/NNN_*.sql` files against the live database before uvicorn starts. Tracks applied versions in a `schema_migrations` table; backfills the table on first run by inspecting marker columns so existing prod DBs (where migrations were applied manually) don't try to re-run. Migration files moved from `scripts/migrations/` into `apps/api/migrations/` so they ship inside the api image. Dockerfile no longer silently swallows migration failures (`alembic upgrade head 2>/dev/null || true` is gone) — a failure now aborts pod start. Closes the class of incident that broke v0.9.1's API for ~24 hours when migration 004 was committed but never ran on prod.
 - **Geocoding for facilities with missing coordinates** ([#231]): new on-demand job `data-pipeline/jobs/geocode_missing_coordinates.py` resolves lat/lon via OpenStreetMap Nominatim (free, no API key, 1 req/sec rate limit) for any facility that has an address but NULL coordinates. Toronto Open Data's Locations CSV ships with NULL lat/lon for some entries (Sunnyside Gus Ryder Outdoor Pool was one example), which prevented those facilities from showing on the map. Already applied to prod via `kubectl exec`: 48 facilities (incl. all 56 outdoor pools, now 100% coverage) updated.
+
+[#229]: https://github.com/raolivei/swimTO/issues/229
 
 ### Fixed
 
