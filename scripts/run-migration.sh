@@ -2,7 +2,7 @@
 # Run database migration against the SwimTO PostgreSQL database
 #
 # Usage:
-#   Local:  ./scripts/run-migration.sh scripts/migrations/001_add_age_columns.sql
+#   Local:  ./scripts/run-migration.sh apps/api/migrations/001_add_age_columns.sql
 #   K8s:    kubectl exec -it -n swimto deploy/postgres -- psql -U swimto -d swimto -f /tmp/migration.sql
 #
 # Prerequisites:
@@ -17,7 +17,7 @@ if [ -z "$MIGRATION_FILE" ]; then
     echo "Usage: $0 <migration_file.sql>"
     echo ""
     echo "Available migrations:"
-    ls -1 scripts/migrations/*.sql 2>/dev/null || echo "  No migrations found"
+    ls -1 apps/api/migrations/*.sql 2>/dev/null || echo "  No migrations found"
     exit 1
 fi
 

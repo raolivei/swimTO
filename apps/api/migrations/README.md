@@ -17,11 +17,11 @@ Connect to your local PostgreSQL database and run the migration:
 
 ```bash
 # Using psql
-psql -U postgres -d pools -f scripts/migrations/004_add_toronto_location_id.sql
+psql -U postgres -d pools -f apps/api/migrations/004_add_toronto_location_id.sql
 
 # Or using the connection from .env
 export $(cat apps/api/.env | grep DATABASE_URL | xargs)
-psql $DATABASE_URL -f scripts/migrations/004_add_toronto_location_id.sql
+psql $DATABASE_URL -f apps/api/migrations/004_add_toronto_location_id.sql
 ```
 
 ### Production Deployment

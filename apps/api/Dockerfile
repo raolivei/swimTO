@@ -34,5 +34,8 @@ RUN mkdir -p logs
 # Expose port
 EXPOSE 8000
 
-# Run migrations (skip if alembic directory doesn't exist) and start server
-CMD ["sh", "-c", "alembic upgrade head 2>/dev/null || true && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+# Run pending SQL migrations against the database, then start uvicorn.
+# A migration failure aborts startup — silent ``|| true`` was the cause
+# of the v0.9.1 24h outage when migration 004 hadn't run on prod.
+# See app/migrate.py and migrations/.
+CMD ["sh", "-c", "python -m app.migrate && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

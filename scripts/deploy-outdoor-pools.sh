@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-MIGRATION="${ROOT}/scripts/migrations/003_add_pool_type_flags.sql"
+MIGRATION="${ROOT}/apps/api/migrations/003_add_pool_type_flags.sql"
 
 echo "=== SwimTO Outdoor Pools deploy (v0.8.3) ==="
 
@@ -18,7 +18,7 @@ echo "1. Run DB migration 003..."
 echo "2. Ensure migration 002 (is_free_entry) is applied..."
 if ! kubectl exec -n swimto deploy/postgres -- psql -U postgres -d pools -tAc \
   "SELECT 1 FROM information_schema.columns WHERE table_name='facilities' AND column_name='is_free_entry'" | grep -q 1; then
-  "${ROOT}/scripts/run-migration.sh" "${ROOT}/scripts/migrations/002_add_is_free_entry.sql"
+  "${ROOT}/scripts/run-migration.sh" "${ROOT}/apps/api/migrations/002_add_is_free_entry.sql"
 fi
 
 echo "3. Reconcile Flux (swimto HelmRelease) — optional, may take several minutes..."
