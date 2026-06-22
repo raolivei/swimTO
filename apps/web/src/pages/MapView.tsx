@@ -546,10 +546,16 @@ export default function MapView() {
     updateAnchor();
     const map = mapRef.current;
     if (!map) return;
-    map.on("move", updateAnchor);
+    // Listen on ``moveend`` (fires once at the end of a pan) and
+    // ``zoomend`` rather than ``move`` (fires every frame during an
+    // animated pan). During an in-progress animation Leaflet briefly
+    // projects the marker's lat/lon to negative pixel coordinates
+    // because the world translates faster than the viewport, which
+    // would yank the panel off-screen for a single frame.
+    map.on("moveend", updateAnchor);
     map.on("zoomend", updateAnchor);
     return () => {
-      map.off("move", updateAnchor);
+      map.off("moveend", updateAnchor);
       map.off("zoomend", updateAnchor);
     };
   }, [selectedFacility, updateAnchor]);
