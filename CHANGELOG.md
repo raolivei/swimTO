@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Map no longer auto-zooms back when filters change** ([#232]): `MapController` ran `fitBounds` on every change to its deps, which included inline-derived `validFacilities` — a fresh array reference on every render. So every keystroke in search, every pool-type toggle, every favorite click, every unrelated re-render re-fit the map and yanked the user's manual zoom back. Now the initial fit happens exactly once via a `useRef` guard; the Locate / Recenter FAB explicitly re-fits via a new top-level helper `fitToUserAndFacilities(map, ...)`; the four derived facility arrays (`facilitiesWithDistance`, `sortedFacilities`, `visibleFacilities`, `validFacilities`) are memoized so dependent effects don't fire on spurious renders. As a side fix, the panel-position effect now listens on Leaflet's `moveend` (not `move`) so the panel doesn't briefly render with negative pixel coords during an animated `panBy`.
+
+[#232]: https://github.com/raolivei/swimTO/pull/232
+
 ## [0.9.1] - 2026-06-21
 
 ### Added
