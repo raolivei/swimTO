@@ -4,7 +4,7 @@ sqlalchemy==2.0.36
 psycopg[binary]==3.2.3
 alembic==1.14.0
 pydantic==2.10.2
-pydantic-settings==2.6.1
+pydantic-settings==2.14.2
 python-multipart==0.0.18
 redis==4.6.0
 fastapi-cache2[redis]==0.2.2
