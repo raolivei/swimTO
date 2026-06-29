@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Indoor/outdoor pool filter on schedule page**: All / Indoor / Outdoor segmented control on `/schedule`, matching the map page. Client-side filter uses `has_indoor` / `has_outdoor` on each session's facility. Shared `PoolTypeFilterControl` component extracted from `MapView`; selection persisted in `localStorage` so schedule and map stay in sync.
+- **Grouped list view on desktop schedule**: List view now groups sessions by community center on all screen sizes (same pattern as mobile since v0.7.5). One facility card shows multiple time slots in a responsive 2–4 column grid; pool-type badge on facility header; share action per slot on desktop.
+
 - **Automatic SQL migrations on api startup** ([#229]): new `app/migrate.py` runner applies any pending `apps/api/migrations/NNN_*.sql` files against the live database before uvicorn starts. Tracks applied versions in a `schema_migrations` table; backfills the table on first run by inspecting marker columns so existing prod DBs (where migrations were applied manually) don't try to re-run. Migration files moved from `scripts/migrations/` into `apps/api/migrations/` so they ship inside the api image. Dockerfile no longer silently swallows migration failures (`alembic upgrade head 2>/dev/null || true` is gone) — a failure now aborts pod start. Closes the class of incident that broke v0.9.1's API for ~24 hours when migration 004 was committed but never ran on prod.
 - **Geocoding for facilities with missing coordinates** ([#231]): new on-demand job `data-pipeline/jobs/geocode_missing_coordinates.py` resolves lat/lon via OpenStreetMap Nominatim (free, no API key, 1 req/sec rate limit) for any facility that has an address but NULL coordinates. Toronto Open Data's Locations CSV ships with NULL lat/lon for some entries (Sunnyside Gus Ryder Outdoor Pool was one example), which prevented those facilities from showing on the map. Already applied to prod via `kubectl exec`: 48 facilities (incl. all 56 outdoor pools, now 100% coverage) updated.
 
@@ -25,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Schedule nearest sort order** — facilities with “happening now” sessions no longer jump ahead of closer pools when Nearest sort is active; distance sort is strictly numeric ascending. Happening-now boost applies only when that filter is explicitly enabled (and not in Nearest mode).
 - **Map no longer auto-zooms back when filters change** ([#232]): `MapController` ran `fitBounds` on every change to its deps, which included inline-derived `validFacilities` — a fresh array reference on every render. So every keystroke in search, every pool-type toggle, every favorite click, every unrelated re-render re-fit the map and yanked the user's manual zoom back. Now the initial fit happens exactly once via a `useRef` guard; the Locate / Recenter FAB explicitly re-fits via a new top-level helper `fitToUserAndFacilities(map, ...)`; the four derived facility arrays (`facilitiesWithDistance`, `sortedFacilities`, `visibleFacilities`, `validFacilities`) are memoized so dependent effects don't fire on spurious renders. As a side fix, the panel-position effect now listens on Leaflet's `moveend` (not `move`) so the panel doesn't briefly render with negative pixel coords during an animated `panBy`.
 
 [#231]: https://github.com/raolivei/swimTO/pull/231
