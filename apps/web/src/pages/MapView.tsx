@@ -2,7 +2,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
-import { facilityApi, getApiErrorMessage, type PoolTypeFilter } from "../lib/api";
+import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
+import { facilityApi, getApiErrorMessage } from "../lib/api";
+import { poolFlags } from "../lib/poolType";
+import { PoolTypeFilterControl } from "../components/PoolTypeFilterControl";
 import {
   formatTimeRange,
   formatDate,
@@ -25,34 +28,13 @@ import {
   X,
   Info,
   Sun,
-  Building2,
 } from "lucide-react";
 import { useDarkMode } from "../contexts/useDarkMode";
 import type { Facility } from "../types";
 
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
 
-const POOL_TYPE_OPTIONS: {
-  value: PoolTypeFilter;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-}[] = [
-  { value: "all", label: "All", icon: MapPin },
-  { value: "indoor", label: "Indoor", icon: Building2 },
-  { value: "outdoor", label: "Outdoor", icon: Sun },
-];
-
 const OUTDOOR_MARKER_STROKE = "#f59e0b";
-
-function poolFlags(facility: Facility): { hasIndoor: boolean; hasOutdoor: boolean } {
-  if (facility.has_indoor !== undefined || facility.has_outdoor !== undefined) {
-    return {
-      hasIndoor: facility.has_indoor ?? false,
-      hasOutdoor: facility.has_outdoor ?? false,
-    };
-  }
-  return { hasIndoor: facility.is_indoor, hasOutdoor: !facility.is_indoor };
-}
 const PANEL_TOP_MARGIN = 64;
 const PANEL_GAP = 16;
 const PANEL_WIDTH = 300;
@@ -186,52 +168,6 @@ function fitToUserAndFacilities(
 
 
 // ─── Legend ──────────────────────────────────────────────────────────────────
-
-function PoolTypeFilterControl({
-  value,
-  onChange,
-}: {
-  value: PoolTypeFilter;
-  onChange: (next: PoolTypeFilter) => void;
-}) {
-  return (
-    <div
-      data-testid="map-pool-type-filter"
-      className="pointer-events-auto flex flex-col gap-1.5"
-    >
-      <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 px-1 hidden sm:block">
-        Outdoor pools open for summer
-      </p>
-      <div
-        role="group"
-        aria-label="Pool type filter"
-        className="flex bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700 p-1"
-      >
-        {POOL_TYPE_OPTIONS.map(({ value: option, label, icon: Icon }) => {
-          const active = value === option;
-          return (
-            <button
-              key={option}
-              type="button"
-              data-testid={`pool-type-${option}`}
-              onClick={() => onChange(option)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                active
-                  ? option === "outdoor"
-                    ? "bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200"
-                    : "bg-primary-100 dark:bg-primary-900/50 text-primary-800 dark:text-primary-200"
-                  : "text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function MapLegend() {
   const [open, setOpen] = useState(false);
@@ -503,7 +439,7 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [poolType, setPoolType] = useState<PoolTypeFilter>("all");
+  const [poolType, setPoolType] = usePoolTypeFilter();
   const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
@@ -853,7 +789,12 @@ export default function MapView() {
 
       {/* ── Bottom-left: pool type filter ───────────────────────────── */}
       <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)]">
-        <PoolTypeFilterControl value={poolType} onChange={setPoolType} />
+        <PoolTypeFilterControl
+          value={poolType}
+          onChange={setPoolType}
+          className="pointer-events-auto"
+          label="Pool type"
+        />
       </div>
 
       {/* ── Bottom-right: FABs (locate + legend) ────────────────────── */}

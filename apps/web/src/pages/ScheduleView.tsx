@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
 import { scheduleApi, getApiErrorMessage } from "../lib/api";
+import { matchesPoolTypeFilter, poolFlags, poolTypeLabel } from "../lib/poolType";
+import { compareFacilityGroups, facilityDistanceKm } from "../lib/facilitySort";
+import { PoolTypeFilterControl } from "@/components/PoolTypeFilterControl";
 import {
   formatDate,
   formatTimeRange,
@@ -30,6 +34,7 @@ import {
   Share2,
   Calendar as CalendarIcon,
   Check,
+  Sun,
 } from "lucide-react";
 import type { SwimType, Session } from "../types";
 
@@ -167,25 +172,6 @@ const ShareButton = ({ session }: { session: Session }) => {
   );
 };
 
-// Calendar Button Component
-const CalendarButton = ({ session }: { session: Session }) => {
-  const handleAddToCalendar = () => {
-    const url = generateCalendarUrl(session);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-
-  return (
-    <button
-      onClick={handleAddToCalendar}
-      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
-      aria-label="Add to calendar"
-      title="Add to Google Calendar"
-    >
-      <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-    </button>
-  );
-};
-
 // Free Entry Badge Component
 const FreeEntryBadge = () => {
   return (
@@ -212,8 +198,8 @@ const compareSessions = (
 
   // Sort by distance mode: pure distance sorting (no favorites priority)
   if (sortMode === "distance" && userLocation) {
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -226,8 +212,8 @@ const compareSessions = (
     if (!isFavA && isFavB) return 1;
 
     // Within favorites and non-favorites, sort by distance
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -240,8 +226,8 @@ const compareSessions = (
     if (!isFavA && isFavB) return 1;
 
     // Within favorites and non-favorites, sort by distance
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -267,6 +253,7 @@ export default function ScheduleView() {
   const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
   const [showFreeOnly, setShowFreeOnly] = useState(false);
+  const [poolType, setPoolType] = usePoolTypeFilter();
   // Time-of-day filter: default is full day [5am, 11pm]
   const TIME_MIN = 5 * 60;
   const TIME_MAX = 23 * 60;
@@ -372,6 +359,9 @@ export default function ScheduleView() {
     if (showFreeOnly) {
       filtered = filtered.filter((s) => s.facility?.is_free_entry === true);
     }
+    if (poolType !== "all") {
+      filtered = filtered.filter((s) => matchesPoolTypeFilter(s.facility, poolType));
+    }
     if (!isTimeDefault) {
       filtered = filtered.filter((s) => {
         const [sh, sm] = s.start_time.split(":").map(Number);
@@ -383,7 +373,7 @@ export default function ScheduleView() {
       });
     }
     return filtered;
-  }, [allSessions, swimType, showFreeOnly, isTimeDefault, timeStart, timeEnd]);
+  }, [allSessions, swimType, showFreeOnly, poolType, isTimeDefault, timeStart, timeEnd]);
 
   // Handle toggling favorites
   const handleToggleFavorite = async (facilityId: string | undefined) => {
@@ -610,69 +600,20 @@ export default function ScheduleView() {
 
   // Sort facilities: by distance (if enabled) or favorites first then by location
   const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {});
-  sortedFacilityEntries.sort((a, b) => {
-    const facilityA = a[1].facility;
-    const facilityB = b[1].facility;
-    const isFavA = facilityA?.facility_id
-      ? isFavorite(facilityA.facility_id)
-      : false;
-    const isFavB = facilityB?.facility_id
-      ? isFavorite(facilityB.facility_id)
-      : false;
-    
-    // Prioritize facilities with sessions happening now
-    const allSessionsA = Object.values(a[1].sessions).flat();
-    const allSessionsB = Object.values(b[1].sessions).flat();
-    const hasHappeningNowA = allSessionsA.some(isHappeningNow);
-    const hasHappeningNowB = allSessionsB.some(isHappeningNow);
-    if (hasHappeningNowA && !hasHappeningNowB) return -1;
-    if (!hasHappeningNowA && hasHappeningNowB) return 1;
-
-    // Sort by distance mode: pure distance sorting (no favorites priority)
-    if (sortMode === "distance" && userLocation) {
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
-    if (sortMode === "favorites" && userLocation) {
-      // Favorites come first
-      if (isFavA && !isFavB) return -1;
-      if (!isFavA && isFavB) return 1;
-
-      // Within favorites and non-favorites, sort by distance
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Default when location is available: favorites first, then by distance
-    if (userLocation) {
-      // Favorites come first
-      if (isFavA && !isFavB) return -1;
-      if (!isFavA && isFavB) return 1;
-
-      // Within favorites and non-favorites, sort by distance
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Fallback when no location: favorites first, then alphabetical order
-    if (isFavA && !isFavB) return -1;
-    if (!isFavA && isFavB) return 1;
-
-    const nameA = facilityA?.name || "";
-    const nameB = facilityB?.name || "";
-    return nameA.localeCompare(nameB);
-  });
+  const facilitySortOptions = {
+    sortMode,
+    userLocation,
+    isFavorite,
+    prioritizeHappeningNow,
+    isHappeningNow,
+  };
+  sortedFacilityEntries.sort((a, b) =>
+    compareFacilityGroups(
+      { facility: a[1].facility, distance: a[1].distance, sessions: a[1].sessions },
+      { facility: b[1].facility, distance: b[1].distance, sessions: b[1].sessions },
+      facilitySortOptions
+    )
+  );
 
   const weekdays = [
     "Sunday",
@@ -979,6 +920,15 @@ export default function ScheduleView() {
                 </span>
               </button>
 
+              {/* Pool type: indoor / outdoor */}
+              <PoolTypeFilterControl
+                value={poolType}
+                onChange={setPoolType}
+                testId="schedule-pool-type-filter"
+                showHint={false}
+                label="Pool type"
+              />
+
               {/* View Mode Toggle - Hidden on mobile since list view is optimal */}
               <div className="hidden md:flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
                 <button
@@ -1142,38 +1092,14 @@ export default function ScheduleView() {
               }, {} as Record<string, { facility: typeof dateSessions[0]["facility"]; sessions: typeof dateSessions; distance?: number }>);
 
               // Sort facilities by the same criteria
-              const sortedFacilities = Object.entries(sessionsByFacility).sort(([, a], [, b]) => {
-                const isFavA = a.facility?.facility_id ? isFavorite(a.facility.facility_id) : false;
-                const isFavB = b.facility?.facility_id ? isFavorite(b.facility.facility_id) : false;
-                
-                // Prioritize facilities with sessions happening now
-                const hasHappeningNowA = a.sessions.some(isHappeningNow);
-                const hasHappeningNowB = b.sessions.some(isHappeningNow);
-                if (hasHappeningNowA && !hasHappeningNowB) return -1;
-                if (!hasHappeningNowA && hasHappeningNowB) return 1;
-
-                if (sortMode === "distance" && userLocation) {
-                  const distA = a.distance;
-                  const distB = b.distance;
-                  if (distA === undefined) return 1;
-                  if (distB === undefined) return -1;
-                  return distA - distB;
-                }
-
-                if (sortMode === "favorites" && userLocation) {
-                  if (isFavA && !isFavB) return -1;
-                  if (!isFavA && isFavB) return 1;
-                  const distA = a.distance;
-                  const distB = b.distance;
-                  if (distA === undefined) return 1;
-                  if (distB === undefined) return -1;
-                  return distA - distB;
-                }
-
-                if (isFavA && !isFavB) return -1;
-                if (!isFavA && isFavB) return 1;
-                return (a.facility?.name || "").localeCompare(b.facility?.name || "");
-              });
+              const sortedFacilities = Object.entries(sessionsByFacility).sort(
+                ([, a], [, b]) =>
+                  compareFacilityGroups(
+                    { facility: a.facility, distance: a.distance, sessions: a.sessions },
+                    { facility: b.facility, distance: b.distance, sessions: b.sessions },
+                    facilitySortOptions
+                  )
+              );
 
               return (
                 <div
@@ -1188,16 +1114,19 @@ export default function ScheduleView() {
                     </p>
                   </div>
 
-                  {/* Sessions grouped by facility on mobile */}
-                  {isMobile ? (
-                    <div className="p-3 space-y-4">
-                      {sortedFacilities.map(([facilityId, data]) => (
+                  {/* Sessions grouped by facility */}
+                  <div className="p-3 md:p-4 space-y-4">
+                    {sortedFacilities.map(([facilityId, data]) => {
+                      const { hasOutdoor } = poolFlags(data.facility);
+                      const label = poolTypeLabel(data.facility);
+
+                      return (
                         <div
                           key={facilityId}
                           className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
                         >
                           {/* Facility Header */}
-                          <div className="p-3 bg-primary-50 dark:bg-gray-700 border-b border-primary-100 dark:border-gray-600">
+                          <div className="p-3 md:p-4 bg-primary-50 dark:bg-gray-700 border-b border-primary-100 dark:border-gray-600">
                             <div className="flex items-start gap-2">
                               <button
                                 onClick={() =>
@@ -1211,7 +1140,7 @@ export default function ScheduleView() {
                                 }
                               >
                                 <Star
-                                  className={`w-5 h-5 ${
+                                  className={`w-5 h-5 md:w-6 md:h-6 ${
                                     favorites.has(data.facility?.facility_id || "")
                                       ? "fill-yellow-400 text-yellow-400"
                                       : "text-gray-400 dark:text-gray-500 hover:text-yellow-400"
@@ -1219,30 +1148,42 @@ export default function ScheduleView() {
                                 />
                               </button>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
-                                  {data.facility?.website ? (
-                                    <a
-                                      href={data.facility.website}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                    >
-                                      {data.facility?.name}
-                                    </a>
-                                  ) : (
-                                    data.facility?.name
-                                  )}
-                                  {data.facility?.is_free_entry && (
-                                    <FreeEntryBadge />
-                                  )}
-                                </h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-bold text-gray-900 dark:text-white text-sm md:text-base leading-tight">
+                                    {data.facility?.website ? (
+                                      <a
+                                        href={data.facility.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                      >
+                                        {data.facility?.name}
+                                      </a>
+                                    ) : (
+                                      data.facility?.name
+                                    )}
+                                    {data.facility?.is_free_entry && (
+                                      <FreeEntryBadge />
+                                    )}
+                                  </h3>
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      hasOutdoor
+                                        ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {hasOutdoor && <Sun className="w-3 h-3" />}
+                                    {label}
+                                  </span>
+                                </div>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {data.distance !== undefined && (
                                     <button
                                       onClick={() =>
                                         setMapsModalAddress(data.facility?.address || "")
                                       }
-                                      className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                                      className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
                                     >
                                       <Navigation className="w-3 h-3" />
                                       {formatDistance(data.distance)}
@@ -1255,7 +1196,7 @@ export default function ScheduleView() {
                                       )}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[200px]"
+                                      className="text-xs md:text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[200px] md:max-w-none"
                                     >
                                       {data.facility.address}
                                     </a>
@@ -1266,7 +1207,7 @@ export default function ScheduleView() {
                           </div>
 
                           {/* Time Slots Grid - sorted with happening now first */}
-                          <div className="p-2 grid grid-cols-2 gap-2">
+                          <div className="p-2 md:p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {[...data.sessions].sort((a, b) => {
                               const aHappening = isHappeningNow(a);
                               const bHappening = isHappeningNow(b);
@@ -1278,13 +1219,13 @@ export default function ScheduleView() {
                               return (
                                 <div
                                   key={session.id}
-                                  className={`p-2.5 rounded-lg transition-all ${
+                                  className={`p-2.5 md:p-3 rounded-lg transition-all ${
                                     happeningNow
                                       ? "bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600"
                                       : "bg-gray-50 dark:bg-gray-700/50"
                                   }`}
                                 >
-                                  <div className={`text-sm font-bold mb-1 ${
+                                  <div className={`text-sm md:text-base font-bold mb-1 ${
                                     happeningNow
                                       ? "text-yellow-900 dark:text-yellow-100"
                                       : "text-primary-600 dark:text-primary-400"
@@ -1293,13 +1234,16 @@ export default function ScheduleView() {
                                   </div>
                                   <div className="flex items-center justify-between gap-1">
                                     <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getSwimTypeColor(
+                                      className={`px-2 py-0.5 rounded-md text-[10px] md:text-xs font-bold ${getSwimTypeColor(
                                         session.swim_type
                                       )}`}
                                     >
                                       {getSwimTypeLabelAbbreviated(session.swim_type)}
                                     </span>
                                     <div className="flex items-center gap-0.5">
+                                      <div className="hidden md:block">
+                                        <ShareButton session={session} />
+                                      </div>
                                       <button
                                         onClick={() => {
                                           const url = generateCalendarUrl(session);
@@ -1313,7 +1257,7 @@ export default function ScheduleView() {
                                     </div>
                                   </div>
                                   {session.notes && (
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                                    <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 md:line-clamp-2">
                                       {session.notes}
                                     </p>
                                   )}
@@ -1322,141 +1266,9 @@ export default function ScheduleView() {
                             })}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    /* Desktop list view - original layout */
-                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {dateSessions.map((session) => {
-                        const happeningNow = isHappeningNow(session);
-
-                        return (
-                          <div
-                            key={session.id}
-                            className={`p-4 md:p-6 rounded-xl border-2 transition-all duration-200 ${
-                              happeningNow
-                                ? "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30 border-yellow-400 dark:border-yellow-600 shadow-lg ring-2 ring-yellow-400/50"
-                                : "bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
-                            }`}
-                          >
-                            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-                              {/* Facility */}
-                              <div className="flex-1 flex items-start gap-2">
-                                <button
-                                  onClick={() =>
-                                    handleToggleFavorite(
-                                      session.facility?.facility_id
-                                    )
-                                  }
-                                  className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center hover:scale-110 transition-transform duration-200"
-                                  aria-label={
-                                    favorites.has(
-                                      session.facility?.facility_id || ""
-                                    )
-                                      ? "Remove from favorites"
-                                      : "Add to favorites"
-                                  }
-                                  title={
-                                    favorites.has(
-                                      session.facility?.facility_id || ""
-                                    )
-                                      ? "Remove from favorites"
-                                      : "Add to favorites"
-                                  }
-                                >
-                                  <Star
-                                    className={`w-6 h-6 ${
-                                      favorites.has(
-                                        session.facility?.facility_id || ""
-                                      )
-                                        ? "fill-yellow-400 text-yellow-400"
-                                        : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
-                                    }`}
-                                  />
-                                </button>
-                                <div className="flex-1">
-                                  {/* Time - Most important info, shown prominently */}
-                                  <div className="text-xl font-bold text-primary-600 dark:text-primary-400 mb-2">
-                                    {formatTimeRange(session.start_time, session.end_time)}
-                                  </div>
-                                  <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-base">
-                                    {session.facility?.website ? (
-                                      <a
-                                        href={session.facility.website}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                      >
-                                        {session.facility.name}
-                                      </a>
-                                    ) : (
-                                      session.facility?.name
-                                    )}
-                                    {session.facility?.is_free_entry && (
-                                      <span className="ml-2 inline-block"><FreeEntryBadge /></span>
-                                    )}
-                                    {session.distance !== undefined &&
-                                      session.facility?.address && (
-                                        <button
-                                          onClick={() =>
-                                            setMapsModalAddress(
-                                              session.facility!.address!
-                                            )
-                                          }
-                                          className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
-                                          title="Open in maps"
-                                        >
-                                          ({formatDistance(session.distance)})
-                                        </button>
-                                      )}
-                                  </h3>
-                                  {session.facility?.address && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                      <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                      <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                          session.facility.address
-                                        )}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                      >
-                                        {session.facility.address}
-                                      </a>
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Type + Actions */}
-                              <div className="flex-shrink-0 flex flex-col sm:flex-row items-end sm:items-center gap-2">
-                                <span
-                                  className={`px-4 py-2 rounded-xl text-xs font-bold ${getSwimTypeColor(
-                                    session.swim_type
-                                  )} shadow-sm`}
-                                >
-                                  {getSwimTypeLabel(session.swim_type)}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                  <ShareButton session={session} />
-                                  <CalendarButton session={session} />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Notes */}
-                            {session.notes && (
-                              <div className="w-full mt-3 md:col-span-full">
-                                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                  {session.notes}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
