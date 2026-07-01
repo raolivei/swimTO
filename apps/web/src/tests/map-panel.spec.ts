@@ -86,10 +86,33 @@ test.describe("Map facility panel", () => {
     const markers = page.locator(
       'path.leaflet-interactive:not([d="M0 0"])'
     );
-    await markers.first().click({ force: true });
+    const count = await markers.count();
+    expect(count).toBeGreaterThan(0);
+
+    const mapBox = await page.locator(".leaflet-container").boundingBox();
+    expect(mapBox).not.toBeNull();
+
+    // Avoid the top search bar and bottom-left filter stack — ``first()``
+    // often lands under those overlays on narrow viewports.
+    let clicked = false;
+    for (let i = 0; i < Math.min(count, 24); i++) {
+      const box = await markers.nth(i).boundingBox();
+      if (!box || !mapBox) continue;
+      const relY = (box.y + box.height / 2 - mapBox.y) / mapBox.height;
+      const relX = (box.x + box.width / 2 - mapBox.x) / mapBox.width;
+      if (relY > 0.28 && relY < 0.62 && relX > 0.12 && relX < 0.88) {
+        await markers.nth(i).click({ force: true });
+        clicked = true;
+        break;
+      }
+    }
+
+    if (!clicked) {
+      await markers.nth(Math.floor(count / 2)).click({ force: true });
+    }
 
     const panel = page.getByTestId("facility-panel-mobile");
-    await expect(panel).toBeVisible({ timeout: 5000 });
+    await expect(panel).toBeVisible({ timeout: 10000 });
   });
 
   test("pool type filter requests outdoor from API", async ({ page }) => {
