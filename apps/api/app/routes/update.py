@@ -2,32 +2,15 @@
 import subprocess
 import sys
 from pathlib import Path
-from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from loguru import logger
 
 from app.database import get_db
+from app.deps.admin import verify_admin_token
 from app.schemas import UpdateResponse
-from app.config import settings
 
 router = APIRouter()
-
-
-def verify_admin_token(authorization: str = Header(None)):
-    """Verify admin token."""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
-    
-    # Expected format: "Bearer <token>"
-    parts = authorization.split()
-    if len(parts) != 2 or parts[0].lower() != "bearer":
-        raise HTTPException(status_code=401, detail="Invalid authorization header")
-    
-    token = parts[1]
-    if token != settings.admin_token:
-        raise HTTPException(status_code=403, detail="Invalid token")
-    
-    return token
 
 
 @router.post("/", response_model=UpdateResponse)

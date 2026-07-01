@@ -13,13 +13,18 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-from sqlalchemy import func
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import SessionLocal, engine
-from app.models import Base, User
-from app.routes import facilities, schedule, update, health, auth, favorites, preferences
+from app.models import Base
+from app.user_metrics import (
+    count_signups_since,
+    count_users,
+    toronto_day_start,
+    toronto_week_start,
+)
+from app.routes import facilities, schedule, update, health, auth, favorites, preferences, admin
 
 # Initialize Sentry if DSN is configured
 sentry_dsn = os.getenv("SENTRY_DSN")
@@ -118,6 +123,14 @@ swimto_db_users_total = Gauge(
     "swimto_db_users_total",
     "Registered users in the SwimTO database (refreshed periodically)",
 )
+swimto_db_users_signups_week = Gauge(
+    "swimto_db_users_signups_week",
+    "New user signups since Monday 00:00 America/Toronto (refreshed periodically)",
+)
+swimto_db_users_signups_today = Gauge(
+    "swimto_db_users_signups_today",
+    "New user signups since today 00:00 America/Toronto (refreshed periodically)",
+)
 
 
 async def _refresh_business_metrics_loop() -> None:
@@ -125,8 +138,16 @@ async def _refresh_business_metrics_loop() -> None:
         try:
             db = SessionLocal()
             try:
-                n = db.query(func.count(User.id)).scalar()
-                swimto_db_users_total.set(float(n or 0))
+                total = count_users(db)
+                week_start = toronto_week_start()
+                day_start = toronto_day_start()
+                swimto_db_users_total.set(float(total))
+                swimto_db_users_signups_week.set(
+                    float(count_signups_since(db, week_start))
+                )
+                swimto_db_users_signups_today.set(
+                    float(count_signups_since(db, day_start))
+                )
             finally:
                 db.close()
         except Exception as e:
@@ -135,6 +156,7 @@ async def _refresh_business_metrics_loop() -> None:
 
 
 # Include routers
+app.include_router(admin.router, tags=["admin"])
 app.include_router(health.router, tags=["health"])
 app.include_router(auth.router, tags=["auth"])
 app.include_router(favorites.router, tags=["favorites"])

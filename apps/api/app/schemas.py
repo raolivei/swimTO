@@ -188,6 +188,28 @@ class UserPreferencesResponse(UserPreferencesBase):
         from_attributes = True
 
 
+class AdminUserSummary(BaseModel):
+    """Registered user row for admin list."""
+    id: int
+    email: str
+    name: Optional[str] = None
+    created_at: datetime
+
+
+class AdminUserListResponse(BaseModel):
+    """Admin list of registered users."""
+    total: int
+    users: List[AdminUserSummary]
+
+
+class AdminUserStatsResponse(BaseModel):
+    """Signup KPIs (Toronto-local week)."""
+    total_users: int
+    signups_this_week: int
+    signups_today: int
+    week_start_utc: datetime
+
+
 # Resolve forward references for Pydantic v2
 FacilityWithSessions.model_rebuild()
 

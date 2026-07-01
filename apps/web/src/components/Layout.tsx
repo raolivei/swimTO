@@ -77,13 +77,13 @@ export default function Layout() {
                   <Home className="w-5 h-5" />
                   <span className="hidden sm:inline">Home</span>
                 </NavLink>
-                <NavLink to="/map" className={navLinkClass}>
-                  <Map className="w-5 h-5" />
-                  <span className="hidden sm:inline">Map</span>
-                </NavLink>
                 <NavLink to="/schedule" className={navLinkClass}>
                   <Calendar className="w-5 h-5" />
                   <span className="hidden sm:inline">Schedule</span>
+                </NavLink>
+                <NavLink to="/map" className={navLinkClass}>
+                  <Map className="w-5 h-5" />
+                  <span className="hidden sm:inline">Map</span>
                 </NavLink>
                 <NavLink to="/about" className={navLinkClass}>
                   <Info className="w-5 h-5" />

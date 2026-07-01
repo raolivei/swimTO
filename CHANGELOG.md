@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Admin user endpoints** — `GET /admin/users` (email list + signup dates) and `GET /admin/users/stats` (total, signups this week/today) protected by `ADMIN_TOKEN`. Prometheus gauges `swimto_db_users_signups_week` and `swimto_db_users_signups_today` for Grafana (Applications/SwimTO dashboard).
+- **Nav tab order** — header tabs reordered to Home → Schedule → Map → About.
+
 - **Indoor/outdoor pool filter on schedule page**: All / Indoor / Outdoor segmented control on `/schedule`, matching the map page. Client-side filter uses `has_indoor` / `has_outdoor` on each session's facility. Shared `PoolTypeFilterControl` component extracted from `MapView`; selection persisted in `localStorage` so schedule and map stay in sync.
 - **Grouped list view on desktop schedule**: List view now groups sessions by community center on all screen sizes (same pattern as mobile since v0.7.5). One facility card shows multiple time slots in a responsive 2–4 column grid; pool-type badge on facility header; share action per slot on desktop.
 
