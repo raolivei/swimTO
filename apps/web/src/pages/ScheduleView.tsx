@@ -4,6 +4,10 @@ import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
 import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import { matchesPoolTypeFilter, poolFlags, poolTypeLabel } from "../lib/poolType";
 import { compareFacilityGroups, facilityDistanceKm } from "../lib/facilitySort";
+import {
+  getSwimTypeFilterLabel,
+  matchesSwimTypeFilter,
+} from "../lib/swimTypeFilter";
 import { PoolTypeFilterControl } from "@/components/PoolTypeFilterControl";
 import {
   formatDate,
@@ -354,7 +358,9 @@ export default function ScheduleView() {
     if (!allSessions) return undefined;
     let filtered = allSessions;
     if (swimType !== "ALL") {
-      filtered = filtered.filter((s) => s.swim_type === swimType);
+      filtered = filtered.filter((s) =>
+        matchesSwimTypeFilter(s.swim_type, swimType, poolType)
+      );
     }
     if (showFreeOnly) {
       filtered = filtered.filter((s) => s.facility?.is_free_entry === true);
@@ -1039,7 +1045,9 @@ export default function ScheduleView() {
                         : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
                     }`}
                   >
-                    {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
+                    {type === "ALL"
+                      ? "All Types"
+                      : getSwimTypeFilterLabel(type as SwimType | "ALL", poolType)}
                   </button>
                 ))}
               </div>
