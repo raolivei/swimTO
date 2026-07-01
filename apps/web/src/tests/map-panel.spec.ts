@@ -111,4 +111,23 @@ test.describe("Map facility panel", () => {
     expect(poolTypeParam).toBe("outdoor");
     await expect(page.getByTestId("pool-type-outdoor")).toHaveClass(/bg-amber/);
   });
+
+  test("swim type filter requests recreational from API", async ({ page }) => {
+    let swimTypeParam = "";
+    page.on("request", (req) => {
+      if (req.url().includes("/facilities") && req.method() === "GET") {
+        const url = new URL(req.url());
+        const st = url.searchParams.get("swim_type");
+        if (st) swimTypeParam = st;
+      }
+    });
+
+    const filter = page.getByTestId("map-swim-type-filter");
+    await expect(filter).toBeVisible();
+
+    await page.getByTestId("swim-type-recreational").click();
+    await page.waitForTimeout(2000);
+
+    expect(swimTypeParam).toBe("RECREATIONAL");
+  });
 });

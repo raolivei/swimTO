@@ -1,14 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
+import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
 import { scheduleApi, getApiErrorMessage } from "../lib/api";
 import { matchesPoolTypeFilter, poolFlags, poolTypeLabel } from "../lib/poolType";
 import { compareFacilityGroups, facilityDistanceKm } from "../lib/facilitySort";
-import {
-  getSwimTypeFilterLabel,
-  matchesSwimTypeFilter,
-} from "../lib/swimTypeFilter";
+import { matchesSwimTypeFilter, swimTypeForPoolTypeChange } from "../lib/swimTypeFilter";
 import { PoolTypeFilterControl } from "@/components/PoolTypeFilterControl";
+import { SwimTypeFilterControl } from "@/components/SwimTypeFilterControl";
 import {
   formatDate,
   formatTimeRange,
@@ -40,7 +39,7 @@ import {
   Check,
   Sun,
 } from "lucide-react";
-import type { SwimType, Session } from "../types";
+import type { Session } from "../types";
 
 type ViewMode = "list" | "table";
 
@@ -254,7 +253,7 @@ type AgeFilter = "all" | "infant" | "child" | "adult";
 
 export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
+  const [swimType, setSwimType] = useSwimTypeFilter();
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [poolType, setPoolType] = usePoolTypeFilter();
@@ -264,7 +263,7 @@ export default function ScheduleView() {
   const [timeStart, setTimeStart] = useState<number>(TIME_MIN);
   const [timeEnd, setTimeEnd] = useState<number>(TIME_MAX);
   const isTimeDefault = timeStart === TIME_MIN && timeEnd === TIME_MAX;
-  const [showFilters, setShowFilters] = useState(false);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   // Default to list view on mobile (< 768px), table view on desktop
   const [viewMode, setViewMode] = useState<ViewMode>(
     typeof window !== "undefined" && window.innerWidth < 768 ? "list" : "table"
@@ -347,11 +346,20 @@ export default function ScheduleView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Compute available swim types from fetched data
+  // Broaden swim-type default when user switches to outdoor pools
+  const handlePoolTypeChange = (next: typeof poolType) => {
+    setSwimType(swimTypeForPoolTypeChange(next, swimType));
+    setPoolType(next);
+  };
+
+  // Compute available swim types from fetched data (respecting pool-type filter)
   const availableSwimTypes = useMemo(() => {
     if (!allSessions?.length) return new Set<string>();
-    return new Set(allSessions.map((s) => s.swim_type));
-  }, [allSessions]);
+    const types = allSessions
+      .filter((s) => matchesPoolTypeFilter(s.facility, poolType))
+      .map((s) => s.swim_type);
+    return new Set(types);
+  }, [allSessions, poolType]);
 
   // Filter sessions by swimType, free entry, and selected time-of-day range (client-side)
   const sessions = useMemo(() => {
@@ -359,7 +367,7 @@ export default function ScheduleView() {
     let filtered = allSessions;
     if (swimType !== "ALL") {
       filtered = filtered.filter((s) =>
-        matchesSwimTypeFilter(s.swim_type, swimType, poolType)
+        matchesSwimTypeFilter(s.swim_type, swimType)
       );
     }
     if (showFreeOnly) {
@@ -829,11 +837,11 @@ export default function ScheduleView() {
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <button
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => setShowMoreFilters(!showMoreFilters)}
               className="min-h-[44px] flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               <Filter className="w-5 h-5" />
-              Swim Types
+              More filters
             </button>
 
             <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-4 flex-1">
@@ -926,14 +934,24 @@ export default function ScheduleView() {
                 </span>
               </button>
 
-              {/* Pool type: indoor / outdoor */}
-              <PoolTypeFilterControl
-                value={poolType}
-                onChange={setPoolType}
-                testId="schedule-pool-type-filter"
-                showHint={false}
-                label="Pool type"
-              />
+              {/* Pool + swim type filters — full width row */}
+              <div className="w-full basis-full flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
+                <PoolTypeFilterControl
+                  value={poolType}
+                  onChange={handlePoolTypeChange}
+                  testId="schedule-pool-type-filter"
+                  showHint={false}
+                  label="Pool type"
+                />
+                <SwimTypeFilterControl
+                  value={swimType}
+                  onChange={setSwimType}
+                  availableTypes={availableSwimTypes}
+                  testId="schedule-swim-type-filter"
+                  label="Swim type"
+                  className="flex-1 min-w-0"
+                />
+              </div>
 
               {/* View Mode Toggle - Hidden on mobile since list view is optimal */}
               <div className="hidden md:flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
@@ -971,7 +989,8 @@ export default function ScheduleView() {
             </div>
           )}
 
-          {/* Age Filter Chips - Hidden for adult/senior-only swim types */}
+          {/* More filters — age, time, free entry (collapsible on mobile) */}
+          <div className={`${showMoreFilters ? "block" : "hidden"} md:block`}>
           {swimType !== "ADULT_SWIM" && swimType !== "SENIOR_SWIM" && (
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
               <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
@@ -1030,28 +1049,6 @@ export default function ScheduleView() {
               </span>
             </label>
           </div>
-
-          <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
-            {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
-            <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
-              <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
-                {["ALL", ...Array.from(availableSwimTypes)].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSwimType(type as SwimType | "ALL")}
-                    className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
-                      swimType === type
-                        ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    {type === "ALL"
-                      ? "All Types"
-                      : getSwimTypeFilterLabel(type as SwimType | "ALL", poolType)}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
 

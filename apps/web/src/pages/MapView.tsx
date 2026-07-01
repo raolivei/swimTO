@@ -3,9 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
 import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
+import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
 import { poolFlags } from "../lib/poolType";
 import { PoolTypeFilterControl } from "../components/PoolTypeFilterControl";
+import { SwimTypeFilterControl } from "../components/SwimTypeFilterControl";
+import { PRIMARY_SWIM_TYPES, swimTypeForPoolTypeChange } from "../lib/swimTypeFilter";
 import {
   formatTimeRange,
   formatDate,
@@ -439,18 +442,35 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
-  const [poolType, setPoolType] = usePoolTypeFilter();
+  const [poolType, setPoolTypeState] = usePoolTypeFilter();
+  const [swimType, setSwimType] = useSwimTypeFilter();
+
+  const setPoolType = (next: typeof poolType) => {
+    setSwimType(swimTypeForPoolTypeChange(next, swimType));
+    setPoolTypeState(next);
+  };
   const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ["facilities", "lane-swim", poolType],
-    queryFn: () => facilityApi.getAll(true, poolType),
+    queryKey: ["facilities", poolType, swimType],
+    queryFn: () => facilityApi.getAll(poolType, swimType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  const mapSwimTypeOptions = useMemo(
+    () =>
+      new Set<string>([
+        ...PRIMARY_SWIM_TYPES,
+        "ADULT_SWIM",
+        "SENIOR_SWIM",
+        "AQUATIC_FITNESS",
+      ]),
+    []
+  );
 
   useEffect(() => {
     handleGetLocation();
@@ -787,13 +807,22 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* ── Bottom-left: pool type filter ───────────────────────────── */}
-      <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)]">
+      {/* ── Bottom-left: pool + swim type filters ───────────────────── */}
+      <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)] flex flex-col gap-2">
         <PoolTypeFilterControl
           value={poolType}
           onChange={setPoolType}
           className="pointer-events-auto"
           label="Pool type"
+        />
+        <SwimTypeFilterControl
+          value={swimType}
+          onChange={setSwimType}
+          availableTypes={mapSwimTypeOptions}
+          testId="map-swim-type-filter"
+          label="Swim type"
+          compact
+          className="pointer-events-auto"
         />
       </div>
 
