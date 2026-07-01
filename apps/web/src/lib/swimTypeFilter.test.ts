@@ -1,38 +1,42 @@
 import { describe, expect, it } from "vitest";
-import { getSwimTypeFilterLabel, matchesSwimTypeFilter } from "./swimTypeFilter";
+import {
+  matchesSwimTypeFilter,
+  orderSwimTypeOptions,
+  swimTypeForPoolTypeChange,
+} from "./swimTypeFilter";
 
 describe("matchesSwimTypeFilter", () => {
-  it("includes recreational when outdoor and lane chip selected", () => {
-    expect(matchesSwimTypeFilter("RECREATIONAL", "LANE_SWIM", "outdoor")).toBe(
-      true
-    );
-    expect(matchesSwimTypeFilter("LANE_SWIM", "LANE_SWIM", "outdoor")).toBe(
-      true
-    );
+  it("filters to a single swim type", () => {
+    expect(matchesSwimTypeFilter("RECREATIONAL", "RECREATIONAL")).toBe(true);
+    expect(matchesSwimTypeFilter("LANE_SWIM", "RECREATIONAL")).toBe(false);
   });
 
-  it("excludes recreational for indoor lane-only filter", () => {
-    expect(matchesSwimTypeFilter("RECREATIONAL", "LANE_SWIM", "indoor")).toBe(
-      false
-    );
-    expect(matchesSwimTypeFilter("LANE_SWIM", "LANE_SWIM", "indoor")).toBe(
-      true
-    );
-  });
-
-  it("shows only recreational when that chip is selected", () => {
-    expect(matchesSwimTypeFilter("RECREATIONAL", "RECREATIONAL", "outdoor")).toBe(
-      true
-    );
-    expect(matchesSwimTypeFilter("LANE_SWIM", "RECREATIONAL", "outdoor")).toBe(
-      false
-    );
+  it("returns all types when ALL selected", () => {
+    expect(matchesSwimTypeFilter("RECREATIONAL", "ALL")).toBe(true);
+    expect(matchesSwimTypeFilter("LANE_SWIM", "ALL")).toBe(true);
   });
 });
 
-describe("getSwimTypeFilterLabel", () => {
-  it("labels outdoor lane default as Lane & Rec", () => {
-    expect(getSwimTypeFilterLabel("LANE_SWIM", "outdoor")).toBe("Lane & Rec");
-    expect(getSwimTypeFilterLabel("LANE_SWIM", "indoor")).toBe("Lane Swim");
+describe("orderSwimTypeOptions", () => {
+  it("puts lane and recreational before other types", () => {
+    const options = orderSwimTypeOptions(
+      new Set(["AQUATIC_FITNESS", "RECREATIONAL", "LANE_SWIM"])
+    );
+    expect(options).toEqual([
+      "ALL",
+      "LANE_SWIM",
+      "RECREATIONAL",
+      "AQUATIC_FITNESS",
+    ]);
+  });
+});
+
+describe("swimTypeForPoolTypeChange", () => {
+  it("broadens lane-only to all when outdoor is selected", () => {
+    expect(swimTypeForPoolTypeChange("outdoor", "LANE_SWIM")).toBe("ALL");
+    expect(swimTypeForPoolTypeChange("indoor", "LANE_SWIM")).toBe("LANE_SWIM");
+    expect(swimTypeForPoolTypeChange("outdoor", "RECREATIONAL")).toBe(
+      "RECREATIONAL"
+    );
   });
 });

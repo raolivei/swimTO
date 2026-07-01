@@ -1,5 +1,6 @@
 import axios from "axios";
 import type { Facility, SessionWithFacility, ScheduleFilters } from "../types";
+import type { SwimTypeFilter } from "./swimTypeFilter";
 
 // Use VITE_API_URL if set (for direct API access), otherwise use relative /api path (for Vite proxy in dev or nginx proxy in production)
 // Empty string should also default to /api
@@ -55,17 +56,44 @@ api.interceptors.response.use(
 
 export type PoolTypeFilter = "all" | "indoor" | "outdoor";
 
+function resolveFacilityQueryParams(
+  poolTypeOrHasLaneSwim: PoolTypeFilter | boolean = "all",
+  poolTypeOrSwimType: PoolTypeFilter | SwimTypeFilter = "LANE_SWIM"
+): { poolType: PoolTypeFilter; swimType: SwimTypeFilter } {
+  if (typeof poolTypeOrHasLaneSwim === "boolean") {
+    return {
+      poolType:
+        poolTypeOrSwimType === "indoor" ||
+        poolTypeOrSwimType === "outdoor" ||
+        poolTypeOrSwimType === "all"
+          ? poolTypeOrSwimType
+          : "all",
+      swimType: poolTypeOrHasLaneSwim ? "LANE_SWIM" : "ALL",
+    };
+  }
+  return {
+    poolType: poolTypeOrHasLaneSwim,
+    swimType: poolTypeOrSwimType as SwimTypeFilter,
+  };
+}
+
 export const facilityApi = {
   getAll: async (
-    hasLaneSwim = true,
-    poolType: PoolTypeFilter = "all"
+    poolTypeOrHasLaneSwim: PoolTypeFilter | boolean = "all",
+    poolTypeOrSwimType: PoolTypeFilter | SwimTypeFilter = "LANE_SWIM"
   ): Promise<Facility[]> => {
-    const { data } = await api.get("/facilities", {
-      params: {
-        has_lane_swim: hasLaneSwim,
-        pool_type: poolType,
-      },
-    });
+    const { poolType, swimType } = resolveFacilityQueryParams(
+      poolTypeOrHasLaneSwim,
+      poolTypeOrSwimType
+    );
+    const params: Record<string, string | boolean> = {
+      pool_type: poolType,
+      has_lane_swim: false,
+    };
+    if (swimType !== "ALL") {
+      params.swim_type = swimType;
+    }
+    const { data } = await api.get("/facilities", { params });
     return data;
   },
 

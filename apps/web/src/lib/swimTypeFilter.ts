@@ -1,43 +1,60 @@
 import type { PoolTypeFilter } from "./api";
+import { getSwimTypeLabel } from "./utils";
 import type { SwimType } from "../types";
 
-/** Drop-in types commonly offered at outdoor pools (City of Toronto). */
-export const OUTDOOR_DROP_IN_SWIM_TYPES: readonly SwimType[] = [
+export type SwimTypeFilter = SwimType | "ALL";
+
+/** Primary drop-in types — always offer chips when present in data. */
+export const PRIMARY_SWIM_TYPES: readonly SwimType[] = [
   "LANE_SWIM",
   "RECREATIONAL",
 ];
 
-export function getSwimTypeFilterLabel(
-  swimType: SwimType | "ALL",
-  poolType: PoolTypeFilter
-): string {
+const SWIM_TYPE_SORT_ORDER: readonly string[] = [
+  "LANE_SWIM",
+  "RECREATIONAL",
+  "ADULT_SWIM",
+  "SENIOR_SWIM",
+  "AQUATIC_FITNESS",
+  "OTHER",
+];
+
+export function getSwimTypeFilterLabel(swimType: SwimTypeFilter): string {
   if (swimType === "ALL") return "All Types";
-  if (swimType === "LANE_SWIM" && poolType === "outdoor") {
-    return "Lane & Rec";
-  }
-  const labels: Record<string, string> = {
-    LANE_SWIM: "Lane Swim",
-    RECREATIONAL: "Recreational Swim",
-    ADULT_SWIM: "Adult Swim",
-    SENIOR_SWIM: "Senior Swim",
-    AQUATIC_FITNESS: "Aquatic Fitness",
-    OTHER: "Other",
-  };
-  return labels[swimType] || swimType;
+  return getSwimTypeLabel(swimType);
 }
 
-/**
- * Schedule swim-type filter. Outdoor pools default to lane + recreational
- * when the Lane Swim chip is selected (same default as indoor-only lane view).
- */
 export function matchesSwimTypeFilter(
   sessionSwimType: string,
-  swimType: SwimType | "ALL",
-  poolType: PoolTypeFilter
+  swimType: SwimTypeFilter
 ): boolean {
   if (swimType === "ALL") return true;
-  if (poolType === "outdoor" && swimType === "LANE_SWIM") {
-    return OUTDOOR_DROP_IN_SWIM_TYPES.includes(sessionSwimType as SwimType);
-  }
   return sessionSwimType === swimType;
+}
+
+/** Ordered chip list: primary types first, then any others in the dataset. */
+export function orderSwimTypeOptions(available: Set<string>): SwimTypeFilter[] {
+  const options: SwimTypeFilter[] = ["ALL"];
+  for (const type of SWIM_TYPE_SORT_ORDER) {
+    if (available.has(type)) {
+      options.push(type as SwimType);
+    }
+  }
+  for (const type of available) {
+    if (!SWIM_TYPE_SORT_ORDER.includes(type)) {
+      options.push(type as SwimType);
+    }
+  }
+  return options;
+}
+
+/** When switching to outdoor pools, broaden default from lane-only to all drop-in types. */
+export function swimTypeForPoolTypeChange(
+  poolType: PoolTypeFilter,
+  current: SwimTypeFilter
+): SwimTypeFilter {
+  if (poolType === "outdoor" && current === "LANE_SWIM") {
+    return "ALL";
+  }
+  return current;
 }

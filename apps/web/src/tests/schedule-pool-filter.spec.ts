@@ -12,6 +12,7 @@ test.describe("Schedule pool type filter", () => {
     await expect(page.getByTestId("schedule-pool-type-filter")).toBeVisible({
       timeout: 15000,
     });
+    await expect(page.getByTestId("schedule-swim-type-filter")).toBeVisible();
   });
 
   test("outdoor filter highlights and reduces visible facilities", async ({
@@ -81,5 +82,26 @@ test.describe("Schedule pool type filter", () => {
     if (outdoorCount > 0) {
       expect(allCount).toBeGreaterThanOrEqual(outdoorCount);
     }
+  });
+
+  test("recreational swim type filter highlights chip", async ({ page }) => {
+    await page.getByTestId("swim-type-recreational").click();
+    await expect(page.getByTestId("swim-type-recreational")).toHaveClass(
+      /bg-gradient|bg-primary/
+    );
+  });
+
+  test("outdoor pool type auto-switches swim type to all", async ({
+    page,
+  }) => {
+    await page.getByTestId("swim-type-lane_swim").click();
+    await expect(page.getByTestId("swim-type-lane_swim")).toHaveClass(
+      /bg-gradient|bg-primary/
+    );
+
+    await page.getByTestId("pool-type-outdoor").click();
+    await expect(page.getByTestId("swim-type-all")).toHaveClass(
+      /bg-gradient|bg-primary/
+    );
   });
 });
