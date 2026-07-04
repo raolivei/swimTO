@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Schedule sort/filter labels** — Nearest, Favorites, and Happening now controls on `/schedule` now show text labels on mobile (not icon-only), grouped under **Sort by** and **Show**, with a short hint line explaining the active sort or filter.
+
 ### Added
 
 - **Admin user endpoints** — `GET /admin/users` (email list + signup dates) and `GET /admin/users/stats` (total, signups this week/today) protected by `ADMIN_TOKEN`. Prometheus gauges `swimto_db_users_signups_week` and `swimto_db_users_signups_today` for Grafana (Applications/SwimTO dashboard).

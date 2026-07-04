@@ -845,28 +845,36 @@ export default function ScheduleView() {
             </button>
 
             <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-4 flex-1">
-              {/* Location loading indicator */}
+              {/* Sort + Show controls — labelled so the icons are self-explanatory */}
               {isLoadingLocation ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
-                  <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
-                  <span className="text-green-800 dark:text-green-300 font-medium">
-                    Getting location...
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
                   </span>
+                  <div className="flex items-center gap-2 px-3 py-2 min-h-[44px] bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
+                    <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
+                    <span className="text-green-800 dark:text-green-300 font-medium">
+                      Getting location...
+                    </span>
+                  </div>
                 </div>
               ) : userLocation ? (
-                <>
-                  {/* Sort Mode Toggle: Location vs Favorites */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
+                  </span>
                   <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    {/* Location Button */}
+                    {/* Nearest: closest pools first */}
                     <button
                       type="button"
                       onClick={() => setSortMode("distance")}
+                      aria-pressed={sortMode === "distance"}
                       className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 ${
                         sortMode === "distance"
                           ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
-                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
-                      title="Sort by distance"
+                      title="Nearest — closest pools to you first"
                     >
                       <Navigation
                         className={`w-4 h-4 transition-all duration-200 ${
@@ -875,19 +883,20 @@ export default function ScheduleView() {
                             : ""
                         }`}
                       />
-                      <span className="text-sm font-medium hidden sm:inline">Nearest</span>
+                      <span className="text-sm font-medium">Nearest</span>
                     </button>
-                    
-                    {/* Favorites Button */}
+
+                    {/* Favorites: starred pools first */}
                     <button
                       type="button"
                       onClick={() => setSortMode("favorites")}
+                      aria-pressed={sortMode === "favorites"}
                       className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 border-l border-gray-200 dark:border-gray-700 ${
                         sortMode === "favorites"
                           ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300"
-                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
-                      title="Favorites first, then by distance"
+                      title="Favorites — your starred pools first, then nearest"
                     >
                       <Star
                         className={`w-4 h-4 transition-all duration-200 ${
@@ -896,43 +905,66 @@ export default function ScheduleView() {
                             : ""
                         }`}
                       />
-                      <span className="text-sm font-medium hidden sm:inline">Favorites</span>
+                      <span className="text-sm font-medium">Favorites</span>
                     </button>
                   </div>
-                </>
+                </div>
               ) : (
-                <button
-                  onClick={handleGetLocation}
-                  className="min-h-[44px] flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Enable location to sort by distance"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>Enable Location</span>
-                </button>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
+                  </span>
+                  <button
+                    onClick={handleGetLocation}
+                    className="min-h-[44px] flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    title="Turn on location to sort pools by distance"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Use my location</span>
+                  </button>
+                </div>
               )}
 
-              {/* Happening Now Filter Button (styled as legend) */}
-              <button
-                onClick={() =>
-                  setPrioritizeHappeningNow(!prioritizeHappeningNow)
-                }
-                className={`min-h-[44px] flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
-                  prioritizeHappeningNow
-                    ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
-                    : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                }`}
-              >
-                <Waves
-                  className={`w-5 h-5 transition-all duration-300 ${
-                    prioritizeHappeningNow
-                      ? "text-blue-600 dark:text-blue-400 animate-pulse"
-                      : "text-blue-500 dark:text-blue-500 opacity-70"
-                  }`}
-                />
-                <span className="text-blue-800 dark:text-blue-300 ml-2 text-sm sm:text-base">
-                  <span className="hidden sm:inline">Happening </span>now
+              {/* Happening Now — filter to sessions on right now */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                  Show
                 </span>
-              </button>
+                <button
+                  onClick={() =>
+                    setPrioritizeHappeningNow(!prioritizeHappeningNow)
+                  }
+                  aria-pressed={prioritizeHappeningNow}
+                  className={`min-h-[44px] flex items-center justify-center px-3 py-2 rounded-lg transition-all duration-300 cursor-pointer ${
+                    prioritizeHappeningNow
+                      ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
+                      : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                  }`}
+                  title="Only show swim sessions happening right now"
+                >
+                  <Waves
+                    className={`w-5 h-5 transition-all duration-300 ${
+                      prioritizeHappeningNow
+                        ? "text-blue-600 dark:text-blue-400 animate-pulse"
+                        : "text-blue-500 dark:text-blue-500 opacity-70"
+                    }`}
+                  />
+                  <span className="text-blue-800 dark:text-blue-300 ml-2 text-sm sm:text-base whitespace-nowrap">
+                    Happening now
+                  </span>
+                </button>
+              </div>
+
+              {/* Plain-language hint explaining the active sort/filter */}
+              <p className="w-full basis-full text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                {prioritizeHappeningNow
+                  ? "Showing only sessions happening right now"
+                  : sortMode === "favorites"
+                    ? "Your favourite pools appear first, then the nearest"
+                    : userLocation
+                      ? "Pools closest to you appear first"
+                      : "Tip: turn on location to sort pools by distance"}
+              </p>
 
               {/* Pool + swim type filters — full width row */}
               <div className="w-full basis-full flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
