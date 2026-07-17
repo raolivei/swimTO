@@ -16,6 +16,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Multi-city GTA foundation** ([#263]): Phase 1 of the GTA expansion. New `city` column on `facilities` (migration 005, `DEFAULT 'Toronto'` backfills all existing rows + index). `BaseSwimSource` ABC in `data-pipeline/sources/base_source.py` defines the `FacilityData`/`SessionData` dataclasses and the `fetch_facilities`/`fetch_sessions` contract that all city-specific sources must implement. `CITY_SOURCES` registry added to `data-pipeline/config.py` — adding a new city requires only a new entry and source module. Optional `?city=` query param added to `GET /facilities` and `GET /schedule` (omit = all cities, unified view). North York and Scarborough are already covered (City of Toronto since 1998). Upcoming phases: Phase 2 ActiveNet client (Mississauga + Richmond Hill); Phase 3 PerfectMind/XplorRecreation client (Brampton + Vaughan + Markham).
+
+[#263]: https://github.com/raolivei/swimTO/issues/263
+
 ### Changed
 
 - **Schedule sort/filter labels** — Nearest, Favorites, and Happening now controls on `/schedule` now show text labels on mobile (not icon-only), grouped under **Sort by** and **Show**, with a short hint line explaining the active sort or filter.

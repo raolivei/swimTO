@@ -72,6 +72,9 @@ def ensure_migrations_table(engine: Engine) -> None:
             ("004_add_toronto_location_id",
              "SELECT 1 FROM information_schema.columns "
              "WHERE table_name='facilities' AND column_name='toronto_location_id'"),
+            ("005_add_city_field",
+             "SELECT 1 FROM information_schema.columns "
+             "WHERE table_name='facilities' AND column_name='city'"),
         ]
         for version, probe in markers:
             if version in existing:
