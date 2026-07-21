@@ -14,9 +14,13 @@ on:
       - "apps/api/**"
       - "apps/web/**"
   workflow_dispatch:
+    inputs:
+      release:
+        description: 'Create semver git tag (cut a prod release)'
+        type: boolean
+        default: false
 
 permissions:
-  # Required by raolivei/github-workflows docker-build.yml (nested job may request contents: write).
   contents: write
   packages: write
 
@@ -25,27 +29,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      create_tag: ${{ steps.gate.outputs.create_tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: gate
+        run: |
+          # Manual release override via workflow_dispatch
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.release }}" == "true" ]]; then
+            echo "create_tag=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          # Automatic gate: only tag when VERSION file was part of this push
+          if git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q '^VERSION$'; then
+            echo "create_tag=true" >> $GITHUB_OUTPUT
+          else
+            echo "create_tag=false" >> $GITHUB_OUTPUT
+          fi
+
   build-api:
+    needs: check-version
     uses: raolivei/github-workflows/.github/workflows/docker-build.yml@main
     with:
       image-name: swimto-api
       context: .
       dockerfile: apps/api/Dockerfile
-      # create-git-tag: false — semver tagging (prod gate) is now manual.
-      # Every main push emits build-<timestamp>-<sha> tags only (dev auto-deploys).
-      # To cut a prod release: bump VERSION file and push, or use workflow_dispatch
-      # with create-git-tag: true via a one-off override.
-      create-git-tag: false
+      create-git-tag: ${{ needs.check-version.outputs.create_tag == 'true' }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-web:
+    needs: check-version
     uses: raolivei/github-workflows/.github/workflows/docker-build.yml@main
     with:
       image-name: swimto-web
       context: ./apps/web
-      # ARC Pi runners hit npm flake/timeouts; web is static nginx — build on GitHub-hosted.
       runs-on: ubuntu-latest
-      create-git-tag: false
+      create-git-tag: ${{ needs.check-version.outputs.create_tag == 'true' }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
