@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Daily refresh job to update pool schedules."""
+import hashlib
 import sys
 from pathlib import Path
 
@@ -11,7 +12,7 @@ from loguru import logger
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
-from config import settings
+from config import settings, CITY_SOURCES
 from models import Base, Facility, Session
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
@@ -19,6 +20,7 @@ from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_fla
 from sources.toronto_drop_in_api import TorontoDropInAPI
 from sources.toronto_parks_json_api import TorontoParksJSONAPI
 from sources.curated_json_facilities import get_json_api_facilities
+from sources.registry import SOURCE_REGISTRY
 
 
 def setup_logging():
@@ -403,6 +405,115 @@ def ingest_json_api_schedules(db_session):
     logger.info("=" * 60)
 
 
+def ingest_city_source(db_session, city: str, source_id: str) -> None:
+    """Ingest facilities and sessions for one BaseSwimSource implementation.
+
+    Called for every non-Toronto entry in CITY_SOURCES. Upserts facilities
+    then wipes + re-inserts sessions (same strategy as ingest_json_api_schedules).
+    """
+    source_cls = SOURCE_REGISTRY.get(source_id)
+    if source_cls is None:
+        logger.warning(f"[{city}] Source ID '{source_id}' not in registry — skipping")
+        return
+
+    logger.info("=" * 60)
+    logger.info(f"Ingesting {city} via {source_id}")
+    logger.info("=" * 60)
+
+    source = source_cls()
+    weeks = settings.ingest_window_days // 7
+
+    # --- Facilities ---
+    try:
+        facilities = source.fetch_facilities()
+    except Exception as exc:
+        logger.error(f"[{city}] fetch_facilities() failed: {exc}")
+        return
+
+    upserted = 0
+    for fd in facilities:
+        existing = db_session.query(Facility).filter_by(facility_id=fd.facility_id).first()
+        if existing:
+            existing.name = fd.name
+            existing.city = fd.city
+            existing.address = fd.address or existing.address
+            existing.postal_code = fd.postal_code or existing.postal_code
+            existing.district = fd.district or existing.district
+            existing.latitude = fd.latitude or existing.latitude
+            existing.longitude = fd.longitude or existing.longitude
+            existing.has_indoor = fd.has_indoor
+            existing.has_outdoor = fd.has_outdoor
+            existing.is_free_entry = fd.is_free_entry
+            existing.phone = fd.phone or existing.phone
+            existing.website = fd.website or existing.website
+            existing.updated_at = datetime.utcnow()
+        else:
+            db_session.add(Facility(
+                facility_id=fd.facility_id,
+                name=fd.name,
+                city=fd.city,
+                address=fd.address,
+                postal_code=fd.postal_code,
+                district=fd.district,
+                latitude=fd.latitude,
+                longitude=fd.longitude,
+                is_indoor=fd.has_indoor,
+                has_indoor=fd.has_indoor,
+                has_outdoor=fd.has_outdoor,
+                is_free_entry=fd.is_free_entry,
+                phone=fd.phone,
+                website=fd.website,
+                source=fd.source,
+                raw=fd.raw,
+            ))
+        upserted += 1
+
+    db_session.commit()
+    logger.info(f"[{city}] Upserted {upserted} facilities")
+
+    # --- Sessions ---
+    total_inserted = 0
+    for fd in facilities:
+        try:
+            sessions = source.fetch_sessions(fd.facility_id, weeks=weeks)
+        except Exception as exc:
+            logger.error(f"[{city}] fetch_sessions({fd.facility_id}) failed: {exc}")
+            continue
+
+        if not sessions:
+            continue
+
+        # Wipe existing sessions for this facility before re-inserting
+        deleted = db_session.query(Session).filter_by(facility_id=fd.facility_id).delete()
+        if deleted:
+            logger.debug(f"[{city}] Deleted {deleted} stale sessions for {fd.name}")
+        db_session.commit()
+
+        for sd in sessions:
+            session_hash = hashlib.sha256(
+                f"{sd.facility_id}:{sd.date}:{sd.start_time}:{sd.swim_type}".encode()
+            ).hexdigest()
+            if not db_session.query(Session).filter_by(hash=session_hash).first():
+                db_session.add(Session(
+                    facility_id=sd.facility_id,
+                    swim_type=sd.swim_type,
+                    date=sd.date,
+                    start_time=sd.start_time,
+                    end_time=sd.end_time,
+                    notes=sd.notes,
+                    age_min=sd.age_min,
+                    age_max=sd.age_max,
+                    source=sd.source,
+                    hash=session_hash,
+                ))
+                total_inserted += 1
+
+        db_session.commit()
+        logger.debug(f"[{city}] {fd.name}: {len(sessions)} sessions")
+
+    logger.success(f"[{city}] Inserted {total_inserted} new sessions across {len(facilities)} facilities")
+
+
 def ingest_schedules_legacy(db_session):
     """
     Legacy web scraper (DEPRECATED - use ingest_official_schedules instead).
@@ -529,7 +640,7 @@ def log_coverage_summary(db_session):
         logger.warning(f"Could not count curated entries: {exc}")
         curated_entries = -1
 
-    # Layer 2: facilities in the database, by source
+    # Layer 2: facilities in the database, by source and by city
     total_facilities = db_session.query(func.count(Facility.facility_id)).scalar() or 0
     by_source_rows = (
         db_session.query(Facility.source, func.count(Facility.facility_id))
@@ -537,6 +648,12 @@ def log_coverage_summary(db_session):
         .all()
     )
     by_source = {(src or "unknown"): count for src, count in by_source_rows}
+    by_city_rows = (
+        db_session.query(Facility.city, func.count(Facility.facility_id))
+        .group_by(Facility.city)
+        .all()
+    )
+    by_city = {(city or "unknown"): count for city, count in by_city_rows}
 
     # Pool type breakdown (uses has_indoor / has_outdoor — both can be true)
     indoor_only = (
@@ -591,6 +708,11 @@ def log_coverage_summary(db_session):
     logger.success("COVERAGE SUMMARY (post-refresh)")
     logger.success(rule)
     logger.success(f"Facilities (DB total): {total_facilities}")
+    if by_city:
+        city_str = ", ".join(
+            f"{c}={count}" for c, count in sorted(by_city.items())
+        )
+        logger.success(f"  by city: {city_str}")
     if by_source:
         source_str = ", ".join(
             f"{src}={count}" for src, count in sorted(by_source.items())
@@ -643,7 +765,14 @@ def main():
         # Step 4: Update schedules from Toronto Parks JSON API (for facilities not in Open Data)
         ingest_json_api_schedules(db_session)
 
-        # Step 5: Emit a coverage summary so we can confirm data health at a glance
+        # Step 5: Ingest non-Toronto cities (Mississauga, Richmond Hill, etc.)
+        for city, source_ids in CITY_SOURCES.items():
+            if city == "Toronto":
+                continue  # handled by steps 1–4 above
+            for source_id in source_ids:
+                ingest_city_source(db_session, city, source_id)
+
+        # Step 7: Emit a coverage summary so we can confirm data health at a glance
         try:
             log_coverage_summary(db_session)
         except Exception as exc:

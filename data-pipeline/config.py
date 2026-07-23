@@ -41,13 +41,13 @@ CITY_SOURCES: dict[str, list[str]] = {
         "toronto_drop_in_api",
         "toronto_parks_json_api",
     ],
-    # Phase 2 — ActiveNet cities
-    # "Mississauga":   ["mississauga_source"],
-    # "Richmond Hill": ["richmond_hill_source"],
+    # Phase 2 — ActiveNet cities (Peel / York)
+    "Mississauga": ["mississauga_activenet"],
+    "Richmond Hill": ["richmond_hill_activenet"],
     # Phase 3 — PerfectMind/XplorRecreation cities
-    # "Brampton": ["brampton_source"],
-    # "Vaughan":  ["vaughan_source"],
-    # "Markham":  ["markham_source"],
+    # "Brampton": ["brampton_activenet"],
+    # "Vaughan":  ["vaughan_activenet"],
+    # "Markham":  ["markham_activenet"],
 }
 
 
