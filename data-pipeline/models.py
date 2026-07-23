@@ -18,6 +18,7 @@ class Facility(Base):
 
     facility_id = Column(String, primary_key=True)
     name = Column(Text, nullable=False)
+    city = Column(String(50), nullable=False, default="Toronto")
     address = Column(Text)
     postal_code = Column(String(10))
     district = Column(String(100))
