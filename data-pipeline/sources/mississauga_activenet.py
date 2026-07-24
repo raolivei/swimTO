@@ -10,5 +10,5 @@ class MississaugaActiveNet(ActiveNetSource):
 
     city = "Mississauga"
     region = "Peel"
-    SITE_NAME = "mississauga"
+    SITE_NAME = "activemississauga"   # portal slug, not "mississauga"
     CITY_SLUG = "mississauga"

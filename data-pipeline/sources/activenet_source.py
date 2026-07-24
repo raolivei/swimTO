@@ -5,15 +5,17 @@ ActiveNet (Active Network / Global Payments) is used by Mississauga and
 Richmond Hill for recreation program registration. Canadian sites live at:
   https://anc.ca.apm.activecommunities.com/{site}/rest/
 
-Key endpoints:
-  GET  /rest/activities/list   — search activities/programs
-  GET  /rest/facilities/list   — list recreation facilities
-
-Subclasses must set SITE_NAME (URL slug) and CITY_SLUG (facility_id prefix).
+Key findings from live API inspection (2026-07-24):
+  - Endpoint is POST-only; GET returns empty body
+  - No server-side keyword filtering — must filter client-side
+  - Pagination: page_number (1-based), 20 items/page (max enforced server-side)
+  - Sessions are recurring ranges: date_range_start/end + days_of_week + time_range
+  - Facility identified by location.label (name), not a numeric ID
+  - Mississauga slug: "activemississauga" (not "mississauga")
+  - Richmond Hill slug: "richmondhill"
 """
 import hashlib
 import re
-from abc import abstractmethod
 from datetime import date, datetime, time, timedelta
 from typing import Optional
 
@@ -29,21 +31,29 @@ except ImportError:
 from sources.base_source import BaseSwimSource, FacilityData, SessionData
 
 
-class ActiveNetSource(BaseSwimSource):
-    """Base class for municipalities served by the ActiveNet platform."""
+_DAY_MAP = {
+    "mon": 0, "tue": 1, "wed": 2, "thu": 3,
+    "fri": 4, "sat": 5, "sun": 6,
+}
 
-    # Subclasses must define these
+
+class ActiveNetSource(BaseSwimSource):
+    """Base class for municipalities served by the ActiveNet platform.
+
+    Subclasses must set: city, region, SITE_NAME, CITY_SLUG.
+    """
+
     city: str = ""
     region: str = ""
-    SITE_NAME: str = ""
-    CITY_SLUG: str = ""
+    SITE_NAME: str = ""   # URL slug, e.g. "activemississauga"
+    CITY_SLUG: str = ""   # facility_id prefix, e.g. "mississauga"
 
     _ACTIVENET_BASE = "https://anc.ca.apm.activecommunities.com/{site}/rest"
 
     SWIM_KEYWORDS = [
         "lane swim", "lap swim", "length swim",
         "public swim", "leisure swim", "family swim",
-        "adult swim", "senior swim",
+        "adult leisure", "adult swim", "senior swim",
         "aqua fit", "aquafit", "aquatic fitness",
         "water fitness", "swim fitness",
         "recreational swim", "open swim",
@@ -60,7 +70,7 @@ class ActiveNetSource(BaseSwimSource):
             r"public\s+swim", r"leisure\s+swim", r"family\s+swim",
             r"recreational\s+swim", r"open\s+swim",
         ],
-        "ADULT_SWIM": [r"adult\s+swim", r"adult\s+only"],
+        "ADULT_SWIM": [r"adult\s+swim", r"adult\s+leisure", r"adult\s+only"],
         "SENIOR_SWIM": [r"senior\s+swim", r"senior\s+only", r"50\+\s*swim"],
     }
 
@@ -69,19 +79,31 @@ class ActiveNetSource(BaseSwimSource):
         self._http = requests.Session()
         self._http.headers.update({
             "Accept": "application/json",
+            "Content-Type": "application/json",
             "User-Agent": "swimTO-data-pipeline/1.0 (+https://github.com/raolivei/swimTO)",
         })
         self._base_url = self._ACTIVENET_BASE.format(site=self.SITE_NAME)
-        # Lazy cache — populated on first _get_activities() call
         self._activities_cache: Optional[list[dict]] = None
+        # Populated by fetch_facilities(); used to reverse-map id → location name
+        self._facility_id_to_name: dict[str, str] = {}
 
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _is_swim_activity(self, name: str, category: str = "") -> bool:
-        combined = f"{name} {category}".lower()
-        return any(kw in combined for kw in self.SWIM_KEYWORDS)
+    @staticmethod
+    def _slugify(name: str) -> str:
+        slug = name.lower().strip()
+        slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+        slug = re.sub(r"\s+", "-", slug)
+        return slug.strip("-")
+
+    def _facility_id(self, location_name: str) -> str:
+        return f"{self.CITY_SLUG}-{self._slugify(location_name)}"
+
+    def _is_swim_activity(self, name: str) -> bool:
+        name_lower = name.lower()
+        return any(kw in name_lower for kw in self.SWIM_KEYWORDS)
 
     def _classify_swim_type(self, name: str) -> str:
         name_lower = name.lower()
@@ -91,28 +113,11 @@ class ActiveNetSource(BaseSwimSource):
                     return swim_type
         return "OTHER"
 
-    def _facility_id(self, local_id) -> str:
-        return f"{self.CITY_SLUG}-{local_id}"
-
-    def _local_id_from(self, facility_id: str) -> Optional[int]:
-        prefix = f"{self.CITY_SLUG}-"
-        if not facility_id.startswith(prefix):
-            return None
-        try:
-            return int(facility_id[len(prefix):])
-        except ValueError:
-            return None
-
-    @staticmethod
-    def _hash(facility_id: str, session_date: date, start_time: time, swim_type: str) -> str:
-        content = f"{facility_id}:{session_date}:{start_time}:{swim_type}"
-        return hashlib.sha256(content.encode()).hexdigest()
-
     @staticmethod
     def _parse_date(val: Optional[str]) -> Optional[date]:
         if not val:
             return None
-        for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%d/%m/%Y"):
+        for fmt in ("%Y-%m-%d", "%m/%d/%Y"):
             try:
                 return datetime.strptime(val.strip(), fmt).date()
             except (ValueError, TypeError):
@@ -121,96 +126,97 @@ class ActiveNetSource(BaseSwimSource):
 
     @staticmethod
     def _parse_time(val: Optional[str]) -> Optional[time]:
+        """Parse '6:00 PM', 'Noon', 'Midnight', '14:30'."""
         if not val:
             return None
         val = val.strip()
-        for fmt in ("%H:%M:%S", "%H:%M", "%I:%M %p", "%I:%M:%S %p"):
+        low = val.lower()
+        if low == "noon":
+            return time(12, 0)
+        if low == "midnight":
+            return time(0, 0)
+        for fmt in ("%I:%M %p", "%I %p", "%H:%M"):
             try:
                 return datetime.strptime(val, fmt).time()
             except (ValueError, TypeError):
                 pass
         return None
 
+    @staticmethod
+    def _parse_time_range(time_range: str) -> tuple[Optional[time], Optional[time]]:
+        """Parse '9:00 PM - 10:00 PM' → (time(21,0), time(22,0))."""
+        if not time_range:
+            return None, None
+        parts = time_range.split(" - ", 1)
+        if len(parts) != 2:
+            return None, None
+        start = ActiveNetSource._parse_time(parts[0].strip())
+        end = ActiveNetSource._parse_time(parts[1].strip())
+        return start, end
+
+    @staticmethod
+    def _parse_days_of_week(days_str: str) -> set[int]:
+        """Parse 'Mon,Fri' or 'Sun,Sat' → {0, 4} or {6, 5}."""
+        result: set[int] = set()
+        for part in days_str.split(","):
+            key = part.strip().lower()[:3]
+            if key in _DAY_MAP:
+                result.add(_DAY_MAP[key])
+        return result
+
     # ------------------------------------------------------------------
     # ActiveNet API calls
     # ------------------------------------------------------------------
 
-    def _fetch_activities_page(
-        self,
-        skip: int = 0,
-        max_results: int = 100,
-        date_from: Optional[str] = None,
-        date_to: Optional[str] = None,
-    ) -> dict:
-        params: dict = {
-            "activity_keyword": "swim",
-            "skip_count": skip,
-            "max_result_count": max_results,
-        }
-        if date_from:
-            params["date_from"] = date_from
-        if date_to:
-            params["date_to"] = date_to
-
-        resp = self._http.get(
+    def _fetch_page(self, page_number: int) -> dict:
+        payload = {"page_number": page_number}
+        resp = self._http.post(
             f"{self._base_url}/activities/list",
-            params=params,
+            json=payload,
             timeout=self.timeout,
         )
         resp.raise_for_status()
         return resp.json()
 
-    def _fetch_all_activities(self, weeks: int = 8) -> list[dict]:
-        """Paginate through all swim activities for the next `weeks` weeks."""
-        today = date.today()
-        date_from = today.strftime("%Y-%m-%d")
-        date_to = (today + timedelta(weeks=weeks)).strftime("%Y-%m-%d")
-
-        results: list[dict] = []
-        skip = 0
-        page_size = 100
+    def _fetch_all_activities(self) -> list[dict]:
+        """Paginate through all pages, filtering swim activities client-side."""
+        swim_results: list[dict] = []
+        page = 1
+        total_pages: Optional[int] = None
 
         while True:
             try:
-                page = self._fetch_activities_page(
-                    skip=skip,
-                    max_results=page_size,
-                    date_from=date_from,
-                    date_to=date_to,
-                )
+                data = self._fetch_page(page)
             except requests.RequestException as exc:
-                logger.error(f"[{self.city}] ActiveNet API error (skip={skip}): {exc}")
+                logger.error(f"[{self.city}] API error at page={page}: {exc}")
                 break
 
-            batch = page.get("data", {}).get("activity", [])
-            if not batch:
-                break
-
-            swim_batch = [
-                a for a in batch
-                if self._is_swim_activity(
-                    a.get("activity_name", ""),
-                    a.get("activity_category_name", ""),
+            page_info = data.get("headers", {}).get("page_info", {})
+            if total_pages is None:
+                total_pages = page_info.get("total_page", 1)
+                total_rec = page_info.get("total_records", 0)
+                logger.info(
+                    f"[{self.city}] {total_rec} total activities "
+                    f"across {total_pages} pages"
                 )
-            ]
-            results.extend(swim_batch)
-            logger.debug(
-                f"[{self.city}] Page skip={skip}: "
-                f"{len(swim_batch)}/{len(batch)} swim activities"
-            )
 
-            total = page.get("data", {}).get("total_count", 0)
-            skip += page_size
-            if skip >= total:
+            items = data.get("body", {}).get("activity_items", [])
+            if not items:
                 break
 
-        logger.info(f"[{self.city}] Total swim activities fetched: {len(results)}")
-        return results
+            swim_batch = [it for it in items if self._is_swim_activity(it.get("name", ""))]
+            swim_results.extend(swim_batch)
 
-    def _get_activities(self, weeks: int = 8) -> list[dict]:
-        """Return cached activity list, fetching once per instance lifetime."""
+            if page >= total_pages:
+                break
+            page += 1
+
+        logger.info(f"[{self.city}] {len(swim_results)} swim activities found")
+        return swim_results
+
+    def _get_activities(self) -> list[dict]:
         if self._activities_cache is None:
-            self._activities_cache = self._fetch_all_activities(weeks=weeks)
+            self._activities_cache = self._fetch_all_activities()
         return self._activities_cache
 
     # ------------------------------------------------------------------
@@ -218,79 +224,83 @@ class ActiveNetSource(BaseSwimSource):
     # ------------------------------------------------------------------
 
     def fetch_facilities(self) -> list[FacilityData]:
-        """Derive the facility list from the activities feed (no separate endpoint)."""
-        logger.info(f"[{self.city}] Fetching facilities via ActiveNet")
+        logger.info(f"[{self.city}] Deriving facilities from ActiveNet activity feed")
         activities = self._get_activities()
 
-        seen: dict = {}
+        seen: dict[str, FacilityData] = {}
+        self._facility_id_to_name = {}
+
         for act in activities:
-            fid = act.get("facility_id") or act.get("location_id")
-            if not fid or fid in seen:
+            loc_name = (act.get("location") or {}).get("label", "").strip()
+            if not loc_name or loc_name in seen:
                 continue
-            seen[fid] = FacilityData(
-                facility_id=self._facility_id(fid),
-                name=act.get("facility_name") or f"{self.city} Facility {fid}",
+            fid = self._facility_id(loc_name)
+            seen[loc_name] = FacilityData(
+                facility_id=fid,
+                name=loc_name,
                 city=self.city,
-                address=(
-                    act.get("location_address")
-                    or act.get("facility_address")
-                    or act.get("address")
-                ),
-                postal_code=act.get("postal_code"),
-                district=act.get("community_name") or act.get("district"),
-                latitude=act.get("latitude") or act.get("lat"),
-                longitude=act.get("longitude") or act.get("lng"),
                 has_indoor=True,
                 has_outdoor=False,
                 is_free_entry=False,
-                website=(
-                    f"https://anc.ca.apm.activecommunities.com/"
-                    f"{self.SITE_NAME}/activity/detail/{act.get('activity_id', '')}"
-                ),
                 source=f"{self.CITY_SLUG}_activenet",
-                raw=act,
             )
+            self._facility_id_to_name[fid] = loc_name
 
         facilities = list(seen.values())
         logger.info(f"[{self.city}] Found {len(facilities)} swim facilities")
         return facilities
 
     def fetch_sessions(self, facility_id: str, weeks: int = 8) -> list[SessionData]:
-        """Return upcoming sessions for a single facility."""
-        local_id = self._local_id_from(facility_id)
-        if local_id is None:
-            logger.warning(f"[{self.city}] Cannot parse local_id from '{facility_id}'")
+        # Ensure facility map is populated
+        if not self._facility_id_to_name:
+            self.fetch_facilities()
+
+        loc_name = self._facility_id_to_name.get(facility_id)
+        if not loc_name:
+            logger.warning(f"[{self.city}] No location name for '{facility_id}'")
             return []
 
-        activities = self._get_activities(weeks=weeks)
+        activities = self._get_activities()
         facility_acts = [
             a for a in activities
-            if (a.get("facility_id") or a.get("location_id")) == local_id
+            if (a.get("location") or {}).get("label", "").strip() == loc_name
         ]
 
         sessions: list[SessionData] = []
+        today = date.today()
+        cutoff = today + timedelta(weeks=weeks)
+
         for act in facility_acts:
-            swim_type = self._classify_swim_type(act.get("activity_name", ""))
-            for meeting in act.get("meeting_dates", []):
-                session_date = self._parse_date(
-                    meeting.get("date") or meeting.get("meeting_date")
-                )
-                start = self._parse_time(
-                    meeting.get("begin_time") or meeting.get("start_time")
-                )
-                end = self._parse_time(meeting.get("end_time"))
+            swim_type = self._classify_swim_type(act.get("name", ""))
+            start_date = self._parse_date(act.get("date_range_start"))
+            end_raw = act.get("date_range_end", "")
+            end_date = self._parse_date(end_raw) if end_raw else start_date
 
-                if not (session_date and start and end):
-                    continue
+            if not (start_date and end_date):
+                continue
 
-                sessions.append(SessionData(
-                    facility_id=facility_id,
-                    swim_type=swim_type,
-                    date=session_date,
-                    start_time=start,
-                    end_time=end,
-                    notes=act.get("activity_name"),
-                    source=f"{self.CITY_SLUG}_activenet",
-                ))
+            start_time, end_time = self._parse_time_range(act.get("time_range", ""))
+            if not (start_time and end_time):
+                continue
+
+            days = self._parse_days_of_week(act.get("days_of_week", ""))
+            if not days:
+                # Single-occurrence event — use start_date's weekday
+                days = {start_date.weekday()}
+
+            # Expand recurring schedule into individual session dates
+            current = max(start_date, today)
+            while current <= min(end_date, cutoff):
+                if current.weekday() in days:
+                    sessions.append(SessionData(
+                        facility_id=facility_id,
+                        swim_type=swim_type,
+                        date=current,
+                        start_time=start_time,
+                        end_time=end_time,
+                        notes=act.get("name"),
+                        source=f"{self.CITY_SLUG}_activenet",
+                    ))
+                current += timedelta(days=1)
 
         return sessions
