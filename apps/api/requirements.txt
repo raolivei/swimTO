@@ -20,5 +20,5 @@ google-auth-oauthlib==1.2.1
 google-auth-httplib2==0.2.0
 # Production readiness additions
 slowapi==0.1.9
-sentry-sdk[fastapi]==2.19.2
+sentry-sdk[fastapi]==2.66.1
 
