@@ -28,7 +28,7 @@
     "react-leaflet": "^4.2.1",
     "date-fns": "^4.1.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.454.0"
+    "lucide-react": "^1.26.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.12",
