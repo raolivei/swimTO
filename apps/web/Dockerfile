@@ -1,5 +1,5 @@
 # Development stage (for local dev with hot reload)
-FROM node:20-alpine AS development
+FROM node:25-alpine AS development
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ EXPOSE 5173
 CMD ["npm", "run", "dev"]
 
 # Build stage
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 
 ARG APP_VERSION=dev
 
