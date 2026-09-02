@@ -48,5 +48,7 @@ jobs:
       # Same auto-bump logic; the second job's git push is a no-op
       # (the first job creates the tag, idempotency is built-in).
       create-git-tag: true
+      build-args: |
+        VITE_CARTO_API_KEY=${{ secrets.CARTO_API_KEY }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
