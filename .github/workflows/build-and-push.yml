@@ -49,6 +49,6 @@ jobs:
       # (the first job creates the tag, idempotency is built-in).
       create-git-tag: true
       build-args: |
-        VITE_CARTO_API_KEY=${{ secrets.CARTO_API_KEY }}
+        VITE_CARTO_API_KEY=${{ vars.CARTO_API_KEY }}
     secrets:
       REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
