@@ -16,6 +16,7 @@ CMD ["npm", "run", "dev"]
 FROM node:20-alpine AS builder
 
 ARG APP_VERSION=dev
+ARG VITE_CARTO_API_KEY=""
 
 WORKDIR /app
 
@@ -26,6 +27,7 @@ RUN npm ci --ignore-scripts
 # Copy source and build with version injected
 COPY . .
 ENV VITE_APP_VERSION=${APP_VERSION}
+ENV VITE_CARTO_API_KEY=${VITE_CARTO_API_KEY}
 RUN npm run build
 
 # Production stage - nginx for static file serving (much smaller than node)
