@@ -22,6 +22,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def get_facilities(
     request: Request,  # Required for rate limiting
     district: Optional[str] = Query(None, description="Filter by district"),
+    city: Optional[str] = Query(None, description="Filter by city (e.g. 'Toronto', 'Mississauga'); omit for all cities"),
     has_lane_swim: bool = Query(False, description="Only facilities with lane swim"),
     swim_type: Optional[str] = Query(
         None, description="Only facilities with upcoming sessions of this swim type"
@@ -43,7 +44,7 @@ async def get_facilities(
             effective_pool_type = "all" if include_outdoor else "indoor"
 
         logger.info(
-            f"Fetching facilities (district={district}, has_lane_swim={has_lane_swim}, "
+            f"Fetching facilities (city={city}, district={district}, has_lane_swim={has_lane_swim}, "
             f"swim_type={swim_type}, is_free={is_free}, pool_type={effective_pool_type})"
         )
 
@@ -52,6 +53,9 @@ async def get_facilities(
             query = query.filter(Facility.has_indoor.is_(True))
         elif effective_pool_type == "outdoor":
             query = query.filter(Facility.has_outdoor.is_(True))
+
+        if city:
+            query = query.filter(Facility.city.ilike(city))
 
         if district:
             query = query.filter(Facility.district.ilike(f"%{district}%"))

@@ -60,6 +60,7 @@ class Facility(Base):
     source = Column(String(50))
     is_free_entry = Column(Boolean, default=False, nullable=False)
     toronto_location_id = Column(Integer, nullable=True, index=True)
+    city = Column(String(50), nullable=False, default="Toronto", index=True)
     raw = Column(JSONType)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

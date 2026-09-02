@@ -26,6 +26,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 from app.config import settings
+from app.models import Base
 
 
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
@@ -72,6 +73,9 @@ def ensure_migrations_table(engine: Engine) -> None:
             ("004_add_toronto_location_id",
              "SELECT 1 FROM information_schema.columns "
              "WHERE table_name='facilities' AND column_name='toronto_location_id'"),
+            ("005_add_city_field",
+             "SELECT 1 FROM information_schema.columns "
+             "WHERE table_name='facilities' AND column_name='city'"),
         ]
         for version, probe in markers:
             if version in existing:
@@ -133,6 +137,11 @@ def run() -> None:
     logger.info(f"Migration runner starting; dir = {MIGRATIONS_DIR}")
     engine = create_engine(settings.database_url, pool_pre_ping=True)
     try:
+        # Ensure base schema exists before running incremental migrations.
+        # On a fresh DB the tables don't exist yet; create_all is idempotent
+        # so running it on an existing DB is safe.
+        logger.info("Ensuring base schema exists (create_all)")
+        Base.metadata.create_all(bind=engine)
         ensure_migrations_table(engine)
         applied = applied_versions(engine)
         files = list_migration_files()

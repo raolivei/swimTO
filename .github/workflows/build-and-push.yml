@@ -6,6 +6,7 @@ on:
     paths:
       - "apps/api/**"
       - "apps/web/**"
+      - "data-pipeline/**"
       - "VERSION"
       - ".github/workflows/build-and-push.yml"
   pull_request:
