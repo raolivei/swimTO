@@ -28,6 +28,8 @@ jobs:
 
       - name: Run core Playwright tests
         run: npx playwright test src/tests/map-panel.spec.ts --config=playwright.ci.config.ts
+        env:
+          VITE_CARTO_API_KEY: ${{ vars.CARTO_API_KEY }}
 
       - name: Upload Playwright report on failure
         if: failure()

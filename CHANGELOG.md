@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [#263]: https://github.com/raolivei/swimTO/issues/263
 
+### Fixed
+
+- **E2E map tests timing out in CI** — pass `VITE_CARTO_API_KEY` (via `vars` context) to the Playwright dev server in `pr.yml`; raise per-test timeout to 60s in `playwright.ci.config.ts` so the `beforeEach` waits for Leaflet initialization have enough budget.
+
 ### Changed
 
 - **Schedule sort/filter labels** — Nearest, Favorites, and Happening now controls on `/schedule` now show text labels on mobile (not icon-only), grouped under **Sort by** and **Show**, with a short hint line explaining the active sort or filter.
