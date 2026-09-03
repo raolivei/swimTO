@@ -44,10 +44,10 @@ CITY_SOURCES: dict[str, list[str]] = {
     # Phase 2 — ActiveNet cities (Peel / York)
     "Mississauga": ["mississauga_activenet"],
     "Richmond Hill": ["richmond_hill_activenet"],
-    # Phase 3 — PerfectMind/XplorRecreation cities
-    # "Brampton": ["brampton_activenet"],
-    # "Vaughan":  ["vaughan_activenet"],
-    # "Markham":  ["markham_activenet"],
+    # Phase 3 — additional York/Peel municipalities
+    "Vaughan": ["vaughan_activenet"],
+    # "Brampton": ["brampton_activenet"],  # Phase 3 — PerfectMind
+    # "Markham":  ["markham_activenet"],   # Phase 3 — PerfectMind
 }
 
 

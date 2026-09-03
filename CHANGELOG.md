@@ -18,9 +18,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Multi-city GTA foundation** ([#263]): Phase 1 of the GTA expansion. New `city` column on `facilities` (migration 005, `DEFAULT 'Toronto'` backfills all existing rows + index). `BaseSwimSource` ABC in `data-pipeline/sources/base_source.py` defines the `FacilityData`/`SessionData` dataclasses and the `fetch_facilities`/`fetch_sessions` contract that all city-specific sources must implement. `CITY_SOURCES` registry added to `data-pipeline/config.py` — adding a new city requires only a new entry and source module. Optional `?city=` query param added to `GET /facilities` and `GET /schedule` (omit = all cities, unified view). North York and Scarborough are already covered (City of Toronto since 1998). Upcoming phases: Phase 2 ActiveNet client (Mississauga + Richmond Hill); Phase 3 PerfectMind/XplorRecreation client (Brampton + Vaughan + Markham).
+- **Vaughan (York Region) pools via ActiveNet** — new `VaughanActiveNet` source (`data-pipeline/sources/vaughan_activenet.py`) pulling from the ActiveNet portal at `anc.ca.apm.activecommunities.com/vaughan`; registered in `CITY_SOURCES` alongside Mississauga and Richmond Hill.
+- **Multi-city GTA foundation** ([#263]): Phase 1 of the GTA expansion. New `city` column on `facilities` (migration 005, `DEFAULT 'Toronto'` backfills all existing rows + index). `BaseSwimSource` ABC in `data-pipeline/sources/base_source.py` defines the `FacilityData`/`SessionData` dataclasses and the `fetch_facilities`/`fetch_sessions` contract that all city-specific sources must implement. `CITY_SOURCES` registry added to `data-pipeline/config.py` — adding a new city requires only a new entry and source module. Optional `?city=` query param added to `GET /facilities` and `GET /schedule` (omit = all cities, unified view). North York and Scarborough are already covered (City of Toronto since 1998). Upcoming phases: Phase 2 ActiveNet client (Mississauga + Richmond Hill); Phase 3 PerfectMind/XplorRecreation client (Brampton + Markham).
 
 [#263]: https://github.com/raolivei/swimTO/issues/263
+
+### Fixed
+
+- **Carto "API KEY REQUIRED" tile watermark** — map tile URLs now only append `?key=…` when `VITE_CARTO_API_KEY` is non-empty; previously an empty key was sent as `?key=` which Carto treats as an explicit invalid key and returns watermarked tiles.
+- **E2E map tests timing out in CI** — pass `VITE_CARTO_API_KEY` (via `vars` context) to the Playwright dev server in `pr.yml`; raise per-test timeout to 60s in `playwright.ci.config.ts` so the `beforeEach` waits for Leaflet initialization have enough budget.
+- **Mock `/api/facilities` in Playwright tests** — tests previously depended on the live `api.swimto.app` production API, which rate-limits GitHub Actions; replaced with `page.route()` fixture so tests are fully self-contained.
+- **swimto.app map and schedule blank after cluster rebuild** — `facilities.city NOT NULL` had no DEFAULT after DB restore from backup (`ADD COLUMN IF NOT EXISTS` in migration 005 was a no-op); added explicit `ALTER COLUMN city SET DEFAULT 'Toronto'` to the migration and repopulated the DB by manually triggering the data-refresh job.
 
 ### Changed
 
