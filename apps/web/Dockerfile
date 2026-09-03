@@ -12,8 +12,8 @@ EXPOSE 5173
 
 CMD ["npm", "run", "dev"]
 
-# Build stage
-FROM node:20-alpine AS builder
+# Build stage — pin to build host platform so npm runs natively (avoids QEMU arm64 crash on ubuntu-latest)
+FROM --platform=$BUILDPLATFORM node:20-alpine AS builder
 
 ARG APP_VERSION=dev
 ARG VITE_CARTO_API_KEY=""
