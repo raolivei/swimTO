@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - **E2E map tests timing out in CI** — pass `VITE_CARTO_API_KEY` (via `vars` context) to the Playwright dev server in `pr.yml`; raise per-test timeout to 60s in `playwright.ci.config.ts` so the `beforeEach` waits for Leaflet initialization have enough budget.
+- **Mock `/api/facilities` in Playwright tests** — tests previously depended on the live `api.swimto.app` production API, which rate-limits GitHub Actions; replaced with `page.route()` fixture so tests are fully self-contained.
+- **swimto.app map and schedule blank after cluster rebuild** — `facilities.city NOT NULL` had no DEFAULT after DB restore from backup (`ADD COLUMN IF NOT EXISTS` in migration 005 was a no-op); added explicit `ALTER COLUMN city SET DEFAULT 'Toronto'` to the migration and repopulated the DB by manually triggering the data-refresh job.
 
 ### Changed
 
