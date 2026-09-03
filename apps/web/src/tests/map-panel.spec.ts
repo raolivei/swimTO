@@ -1,5 +1,62 @@
 import { test, expect } from "@playwright/test";
 
+const MOCK_FACILITIES = [
+  {
+    facility_id: "mock-1",
+    name: "North York Pool",
+    address: "100 Mock St",
+    postal_code: "M2N 1A1",
+    district: "North York",
+    latitude: 43.762,
+    longitude: -79.413,
+    is_indoor: true,
+    has_indoor: true,
+    has_outdoor: false,
+    phone: null,
+    website: null,
+    is_free_entry: false,
+    source: "toronto",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    facility_id: "mock-2",
+    name: "Scarborough Pool",
+    address: "200 Mock Ave",
+    postal_code: "M1P 1B2",
+    district: "Scarborough",
+    latitude: 43.773,
+    longitude: -79.258,
+    is_indoor: false,
+    has_indoor: false,
+    has_outdoor: true,
+    phone: null,
+    website: null,
+    is_free_entry: false,
+    source: "toronto",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    facility_id: "mock-3",
+    name: "Downtown Pool",
+    address: "300 Mock Blvd",
+    postal_code: "M5V 1C3",
+    district: "Downtown",
+    latitude: 43.645,
+    longitude: -79.387,
+    is_indoor: true,
+    has_indoor: true,
+    has_outdoor: true,
+    phone: null,
+    website: null,
+    is_free_entry: true,
+    source: "toronto",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+];
+
 /**
  * Map panel regression tests (desktop + mobile).
  * Covers northern-marker panel visibility and outdoor pool filter.
@@ -7,6 +64,15 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Map facility panel", () => {
   test.beforeEach(async ({ page }) => {
+    // Intercept /api/facilities so tests don't depend on the live production API.
+    await page.route("**/facilities*", (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(MOCK_FACILITIES),
+      })
+    );
+
     await page.goto("/map");
     await page.waitForSelector(".leaflet-container", { timeout: 20000 });
     // Leaflet renders ``path.leaflet-interactive`` elements with
