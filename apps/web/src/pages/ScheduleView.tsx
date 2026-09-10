@@ -48,10 +48,33 @@ interface SessionWithDistance extends Session {
   distance?: number;
 }
 
+// Helper function to get current date/time in Toronto as a Date object (local)
+const getTorontoDate = () => {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Toronto" }));
+};
+
+// Helper function to check if a date string (YYYY-MM-DD) is today in Toronto
+const isTodayToronto = (dateString: string) => {
+  const todayStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return dateString === todayStr;
+};
+
+// Helper function to check if a session has already ended in Toronto
+const isPastSession = (session: Session): boolean => {
+  const now = getTorontoDate();
+  const sessionEnd = new Date(`${session.date} ${session.end_time}`);
+  return now >= sessionEnd;
+};
+
 // Helper function to check if a session is happening right now
 // Includes a 30-minute travel time window before the start time
 const isHappeningNow = (session: Session): boolean => {
-  const now = new Date();
+  const now = getTorontoDate();
   const sessionStart = new Date(`${session.date} ${session.start_time}`);
   const sessionEnd = new Date(`${session.date} ${session.end_time}`);
 
@@ -1259,6 +1282,8 @@ export default function ScheduleView() {
                                   className={`p-2.5 md:p-3 rounded-lg transition-all ${
                                     happeningNow
                                       ? "bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600"
+                                      : isTodayToronto(session.date) && isPastSession(session)
+                                      ? "bg-gray-100 dark:bg-gray-800/40 opacity-60"
                                       : "bg-gray-50 dark:bg-gray-700/50"
                                   }`}
                                 >
@@ -1595,7 +1620,9 @@ export default function ScheduleView() {
                                       className={`group relative p-2 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md ${
                                         happeningNow
                                           ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
-                                          : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                                          : isTodayToronto(session.date) && isPastSession(session)
+                                      ? "bg-gray-100 dark:bg-gray-800/40 opacity-60 border border-gray-200 dark:border-gray-700"
+                                      : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
                                       <div
