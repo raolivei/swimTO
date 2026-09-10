@@ -15,6 +15,7 @@ https://www.toronto.ca/data/parks/live/locations/{location_id}/swim/
 | Facility | Location ID | Status |
 |----------|-------------|---------|
 | Norseman Community School and Pool | 797 | ✅ Active |
+| Ourland Park Outdoor Pool | 857 | ✅ Active |
 
 ### Architecture
 
@@ -92,11 +93,13 @@ TORONTO_INDOOR_POOLS = [
         "longitude": -79.xxxx,
         "phone": "416-xxx-xxxx",
         "website": "https://www.toronto.ca/...",
-        "is_indoor": True,
+        "is_indoor": True,  # False for outdoor pools (e.g. Ourland Park)
         "has_lane_swim": True,
     },
 ]
 ```
+
+Outdoor pools are included via `get_all_swim_pools()` in `daily_refresh.py` (not only `get_all_indoor_pools()`). The API exposes them when `include_outdoor=true` (default); the map has an "Indoor pools only" toggle.
 
 ### Step 5: Test
 

@@ -111,10 +111,3 @@ echo ""
 echo -e "${GREEN}External Secrets Operator will automatically sync these secrets${NC}"
 echo -e "${GREEN}to Kubernetes within 24 hours, or immediately on ExternalSecret update.${NC}"
 
-
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/main
-
-

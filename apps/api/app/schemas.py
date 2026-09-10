@@ -14,8 +14,13 @@ class FacilityBase(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     is_indoor: bool = True
+    has_indoor: bool = True
+    has_outdoor: bool = False
     phone: Optional[str] = None
     website: Optional[str] = None
+    is_free_entry: bool = False
+    toronto_location_id: Optional[int] = Field(None, description="Toronto Open Data LocationID for stable facility matching")
+    city: str = Field("Toronto", description="Municipality name, e.g. 'Toronto', 'Mississauga'")
 
 
 class FacilityCreate(FacilityBase):
@@ -182,6 +187,28 @@ class UserPreferencesResponse(UserPreferencesBase):
     
     class Config:
         from_attributes = True
+
+
+class AdminUserSummary(BaseModel):
+    """Registered user row for admin list."""
+    id: int
+    email: str
+    name: Optional[str] = None
+    created_at: datetime
+
+
+class AdminUserListResponse(BaseModel):
+    """Admin list of registered users."""
+    total: int
+    users: List[AdminUserSummary]
+
+
+class AdminUserStatsResponse(BaseModel):
+    """Signup KPIs (Toronto-local week)."""
+    total_users: int
+    signups_this_week: int
+    signups_today: int
+    week_start_utc: datetime
 
 
 # Resolve forward references for Pydantic v2

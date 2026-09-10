@@ -313,26 +313,28 @@ test.describe("Mobile UX - Session Times Visibility", () => {
     }
   });
 
-  test("session cards should show time before facility name", async ({ page }) => {
+  test("session cards should show times within facility groups", async ({ page }) => {
     await page.goto("/schedule");
     await page.waitForLoadState("networkidle");
     await page.waitForTimeout(2000);
 
-    // Find session cards in list view
-    const sessionCards = page.locator('[class*="rounded-xl"][class*="border-2"]');
-    const cardCount = await sessionCards.count();
+    // Facility-grouped cards in list view
+    const facilityCards = page.locator(
+      '[class*="rounded-xl"][class*="border-gray"]'
+    );
+    const cardCount = await facilityCards.count();
 
     if (cardCount > 0) {
-      const firstCard = sessionCards.first();
-      
+      const firstCard = facilityCards.first();
+
       // Get the text content of the card
       const cardText = await firstCard.textContent();
-      
+
       // Time pattern should appear in the card
       const timePattern = /\d{1,2}:\d{2}\s*(AM|PM)/i;
       expect(cardText).toMatch(timePattern);
-      
-      console.log(`✓ Session card contains time information`);
+
+      console.log(`✓ Facility card contains time information`);
     }
   });
 });

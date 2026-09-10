@@ -1,8 +1,14 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-leaflet";
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
+import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
+import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
+import { poolFlags } from "../lib/poolType";
+import { PoolTypeFilterControl } from "../components/PoolTypeFilterControl";
+import { SwimTypeFilterControl } from "../components/SwimTypeFilterControl";
+import { PRIMARY_SWIM_TYPES, swimTypeForPoolTypeChange } from "../lib/swimTypeFilter";
 import {
   formatTimeRange,
   formatDate,
@@ -24,11 +30,18 @@ import {
   Search,
   X,
   Info,
+  Sun,
 } from "lucide-react";
-import { useDarkMode } from "../contexts/DarkModeContext";
+import { useDarkMode } from "../contexts/useDarkMode";
 import type { Facility } from "../types";
 
 const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
+
+const OUTDOOR_MARKER_STROKE = "#f59e0b";
+const PANEL_TOP_MARGIN = 64;
+const PANEL_GAP = 16;
+const PANEL_WIDTH = 300;
+const PANEL_MAX_HEIGHT = 400;
 
 // ─── Marker colours ───────────────────────────────────────────────────────────
 
@@ -102,7 +115,12 @@ interface FacilityWithDistance extends Facility {
   distance?: number;
 }
 
-function MapController({
+// Fits the map to nearby facilities (within 10km of the user) ONCE, the
+// first time both user location and a non-empty facility list are
+// available. After that, the user owns the viewport — filter changes,
+// search, favorites, re-renders never re-fit. The "Recenter" button
+// triggers an explicit re-fit via fitToUserAndFacilities (below).
+function InitialFit({
   userLocation,
   facilities,
 }: {
@@ -110,35 +128,45 @@ function MapController({
   facilities: FacilityWithDistance[];
 }) {
   const map = useMap();
+  const hasFittedRef = useRef(false);
 
   useEffect(() => {
+    if (hasFittedRef.current) return;
     if (!userLocation || facilities.length === 0) return;
-
-    const nearby = facilities.filter((f) => {
-      if (!f.latitude || !f.longitude) return false;
-      return (
-        calculateDistance(
-          userLocation.latitude,
-          userLocation.longitude,
-          f.latitude,
-          f.longitude
-        ) <= 10
-      );
-    });
-
-    if (nearby.length === 0) {
-      map.setView([userLocation.latitude, userLocation.longitude], 12);
-      return;
-    }
-
-    const bounds = new LatLngBounds([[userLocation.latitude, userLocation.longitude]]);
-    nearby.forEach((f) => {
-      if (f.latitude && f.longitude) bounds.extend([f.latitude, f.longitude]);
-    });
-    map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+    fitToUserAndFacilities(map, userLocation, facilities);
+    hasFittedRef.current = true;
   }, [userLocation, facilities, map]);
 
   return null;
+}
+
+function fitToUserAndFacilities(
+  map: LeafletMap,
+  userLocation: UserLocation,
+  facilities: FacilityWithDistance[],
+) {
+  const nearby = facilities.filter((f) => {
+    if (!f.latitude || !f.longitude) return false;
+    return (
+      calculateDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        f.latitude,
+        f.longitude,
+      ) <= 10
+    );
+  });
+
+  if (nearby.length === 0) {
+    map.setView([userLocation.latitude, userLocation.longitude], 12);
+    return;
+  }
+
+  const bounds = new LatLngBounds([[userLocation.latitude, userLocation.longitude]]);
+  nearby.forEach((f) => {
+    if (f.latitude && f.longitude) bounds.extend([f.latitude, f.longitude]);
+  });
+  map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
 }
 
 
@@ -164,7 +192,7 @@ function MapLegend() {
         <Info className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute bottom-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[180px]">
+        <div className="absolute bottom-12 right-0 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 p-3 min-w-[200px]">
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Legend
           </p>
@@ -182,6 +210,20 @@ function MapLegend() {
                 <span className="text-xs text-gray-600 dark:text-gray-400">{label}</span>
               </div>
             ))}
+            <div className="flex items-center gap-2 pt-1 border-t border-gray-100 dark:border-gray-700">
+              <div
+                className="flex-shrink-0 rounded-full border-2 shadow"
+                style={{
+                  width: 12,
+                  height: 12,
+                  background: MARKER_COLORS.today,
+                  borderColor: OUTDOOR_MARKER_STROKE,
+                }}
+              />
+              <span className="text-xs text-gray-600 dark:text-gray-400">
+                Outdoor pool (amber ring)
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -223,6 +265,10 @@ function FacilityPanel({
     "no-sessions": null,
   }[availability];
 
+  const { hasIndoor, hasOutdoor } = poolFlags(facility);
+  const poolTypeLabel =
+    hasIndoor && hasOutdoor ? "Indoor & outdoor" : hasOutdoor ? "Outdoor" : "Indoor";
+
   return (
     <div className="flex flex-col flex-1 min-h-0">
       {/* Drag handle (mobile only) */}
@@ -249,6 +295,16 @@ function FacilityPanel({
               )}
             </h2>
             {availabilityBadge}
+            <span
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                hasOutdoor
+                  ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              }`}
+            >
+              {hasOutdoor && <Sun className="w-3 h-3" />}
+              {poolTypeLabel}
+            </span>
           </div>
           {facility.district && (
             <p className="text-xs text-gray-500 dark:text-gray-400">{facility.district}</p>
@@ -386,20 +442,42 @@ export default function MapView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedFacilityId, setHighlightedFacilityId] = useState<string | null>(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [poolType, setPoolTypeState] = usePoolTypeFilter();
+  const [swimType, setSwimType] = useSwimTypeFilter();
+
+  const setPoolType = (next: typeof poolType) => {
+    setSwimType(swimTypeForPoolTypeChange(next, swimType));
+    setPoolTypeState(next);
+  };
   const [panelAnchor, setPanelAnchor] = useState<{ x: number; y: number } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<LeafletMap | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const { data: facilities, isLoading, error, refetch, isRefetching } = useQuery({
-    queryKey: ["facilities", "lane-swim"],
-    queryFn: () => facilityApi.getAll(true),
+    queryKey: ["facilities", poolType, swimType],
+    queryFn: () => facilityApi.getAll(poolType, swimType),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
+  const mapSwimTypeOptions = useMemo(
+    () =>
+      new Set<string>([
+        ...PRIMARY_SWIM_TYPES,
+        "ADULT_SWIM",
+        "SENIOR_SWIM",
+        "AQUATIC_FITNESS",
+      ]),
+    []
+  );
+
   useEffect(() => {
     handleGetLocation();
+    // Only request location once on mount; handleGetLocation closes over
+    // mapRef and validFacilities, but we deliberately don't want this
+    // effect to re-fire when those change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -424,10 +502,16 @@ export default function MapView() {
     updateAnchor();
     const map = mapRef.current;
     if (!map) return;
-    map.on("move", updateAnchor);
+    // Listen on ``moveend`` (fires once at the end of a pan) and
+    // ``zoomend`` rather than ``move`` (fires every frame during an
+    // animated pan). During an in-progress animation Leaflet briefly
+    // projects the marker's lat/lon to negative pixel coordinates
+    // because the world translates faster than the viewport, which
+    // would yank the panel off-screen for a single frame.
+    map.on("moveend", updateAnchor);
     map.on("zoomend", updateAnchor);
     return () => {
-      map.off("move", updateAnchor);
+      map.off("moveend", updateAnchor);
       map.off("zoomend", updateAnchor);
     };
   }, [selectedFacility, updateAnchor]);
@@ -437,46 +521,60 @@ export default function MapView() {
     await toggleFavorite(facilityId);
   };
 
-  const facilitiesWithDistance: FacilityWithDistance[] =
-    facilities?.map((f) => {
-      if (userLocation && f.latitude && f.longitude) {
-        return {
-          ...f,
-          distance: calculateDistance(
-            userLocation.latitude,
-            userLocation.longitude,
-            f.latitude,
-            f.longitude
-          ),
-        };
-      }
-      return f;
-    }) || [];
+  const facilitiesWithDistance = useMemo<FacilityWithDistance[]>(
+    () =>
+      facilities?.map((f) => {
+        if (userLocation && f.latitude && f.longitude) {
+          return {
+            ...f,
+            distance: calculateDistance(
+              userLocation.latitude,
+              userLocation.longitude,
+              f.latitude,
+              f.longitude,
+            ),
+          };
+        }
+        return f;
+      }) || [],
+    [facilities, userLocation],
+  );
 
-  const sortedFacilities = [...facilitiesWithDistance].sort((a, b) => {
-    const isFavA = favorites.has(a.facility_id);
-    const isFavB = favorites.has(b.facility_id);
-    if (isFavA && !isFavB) return -1;
-    if (!isFavA && isFavB) return 1;
-    if (sortByDistance && userLocation) {
-      if (a.distance === undefined) return 1;
-      if (b.distance === undefined) return -1;
-      return a.distance - b.distance;
-    }
-    return 0;
-  });
+  const sortedFacilities = useMemo(
+    () =>
+      [...facilitiesWithDistance].sort((a, b) => {
+        const isFavA = favorites.has(a.facility_id);
+        const isFavB = favorites.has(b.facility_id);
+        if (isFavA && !isFavB) return -1;
+        if (!isFavA && isFavB) return 1;
+        if (sortByDistance && userLocation) {
+          if (a.distance === undefined) return 1;
+          if (b.distance === undefined) return -1;
+          return a.distance - b.distance;
+        }
+        return 0;
+      }),
+    [facilitiesWithDistance, favorites, sortByDistance, userLocation],
+  );
 
-  const visibleFacilities = sortedFacilities.filter((f) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      f.name.toLowerCase().includes(q) ||
-      f.address?.toLowerCase().includes(q) ||
-      f.district?.toLowerCase().includes(q)
-    );
-  });
+  const visibleFacilities = useMemo(
+    () =>
+      sortedFacilities.filter((f) => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          f.name.toLowerCase().includes(q) ||
+          f.address?.toLowerCase().includes(q) ||
+          f.district?.toLowerCase().includes(q)
+        );
+      }),
+    [sortedFacilities, searchQuery],
+  );
 
-  const validFacilities = visibleFacilities.filter((f) => f.latitude && f.longitude);
+  const validFacilities = useMemo(
+    () => visibleFacilities.filter((f) => f.latitude && f.longitude),
+    [visibleFacilities],
+  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -500,6 +598,13 @@ export default function MapView() {
       const location = await getUserLocation();
       setUserLocation(location);
       setSortByDistance(true);
+      // If the map is already mounted (i.e. the user clicked Recenter
+      // after the initial fit), re-fit explicitly. The InitialFit
+      // useEffect only runs once, so this is the only way to recenter
+      // after the user has panned/zoomed away.
+      if (mapRef.current) {
+        fitToUserAndFacilities(mapRef.current, location, validFacilities);
+      }
     } catch (err) {
       setLocationError(err instanceof Error ? err.message : "Failed to get location");
       setSortByDistance(false);
@@ -508,9 +613,31 @@ export default function MapView() {
     }
   };
 
+  const panMapForPanel = useCallback((facility: FacilityWithDistance) => {
+    const map = mapRef.current;
+    if (!map || !facility.latitude || !facility.longitude) return;
+    if (typeof window !== "undefined" && window.innerWidth < 768) return;
+
+    const point = map.latLngToContainerPoint([facility.latitude, facility.longitude]);
+    const size = map.getSize();
+    const roomAbove = point.y - PANEL_TOP_MARGIN;
+    const roomNeeded = PANEL_MAX_HEIGHT + PANEL_GAP;
+
+    if (roomAbove < roomNeeded) {
+      const panY = roomNeeded - roomAbove + 24;
+      map.panBy([0, panY], { animate: true });
+    } else if (point.y > size.y - 120) {
+      map.panBy([0, -80], { animate: true });
+    }
+  }, []);
+
   const handleSelectFacility = (facility: FacilityWithDistance) => {
     setSelectedFacility(facility);
     setHighlightedFacilityId(facility.facility_id);
+    panMapForPanel(facility);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => updateAnchor());
+    });
   };
 
   const handleClose = () => {
@@ -572,16 +699,18 @@ export default function MapView() {
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url={
-                isDarkMode
-                  ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-                  : "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-              }
+              url={(() => {
+                const key = import.meta.env.VITE_CARTO_API_KEY;
+                const q = key ? `?key=${key}` : "";
+                return isDarkMode
+                  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${q}`
+                  : `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${q}`;
+              })()}
               subdomains="abcd"
               maxZoom={20}
             />
 
-            <MapController userLocation={userLocation} facilities={validFacilities} />
+            <InitialFit userLocation={userLocation} facilities={validFacilities} />
             <MapRefSetter mapRef={mapRef} />
 
             {/* User location dot */}
@@ -600,6 +729,10 @@ export default function MapView() {
               const variant = getMarkerVariant(availability, isFavorited);
               const color = MARKER_COLORS[variant];
               const radius = isSelected ? 14 : 10;
+              const { hasIndoor, hasOutdoor } = poolFlags(facility);
+              const isOutdoorPool = hasOutdoor && !hasIndoor;
+              const isBothPools = hasIndoor && hasOutdoor;
+              const strokeColor = isOutdoorPool || isBothPools ? OUTDOOR_MARKER_STROKE : "white";
 
               return (
                 <CircleMarker
@@ -607,8 +740,9 @@ export default function MapView() {
                   center={[facility.latitude!, facility.longitude!]}
                   radius={radius}
                   pathOptions={{
-                    color: "white",
-                    weight: isSelected ? 3 : 2,
+                    color: strokeColor,
+                    weight: isSelected ? 3 : isOutdoorPool ? 3 : 2,
+                    dashArray: isBothPools ? "4 2" : undefined,
                     fillColor: color,
                     fillOpacity: 1,
                   }}
@@ -675,6 +809,25 @@ export default function MapView() {
         </button>
       </div>
 
+      {/* ── Bottom-left: pool + swim type filters ───────────────────── */}
+      <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)] flex flex-col gap-2">
+        <PoolTypeFilterControl
+          value={poolType}
+          onChange={setPoolType}
+          className="pointer-events-auto"
+          label="Pool type"
+        />
+        <SwimTypeFilterControl
+          value={swimType}
+          onChange={setSwimType}
+          availableTypes={mapSwimTypeOptions}
+          testId="map-swim-type-filter"
+          label="Swim type"
+          compact
+          className="pointer-events-auto"
+        />
+      </div>
+
       {/* ── Bottom-right: FABs (locate + legend) ────────────────────── */}
       <div className="absolute bottom-4 right-3 z-10 flex flex-col gap-2 items-end pointer-events-none">
         <MapLegend />
@@ -706,7 +859,10 @@ export default function MapView() {
       {selectedFacility && (
         <>
           {/* Mobile: full-width bottom sheet */}
-          <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up">
+          <div
+            data-testid="facility-panel-mobile"
+            className="md:hidden absolute bottom-0 left-0 right-0 z-[1000] bg-white dark:bg-gray-800 rounded-t-2xl shadow-2xl max-h-[65dvh] flex flex-col animate-slide-up"
+          >
             <FacilityPanel
               facility={selectedFacility}
               isFavorited={isFavorite(selectedFacility.facility_id)}
@@ -720,25 +876,38 @@ export default function MapView() {
           {panelAnchor && (() => {
             const cw = containerRef.current?.clientWidth ?? 800;
             const ch = containerRef.current?.clientHeight ?? 600;
-            const W = 300;
-            const GAP = 16;
-            // Top margin accounts for the search bar row (≈56px) + padding
-            const TOP_MARGIN = 64;
             const SIDE_MARGIN = 8;
-            const maxH = Math.min(ch - TOP_MARGIN - GAP * 2, 400);
+            const maxH = Math.min(ch - PANEL_TOP_MARGIN - PANEL_GAP * 2, PANEL_MAX_HEIGHT);
 
-            const left = Math.max(SIDE_MARGIN, Math.min(panelAnchor.x - W / 2, cw - W - SIDE_MARGIN));
+            const left = Math.max(
+              SIDE_MARGIN,
+              Math.min(panelAnchor.x - PANEL_WIDTH / 2, cw - PANEL_WIDTH - SIDE_MARGIN)
+            );
 
-            // Prefer above the circle; fall back to below if it doesn't fit
-            const topIfAbove = panelAnchor.y - GAP - maxH;
-            const top = topIfAbove >= TOP_MARGIN
-              ? topIfAbove                    // fits above
-              : Math.min(panelAnchor.y + GAP, ch - maxH - SIDE_MARGIN); // below, clamped
+            const topIfAbove = panelAnchor.y - PANEL_GAP - maxH;
+            const topIfBelow = panelAnchor.y + PANEL_GAP;
+            let top: number;
+            if (topIfAbove >= PANEL_TOP_MARGIN) {
+              top = topIfAbove;
+            } else if (topIfBelow + maxH <= ch - SIDE_MARGIN) {
+              top = topIfBelow;
+            } else {
+              top = Math.max(
+                PANEL_TOP_MARGIN,
+                Math.min(topIfBelow, ch - maxH - SIDE_MARGIN)
+              );
+            }
 
-            const style: React.CSSProperties = { left, top, width: W, height: maxH };
+            const style: React.CSSProperties = {
+              left,
+              top,
+              width: PANEL_WIDTH,
+              height: maxH,
+            };
             return (
               <div
-                className="hidden md:flex absolute z-20 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden"
+                data-testid="facility-panel-desktop"
+                className="hidden md:flex absolute z-[1000] bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 flex-col overflow-hidden pointer-events-auto"
                 style={style}
               >
                 {/* min-h-0 lets the scrollable body actually shrink and scroll */}

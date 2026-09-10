@@ -163,7 +163,7 @@ def main():
         print(f"   Coordinates: ({item['lat']}, {item['lon']})")
         if item['website']:
             print(f"   Website: {item['website']}")
-        print(f"   Issues:")
+        print("   Issues:")
         for issue in item['issues']:
             print(f"   - ❌ {issue}")
         print()

@@ -1,5 +1,12 @@
 # 🏊‍♂️ SwimTO
 
+![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
+![Node](https://img.shields.io/badge/node-20+-green.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)
+![React](https://img.shields.io/badge/React-18.2-61DAFB.svg?logo=react)
+![PR Checks](https://github.com/raolivei/swimTO/actions/workflows/pr.yml/badge.svg)
+![Build](https://github.com/raolivei/swimTO/actions/workflows/build-and-push.yml/badge.svg)
+
 **SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
 
 > **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.

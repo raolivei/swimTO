@@ -51,6 +51,7 @@
 
 ### Data Improvements
 
+- [ ] **Full Toronto pool coverage** — Epic: [`EPIC_TORONTO_POOL_COVERAGE.md`](EPIC_TORONTO_POOL_COVERAGE.md). Phase 1: batch-add remaining ~30+ public pools from Open Data inventory. Phase 2: auto-discovery pipeline (facilities → JSON probe → registry).
 - [ ] **Historical Data**: Track session availability trends over time
 - [ ] **Crowd Predictions**: ML-based busy time forecasts
 - [ ] **Price Information**: Drop-in fees, monthly passes, and family rates

@@ -1,7 +1,7 @@
 """Scraper for facility web pages."""
 import re
 import hashlib
-from datetime import datetime, timedelta, time as time_type, date as date_type
+from datetime import timedelta, time as time_type, date as date_type
 from typing import List, Dict, Optional, Tuple
 from bs4 import BeautifulSoup
 import requests

@@ -64,6 +64,8 @@ def sample_facility(db):
         latitude=43.6532,
         longitude=-79.3832,
         is_indoor=True,
+        has_indoor=True,
+        has_outdoor=False,
         phone="416-555-0100",
         source="test"
     )

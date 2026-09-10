@@ -14,6 +14,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **Vaughan (York Region) pools via ActiveNet** — new `VaughanActiveNet` source (`data-pipeline/sources/vaughan_activenet.py`) pulling from the ActiveNet portal at `anc.ca.apm.activecommunities.com/vaughan`; registered in `CITY_SOURCES` alongside Mississauga and Richmond Hill.
+- **Multi-city GTA foundation** ([#263]): Phase 1 of the GTA expansion. New `city` column on `facilities` (migration 005, `DEFAULT 'Toronto'` backfills all existing rows + index). `BaseSwimSource` ABC in `data-pipeline/sources/base_source.py` defines the `FacilityData`/`SessionData` dataclasses and the `fetch_facilities`/`fetch_sessions` contract that all city-specific sources must implement. `CITY_SOURCES` registry added to `data-pipeline/config.py` — adding a new city requires only a new entry and source module. Optional `?city=` query param added to `GET /facilities` and `GET /schedule` (omit = all cities, unified view). North York and Scarborough are already covered (City of Toronto since 1998). Upcoming phases: Phase 2 ActiveNet client (Mississauga + Richmond Hill); Phase 3 PerfectMind/XplorRecreation client (Brampton + Markham).
+
+[#263]: https://github.com/raolivei/swimTO/issues/263
+
+### Fixed
+
+- **Carto "API KEY REQUIRED" tile watermark** — map tile URLs now only append `?key=…` when `VITE_CARTO_API_KEY` is non-empty; previously an empty key was sent as `?key=` which Carto treats as an explicit invalid key and returns watermarked tiles.
+- **E2E map tests timing out in CI** — pass `VITE_CARTO_API_KEY` (via `vars` context) to the Playwright dev server in `pr.yml`; raise per-test timeout to 60s in `playwright.ci.config.ts` so the `beforeEach` waits for Leaflet initialization have enough budget.
+- **Mock `/api/facilities` in Playwright tests** — tests previously depended on the live `api.swimto.app` production API, which rate-limits GitHub Actions; replaced with `page.route()` fixture so tests are fully self-contained.
+- **swimto.app map and schedule blank after cluster rebuild** — `facilities.city NOT NULL` had no DEFAULT after DB restore from backup (`ADD COLUMN IF NOT EXISTS` in migration 005 was a no-op); added explicit `ALTER COLUMN city SET DEFAULT 'Toronto'` to the migration and repopulated the DB by manually triggering the data-refresh job.
+
+### Changed
+
+- **Schedule sort/filter labels** — Nearest, Favorites, and Happening now controls on `/schedule` now show text labels on mobile (not icon-only), grouped under **Sort by** and **Show**, with a short hint line explaining the active sort or filter.
+
+### Added
+
+- **Admin user endpoints** — `GET /admin/users` (email list + signup dates) and `GET /admin/users/stats` (total, signups this week/today) protected by `ADMIN_TOKEN`. Prometheus gauges `swimto_db_users_signups_week` and `swimto_db_users_signups_today` for Grafana (Applications/SwimTO dashboard).
+- **Nav tab order** — header tabs reordered to Home → Schedule → Map → About.
+
+- **Indoor/outdoor pool filter on schedule page**: All / Indoor / Outdoor segmented control on `/schedule`, matching the map page. Client-side filter uses `has_indoor` / `has_outdoor` on each session's facility. Shared `PoolTypeFilterControl` component extracted from `MapView`; selection persisted in `localStorage` so schedule and map stay in sync.
+- **Grouped list view on desktop schedule**: List view now groups sessions by community center on all screen sizes (same pattern as mobile since v0.7.5). One facility card shows multiple time slots in a responsive 2–4 column grid; pool-type badge on facility header; share action per slot on desktop.
+
+- **Automatic SQL migrations on api startup** ([#229]): new `app/migrate.py` runner applies any pending `apps/api/migrations/NNN_*.sql` files against the live database before uvicorn starts. Tracks applied versions in a `schema_migrations` table; backfills the table on first run by inspecting marker columns so existing prod DBs (where migrations were applied manually) don't try to re-run. Migration files moved from `scripts/migrations/` into `apps/api/migrations/` so they ship inside the api image. Dockerfile no longer silently swallows migration failures (`alembic upgrade head 2>/dev/null || true` is gone) — a failure now aborts pod start. Closes the class of incident that broke v0.9.1's API for ~24 hours when migration 004 was committed but never ran on prod.
+- **Geocoding for facilities with missing coordinates** ([#231]): new on-demand job `data-pipeline/jobs/geocode_missing_coordinates.py` resolves lat/lon via OpenStreetMap Nominatim (free, no API key, 1 req/sec rate limit) for any facility that has an address but NULL coordinates. Toronto Open Data's Locations CSV ships with NULL lat/lon for some entries (Sunnyside Gus Ryder Outdoor Pool was one example), which prevented those facilities from showing on the map. Already applied to prod via `kubectl exec`: 48 facilities (incl. all 56 outdoor pools, now 100% coverage) updated.
+
+[#229]: https://github.com/raolivei/swimTO/issues/229
+
+### Fixed
+
+- **Swim-type filters on schedule and map** — Lane, Recreational, and All Types chips are always visible on `/schedule` (no longer hidden behind “More filters”). Map adds the same swim-type control, synced via `localStorage` with schedule. Selecting **Outdoor** auto-switches swim type to **All Types** so recreational sessions appear; tap **Recreational Swim** to filter to leisure swim only.
+- **Schedule nearest sort order** — facilities with “happening now” sessions no longer jump ahead of closer pools when Nearest sort is active; distance sort is strictly numeric ascending. Happening-now boost applies only when that filter is explicitly enabled (and not in Nearest mode).
+- **Map no longer auto-zooms back when filters change** ([#232]): `MapController` ran `fitBounds` on every change to its deps, which included inline-derived `validFacilities` — a fresh array reference on every render. So every keystroke in search, every pool-type toggle, every favorite click, every unrelated re-render re-fit the map and yanked the user's manual zoom back. Now the initial fit happens exactly once via a `useRef` guard; the Locate / Recenter FAB explicitly re-fits via a new top-level helper `fitToUserAndFacilities(map, ...)`; the four derived facility arrays (`facilitiesWithDistance`, `sortedFacilities`, `visibleFacilities`, `validFacilities`) are memoized so dependent effects don't fire on spurious renders. As a side fix, the panel-position effect now listens on Leaflet's `moveend` (not `move`) so the panel doesn't briefly render with negative pixel coords during an animated `panBy`.
+
+[#231]: https://github.com/raolivei/swimTO/pull/231
+[#232]: https://github.com/raolivei/swimTO/pull/232
+
+## [0.9.1] - 2026-06-21
+
+### Added
+
+- **Why-swimTO advantages section on the homepage** ([#219]): three-card grid (Database / RefreshCw / Waves icons) under a new "Skip the runaround." headline summarising what swimTO does — aggregates every Toronto drop-in swim, sources kept fresh automatically from the City Open Data Portal, indoor + outdoor coverage.
+- **Coverage summary at the end of `daily_refresh`** ([#185]): one-block log after every refresh listing facility counts by source and pool type, sessions in the next 7 days, facilities with zero upcoming sessions (warning), and the curated/DB/Open-Data layer counts. Greppable on `COVERAGE SUMMARY`.
+- **Weekly `swimto-discover-facilities` CronJob** ([#183]): runs `discover_swim_facilities.py` Mondays 11:00 UTC, diffs the report against `facilities.toronto_location_id`, and emits a `logger.warning` when the City adds new pool locations the registry hasn't picked up. Manifest in `k8s/cronjob-discover.yaml`; GitOps wiring tracked in pi-fleet#237.
+- **`validate_facility_urls` JSON-available-not-registered drift check** ([#184]): the weekly URL validator now also probes the Parks JSON API for every Open-Data pool location and emits `::warning::` annotations for swim-active locations missing from the registry. Output footer reads `X registered, Y JSON-available-not-registered, Z 404s`.
+
+### Changed
+
+- **`PROJECT_STRATEGY.md` rewritten for the public repo** ([#221]): the original 380-line doc was written when the repo was private and the plan was a $0.99 paid app — it claimed proprietary licensing, a "confidential, for investors" footer, and revenue projections that contradicted every other surface. Replaced with a 27-line public-friendly "why this exists" — what the app does, how it stays current, operating principles, Toronto OGL attribution. Old content preserved in git history.
+- **Sanitized codebase to fix lint/type-check failures** ([#220]): split React Context constants and the `useDarkMode` hook into their own files (`AuthContextValue.ts`, `DarkModeContextValue.ts`, `useDarkMode.ts`) so `react-refresh/only-export-components` is no longer warned. Cleared 29 ruff findings across `data-pipeline/` and `scripts/` (unused imports, unused locals, stray f-string prefixes, SQLAlchemy `== True` → `.is_(True)`, duplicate `import re`). `npm run lint -- --max-warnings 0`, `npm run type-check`, `npm run build`, `npm test`, and `ruff check .` all pass.
+
+### Fixed
+
+- **Drop-in program facility matching** ([#181]): `TorontoDropInAPI.match_facility` now resolves drop-in programs to facilities by `toronto_location_id` (integer) before falling back to name-based fuzzy matching. Backward-compatible: legacy facilities without a `toronto_location_id` still match by name. New `Matched by toronto_location_id=...` info log fires per matched program so the new path is visible in prod logs.
+- **Flaky mobile Playwright test** ([#222]): `map-panel.spec.ts` `beforeEach` waited on `path.leaflet-interactive` to be visible, but Leaflet renders all SVG marker paths with `d="M0 0"` until the initial fitBounds completes — a 393×851 mobile viewport in CI ran past the 20s timeout. Replaced with a `waitForFunction` that polls until at least one path has a non-zero `d` attribute, and tightened the per-test marker locator with `path.leaflet-interactive:not([d="M0 0"])`. Mobile suite went from 21s × 3-retry timeouts to under 5s end-to-end.
+- **Aquafit filter on /schedule only showed Norseman pool**: the two ingestion parsers were tagging the same activity differently — `data-pipeline/sources/toronto_drop_in_api.py` used `AQUAFIT` while `data-pipeline/sources/toronto_parks_json_api.py` and the frontend `SwimType` enum used `AQUATIC_FITNESS`. The drop-in parser now also writes `AQUATIC_FITNESS`, so aquafit sessions from every indoor pool surface under the "Aquatic Fitness" filter button. Existing rows can be relabeled with `UPDATE sessions SET swim_type = 'AQUATIC_FITNESS' WHERE swim_type = 'AQUAFIT';` (no-op on prod where the count is currently 0, but kept for completeness).
+
+[#181]: https://github.com/raolivei/swimTO/issues/181
+[#183]: https://github.com/raolivei/swimTO/issues/183
+[#184]: https://github.com/raolivei/swimTO/issues/184
+[#185]: https://github.com/raolivei/swimTO/issues/185
+[#219]: https://github.com/raolivei/swimTO/pull/219
+[#220]: https://github.com/raolivei/swimTO/pull/220
+[#221]: https://github.com/raolivei/swimTO/pull/221
+[#222]: https://github.com/raolivei/swimTO/pull/222
+
+## [0.9.0] - 2026-06-21
+
+### Added
+
+- **Full Toronto outdoor pool coverage (#178/#179)**: Outdoor pool count goes from 2 to 56 — every active outdoor public pool location in the City of Toronto. New `data-pipeline/jobs/discover_swim_facilities.py` pulls Toronto Open Data Facilities + Locations, classifies pool tank types, and probes the Parks JSON API. 48 new entries auto-generated; 6 existing entries (High Park, McGregor, Oriole, Goulding, Grandravine, Weston Lions) corrected from indoor-only to outdoor-only.
+- **Outdoor pools default to free**: City of Toronto outdoor drop-in is free during operating season, so `seed_facilities` and `daily_refresh` now set `is_free_entry=True` for outdoor-only pools. The "Show free pools only" toggle now returns results.
+- **`toronto_location_id` column** (migration 004) for stable facility matching.
+
+### Fixed
+
+- **Mobile filter bar layout (/schedule)**: replaced `flex-col` mobile fallback with `flex-row flex-wrap`; "Happening now" label collapses to "now" under sm breakpoint.
+- **"Happening now" filter showed future-today sessions**: now uses the same predicate as the yellow highlight (`travel_window_start ≤ now < end`).
+- **Install prompt re-appeared on every reload**: dismissal persisted to `localStorage`.
+- **CI web image build**: `build-web` uses `ubuntu-latest` instead of ARC self-hosted runners (npm flake on Pi).
+
+## [0.8.3] - 2026-06-09
+
+### Added
+
+- **Outdoor Pools (summer feature)**: Map view adds an **All / Indoor / Outdoor** segmented filter with amber outdoor markers and pool-type badges on facility panels. Schema adds `has_indoor` and `has_outdoor` so a site can offer both pool types. API `GET /facilities` accepts `pool_type=all|indoor|outdoor` (`include_outdoor` deprecated). Migration `003_add_pool_type_flags.sql`. PR CI runs core Playwright tests (`map-panel.spec.ts`).
+- **Ourland Park Outdoor Pool (toronto.ca id=857)**: Ingest lane and leisure swim schedules via the Toronto Parks JSON API. Added facility metadata, JSON API allowlist entry, and `get_all_swim_pools()` so outdoor pools with lane swim are seeded during daily refresh.
+
+### Fixed
+
+- **Map panel hidden for northern pools (desktop)**: Selecting markers near the top of the map now auto-pans to leave room for the schedule panel; panel z-index raised and clamp logic improved so the card stays fully visible above Leaflet tiles.
+
+- **Free vs Paid Pool Tagging**: Users can now identify free pools at a glance with a "FREE" badge displayed on pool listings. A "Show free pools only" filter checkbox allows filtering to display only pools with free entry. This feature addresses user feedback from Reddit requesting the ability to distinguish between free and paid pools. (#105)
+  - Added `is_free_entry` boolean field to `Facility` model (API and data-pipeline)
+  - Added database migration `002_add_is_free_entry.sql` with index for efficient filtering
+  - Added `?is_free=true` query parameter to `/api/v1/facilities` endpoint
+  - Added visual "FREE" badge component displayed next to facility names in both list and table views
+  - Added "Show free pools only" checkbox filter in the schedule view
+  - Note: Phase 1 defaults all pools to paid (`is_free_entry=false`). Future work will research and map actual free Toronto pools.
+
+---
+
 ## [0.8.1] - 2026-04-02
 
 ### Fixed

@@ -13,7 +13,7 @@ from sqlalchemy.orm import sessionmaker
 
 from config import settings
 from models import Base, Facility
-from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
 
 
 def setup_logging():
@@ -38,13 +38,12 @@ def seed_facilities(db_session):
     """Seed database with curated facility data."""
     logger.info("Seeding database with Toronto indoor pool facilities")
     
-    facilities = get_all_indoor_pools()
+    facilities = get_all_swim_pools()
     logger.info(f"Found {len(facilities)} indoor pool facilities to seed")
     
     added = 0
     updated = 0
-    skipped = 0
-    
+
     for facility_data in facilities:
         # Generate facility_id from name (normalized)
         facility_id = facility_data['name'].lower().replace(' ', '-').replace("'", '').replace('.', '')
@@ -52,6 +51,12 @@ def seed_facilities(db_session):
         # Check if exists
         existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         
+        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
+        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+        # All City of Toronto outdoor pools are free drop-in during operating season.
+        is_free_entry = facility_data.get('is_free_entry', has_outdoor and not has_indoor)
+        toronto_location_id = facility_data.get('toronto_location_id')
+
         if existing:
             # Update existing facility
             logger.info(f"Updating: {facility_data['name']}")
@@ -61,7 +66,12 @@ def seed_facilities(db_session):
             existing.district = facility_data.get('district', existing.district)
             existing.latitude = facility_data.get('latitude', existing.latitude)
             existing.longitude = facility_data.get('longitude', existing.longitude)
-            existing.is_indoor = facility_data.get('is_indoor', existing.is_indoor)
+            existing.is_indoor = is_indoor
+            existing.has_indoor = has_indoor
+            existing.has_outdoor = has_outdoor
+            existing.is_free_entry = is_free_entry
+            if toronto_location_id is not None:
+                existing.toronto_location_id = toronto_location_id
             existing.phone = facility_data.get('phone', existing.phone)
             existing.website = facility_data.get('website', existing.website)
             existing.source = 'curated'
@@ -78,7 +88,11 @@ def seed_facilities(db_session):
                 district=facility_data.get('district'),
                 latitude=facility_data.get('latitude'),
                 longitude=facility_data.get('longitude'),
-                is_indoor=facility_data.get('is_indoor', True),
+                is_indoor=is_indoor,
+                has_indoor=has_indoor,
+                has_outdoor=has_outdoor,
+                is_free_entry=is_free_entry,
+                toronto_location_id=toronto_location_id,
                 phone=facility_data.get('phone'),
                 website=facility_data.get('website'),
                 source='curated',
@@ -92,7 +106,7 @@ def seed_facilities(db_session):
     # Commit all changes
     db_session.commit()
     
-    logger.success(f"✓ Seeding complete!")
+    logger.success("✓ Seeding complete!")
     logger.info(f"  Added: {added} new facilities")
     logger.info(f"  Updated: {updated} existing facilities")
     logger.info(f"  Total facilities in database: {db_session.query(Facility).count()}")

@@ -2,12 +2,28 @@ import { useState } from 'react';
 import { Download, X, Share, Plus } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall';
 
+const DISMISS_KEY = 'swimto:install-prompt-dismissed';
+
 export function InstallPrompt() {
   const { canInstall, isIOS, isInstalled, promptInstall } = usePWAInstall();
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(DISMISS_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
 
-  // Don't show if already installed or dismissed
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem(DISMISS_KEY, '1');
+    } catch {
+      // ignore storage errors (private mode)
+    }
+  };
+
   if (isInstalled || dismissed) return null;
 
   // Show iOS instructions modal
@@ -95,7 +111,7 @@ export function InstallPrompt() {
             Install
           </button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="w-5 h-5" />
@@ -128,7 +144,7 @@ export function InstallPrompt() {
             Install
           </button>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
           >
             <X className="w-5 h-5" />

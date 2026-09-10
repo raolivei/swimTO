@@ -21,6 +21,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def get_schedule(
     request: Request,  # Required for rate limiting
     facility_id: Optional[str] = Query(None, description="Filter by facility"),
+    city: Optional[str] = Query(None, description="Filter by city (e.g. 'Toronto', 'Mississauga'); omit for all cities"),
     district: Optional[str] = Query(None, description="Filter by district"),
     swim_type: Optional[str] = Query(None, description="Filter by swim type (e.g., LANE_SWIM)"),
     date_from: Optional[date_type] = Query(None, description="Start date (YYYY-MM-DD)"),
@@ -41,9 +42,12 @@ async def get_schedule(
     if facility_id:
         filters.append(SessionModel.facility_id == facility_id)
     
+    if city:
+        filters.append(Facility.city.ilike(city))
+
     if district:
         filters.append(Facility.district.ilike(f"%{district}%"))
-    
+
     if swim_type:
         filters.append(SessionModel.swim_type == swim_type)
     

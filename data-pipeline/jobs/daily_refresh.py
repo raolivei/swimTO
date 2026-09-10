@@ -1,25 +1,26 @@
 #!/usr/bin/env python3
 """Daily refresh job to update pool schedules."""
+import hashlib
 import sys
 from pathlib import Path
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from loguru import logger
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
-from config import settings
+from config import settings, CITY_SOURCES
 from models import Base, Facility, Session
-from sources.open_data import OpenDataClient
 from sources.pools_xml_parser import PoolsXMLParser
 from sources.facility_scraper import FacilityScraper
-from sources.toronto_pools_data import get_all_indoor_pools
+from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
 from sources.toronto_drop_in_api import TorontoDropInAPI
 from sources.toronto_parks_json_api import TorontoParksJSONAPI
 from sources.curated_json_facilities import get_json_api_facilities
+from sources.registry import SOURCE_REGISTRY
 
 
 def setup_logging():
@@ -50,7 +51,7 @@ def ingest_curated_facilities(db_session):
     """Ingest curated facility data from toronto_pools_data."""
     logger.info("Ingesting curated facility data")
     
-    facilities = get_all_indoor_pools()
+    facilities = get_all_swim_pools()
     
     ingested = 0
     updated = 0
@@ -61,6 +62,13 @@ def ingest_curated_facilities(db_session):
         # Check if exists
         existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         
+        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
+        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
+        # All City of Toronto outdoor pools are free drop-in during operating season.
+        # Allow per-facility override via curated 'is_free_entry' field.
+        is_free_entry = facility_data.get('is_free_entry', has_outdoor and not has_indoor)
+        toronto_location_id = facility_data.get('toronto_location_id')
+
         if existing:
             # Update
             existing.name = facility_data.get('name', existing.name)
@@ -69,7 +77,12 @@ def ingest_curated_facilities(db_session):
             existing.district = facility_data.get('district', existing.district)
             existing.latitude = facility_data.get('latitude', existing.latitude)
             existing.longitude = facility_data.get('longitude', existing.longitude)
-            existing.is_indoor = facility_data.get('is_indoor', existing.is_indoor)
+            existing.is_indoor = is_indoor
+            existing.has_indoor = has_indoor
+            existing.has_outdoor = has_outdoor
+            existing.is_free_entry = is_free_entry
+            if toronto_location_id is not None:
+                existing.toronto_location_id = toronto_location_id
             existing.phone = facility_data.get('phone', existing.phone)
             existing.website = facility_data.get('website', existing.website)
             existing.updated_at = datetime.utcnow()
@@ -84,7 +97,11 @@ def ingest_curated_facilities(db_session):
                 district=facility_data.get('district'),
                 latitude=facility_data.get('latitude'),
                 longitude=facility_data.get('longitude'),
-                is_indoor=facility_data.get('is_indoor', True),
+                is_indoor=is_indoor,
+                has_indoor=has_indoor,
+                has_outdoor=has_outdoor,
+                is_free_entry=is_free_entry,
+                toronto_location_id=toronto_location_id,
                 phone=facility_data.get('phone'),
                 website=facility_data.get('website'),
                 source='curated',
@@ -311,7 +328,7 @@ def ingest_json_api_schedules(db_session):
         existing_facility = db_session.query(Facility).filter_by(facility_id=facility_id).first()
         if not existing_facility:
             logger.warning(f"Facility not found in database: {facility_id}")
-            logger.warning(f"Please add it to toronto_pools_data.py first")
+            logger.warning("Please add it to toronto_pools_data.py first")
             continue
         
         try:
@@ -388,6 +405,115 @@ def ingest_json_api_schedules(db_session):
     logger.info("=" * 60)
 
 
+def ingest_city_source(db_session, city: str, source_id: str) -> None:
+    """Ingest facilities and sessions for one BaseSwimSource implementation.
+
+    Called for every non-Toronto entry in CITY_SOURCES. Upserts facilities
+    then wipes + re-inserts sessions (same strategy as ingest_json_api_schedules).
+    """
+    source_cls = SOURCE_REGISTRY.get(source_id)
+    if source_cls is None:
+        logger.warning(f"[{city}] Source ID '{source_id}' not in registry — skipping")
+        return
+
+    logger.info("=" * 60)
+    logger.info(f"Ingesting {city} via {source_id}")
+    logger.info("=" * 60)
+
+    source = source_cls()
+    weeks = settings.ingest_window_days // 7
+
+    # --- Facilities ---
+    try:
+        facilities = source.fetch_facilities()
+    except Exception as exc:
+        logger.error(f"[{city}] fetch_facilities() failed: {exc}")
+        return
+
+    upserted = 0
+    for fd in facilities:
+        existing = db_session.query(Facility).filter_by(facility_id=fd.facility_id).first()
+        if existing:
+            existing.name = fd.name
+            existing.city = fd.city
+            existing.address = fd.address or existing.address
+            existing.postal_code = fd.postal_code or existing.postal_code
+            existing.district = fd.district or existing.district
+            existing.latitude = fd.latitude or existing.latitude
+            existing.longitude = fd.longitude or existing.longitude
+            existing.has_indoor = fd.has_indoor
+            existing.has_outdoor = fd.has_outdoor
+            existing.is_free_entry = fd.is_free_entry
+            existing.phone = fd.phone or existing.phone
+            existing.website = fd.website or existing.website
+            existing.updated_at = datetime.utcnow()
+        else:
+            db_session.add(Facility(
+                facility_id=fd.facility_id,
+                name=fd.name,
+                city=fd.city,
+                address=fd.address,
+                postal_code=fd.postal_code,
+                district=fd.district,
+                latitude=fd.latitude,
+                longitude=fd.longitude,
+                is_indoor=fd.has_indoor,
+                has_indoor=fd.has_indoor,
+                has_outdoor=fd.has_outdoor,
+                is_free_entry=fd.is_free_entry,
+                phone=fd.phone,
+                website=fd.website,
+                source=fd.source,
+                raw=fd.raw,
+            ))
+        upserted += 1
+
+    db_session.commit()
+    logger.info(f"[{city}] Upserted {upserted} facilities")
+
+    # --- Sessions ---
+    total_inserted = 0
+    for fd in facilities:
+        try:
+            sessions = source.fetch_sessions(fd.facility_id, weeks=weeks)
+        except Exception as exc:
+            logger.error(f"[{city}] fetch_sessions({fd.facility_id}) failed: {exc}")
+            continue
+
+        if not sessions:
+            continue
+
+        # Wipe existing sessions for this facility before re-inserting
+        deleted = db_session.query(Session).filter_by(facility_id=fd.facility_id).delete()
+        if deleted:
+            logger.debug(f"[{city}] Deleted {deleted} stale sessions for {fd.name}")
+        db_session.commit()
+
+        for sd in sessions:
+            session_hash = hashlib.sha256(
+                f"{sd.facility_id}:{sd.date}:{sd.start_time}:{sd.swim_type}".encode()
+            ).hexdigest()
+            if not db_session.query(Session).filter_by(hash=session_hash).first():
+                db_session.add(Session(
+                    facility_id=sd.facility_id,
+                    swim_type=sd.swim_type,
+                    date=sd.date,
+                    start_time=sd.start_time,
+                    end_time=sd.end_time,
+                    notes=sd.notes,
+                    age_min=sd.age_min,
+                    age_max=sd.age_max,
+                    source=sd.source,
+                    hash=session_hash,
+                ))
+                total_inserted += 1
+
+        db_session.commit()
+        logger.debug(f"[{city}] {fd.name}: {len(sessions)} sessions")
+
+    logger.success(f"[{city}] Inserted {total_inserted} new sessions across {len(facilities)} facilities")
+
+
 def ingest_schedules_legacy(db_session):
     """
     Legacy web scraper (DEPRECATED - use ingest_official_schedules instead).
@@ -401,7 +527,7 @@ def ingest_schedules_legacy(db_session):
     # Get all facilities with websites
     facilities = db_session.query(Facility).filter(
         Facility.website.isnot(None),
-        Facility.is_indoor == True
+        Facility.is_indoor.is_(True)
     ).all()
     
     scraper = FacilityScraper()
@@ -494,28 +620,164 @@ def ingest_schedules_legacy(db_session):
     logger.info(f"Processed {total_sessions} sessions, inserted {total_inserted} new sessions")
 
 
+def log_coverage_summary(db_session):
+    """Log a one-line summary of data coverage after refresh.
+
+    Emits a grep-friendly block (look for ``COVERAGE SUMMARY``) so we can
+    confirm at a glance that the refresh produced healthy data:
+    facility totals by source, pool type breakdown, sessions in the next
+    7 days, facilities with zero upcoming sessions (red flag), and the
+    three-layer counts referenced in issue #178 (curated entries vs
+    facilities-in-DB vs Open-Data swim locations).
+    """
+    today = date.today()
+    week_end = today + timedelta(days=7)
+
+    # Layer 1: curated entries (in-code source of truth)
+    try:
+        curated_entries = len(get_all_swim_pools())
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning(f"Could not count curated entries: {exc}")
+        curated_entries = -1
+
+    # Layer 2: facilities in the database, by source and by city
+    total_facilities = db_session.query(func.count(Facility.facility_id)).scalar() or 0
+    by_source_rows = (
+        db_session.query(Facility.source, func.count(Facility.facility_id))
+        .group_by(Facility.source)
+        .all()
+    )
+    by_source = {(src or "unknown"): count for src, count in by_source_rows}
+    by_city_rows = (
+        db_session.query(Facility.city, func.count(Facility.facility_id))
+        .group_by(Facility.city)
+        .all()
+    )
+    by_city = {(city or "unknown"): count for city, count in by_city_rows}
+
+    # Pool type breakdown (uses has_indoor / has_outdoor — both can be true)
+    indoor_only = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(True), Facility.has_outdoor.is_(False))
+        .scalar()
+        or 0
+    )
+    outdoor_only = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(False), Facility.has_outdoor.is_(True))
+        .scalar()
+        or 0
+    )
+    both = (
+        db_session.query(func.count(Facility.facility_id))
+        .filter(Facility.has_indoor.is_(True), Facility.has_outdoor.is_(True))
+        .scalar()
+        or 0
+    )
+    neither = total_facilities - indoor_only - outdoor_only - both
+
+    # Sessions in the next 7 days
+    sessions_next_7 = (
+        db_session.query(func.count(Session.id))
+        .filter(Session.date >= today, Session.date < week_end)
+        .scalar()
+        or 0
+    )
+
+    # Facilities with zero sessions in the next 7 days (red flag)
+    facilities_with_sessions = (
+        db_session.query(Session.facility_id)
+        .filter(Session.date >= today, Session.date < week_end)
+        .distinct()
+        .count()
+    )
+    facilities_zero_sessions = total_facilities - facilities_with_sessions
+
+    # Layer 3: Open-Data swim locations (distinct facilities sourced from
+    # toronto_open_data ingest — proxy for "matched in Open Data API")
+    open_data_locations = (
+        db_session.query(Session.facility_id)
+        .filter(Session.source == "toronto_open_data")
+        .distinct()
+        .count()
+    )
+
+    # Render the summary block
+    rule = "=" * 70
+    logger.success(rule)
+    logger.success("COVERAGE SUMMARY (post-refresh)")
+    logger.success(rule)
+    logger.success(f"Facilities (DB total): {total_facilities}")
+    if by_city:
+        city_str = ", ".join(
+            f"{c}={count}" for c, count in sorted(by_city.items())
+        )
+        logger.success(f"  by city: {city_str}")
+    if by_source:
+        source_str = ", ".join(
+            f"{src}={count}" for src, count in sorted(by_source.items())
+        )
+        logger.success(f"  by source: {source_str}")
+    logger.success(
+        f"Pool type: indoor_only={indoor_only}, outdoor_only={outdoor_only}, "
+        f"both={both}, neither={neither}"
+    )
+    logger.success(
+        f"Sessions next 7 days ({today} -> {week_end - timedelta(days=1)}): "
+        f"{sessions_next_7}"
+    )
+    if facilities_zero_sessions > 0:
+        logger.warning(
+            f"Facilities with ZERO sessions next 7 days: "
+            f"{facilities_zero_sessions} / {total_facilities} (red flag)"
+        )
+    else:
+        logger.success(
+            f"Facilities with zero sessions next 7 days: 0 / {total_facilities}"
+        )
+    logger.success(
+        f"Layers (issue #178): curated={curated_entries}, "
+        f"facilities_in_db={total_facilities}, "
+        f"open_data_swim_locations={open_data_locations}"
+    )
+    logger.success(rule)
+
+
 def main():
     """Main entry point."""
     setup_logging()
     logger.info("=" * 60)
     logger.info("Starting daily refresh job")
     logger.info("=" * 60)
-    
+
     db_session = setup_database()
-    
+
     try:
         # Step 1: Ingest curated facility data
         ingest_curated_facilities(db_session)
-        
+
         # Step 2: Update facility metadata from XML
         ingest_facilities(db_session)
-        
+
         # Step 3: Update schedules from official Toronto Open Data API
         ingest_official_schedules(db_session)
-        
+
         # Step 4: Update schedules from Toronto Parks JSON API (for facilities not in Open Data)
         ingest_json_api_schedules(db_session)
-        
+
+        # Step 5: Ingest non-Toronto cities (Mississauga, Richmond Hill, etc.)
+        for city, source_ids in CITY_SOURCES.items():
+            if city == "Toronto":
+                continue  # handled by steps 1–4 above
+            for source_id in source_ids:
+                ingest_city_source(db_session, city, source_id)
+
+        # Step 7: Emit a coverage summary so we can confirm data health at a glance
+        try:
+            log_coverage_summary(db_session)
+        except Exception as exc:
+            logger.warning(f"Could not emit coverage summary: {exc}")
+
         logger.info("=" * 60)
         logger.success("✓ Daily refresh completed successfully!")
         logger.info("=" * 60)

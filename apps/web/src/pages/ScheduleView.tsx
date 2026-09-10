@@ -1,6 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
+import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
 import { scheduleApi, getApiErrorMessage } from "../lib/api";
+import { matchesPoolTypeFilter, poolFlags, poolTypeLabel } from "../lib/poolType";
+import { compareFacilityGroups, facilityDistanceKm } from "../lib/facilitySort";
+import { matchesSwimTypeFilter, swimTypeForPoolTypeChange } from "../lib/swimTypeFilter";
+import { PoolTypeFilterControl } from "@/components/PoolTypeFilterControl";
+import { SwimTypeFilterControl } from "@/components/SwimTypeFilterControl";
 import {
   formatDate,
   formatTimeRange,
@@ -30,8 +37,9 @@ import {
   Share2,
   Calendar as CalendarIcon,
   Check,
+  Sun,
 } from "lucide-react";
-import type { SwimType, Session } from "../types";
+import type { Session } from "../types";
 
 type ViewMode = "list" | "table";
 
@@ -40,10 +48,33 @@ interface SessionWithDistance extends Session {
   distance?: number;
 }
 
+// Helper function to get current date/time in Toronto as a Date object (local)
+const getTorontoDate = () => {
+  return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Toronto" }));
+};
+
+// Helper function to check if a date string (YYYY-MM-DD) is today in Toronto
+const isTodayToronto = (dateString: string) => {
+  const todayStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Toronto",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return dateString === todayStr;
+};
+
+// Helper function to check if a session has already ended in Toronto
+const isPastSession = (session: Session): boolean => {
+  const now = getTorontoDate();
+  const sessionEnd = new Date(`${session.date} ${session.end_time}`);
+  return now >= sessionEnd;
+};
+
 // Helper function to check if a session is happening right now
 // Includes a 30-minute travel time window before the start time
 const isHappeningNow = (session: Session): boolean => {
-  const now = new Date();
+  const now = getTorontoDate();
   const sessionStart = new Date(`${session.date} ${session.start_time}`);
   const sessionEnd = new Date(`${session.date} ${session.end_time}`);
 
@@ -167,22 +198,12 @@ const ShareButton = ({ session }: { session: Session }) => {
   );
 };
 
-// Calendar Button Component
-const CalendarButton = ({ session }: { session: Session }) => {
-  const handleAddToCalendar = () => {
-    const url = generateCalendarUrl(session);
-    window.open(url, '_blank', 'noopener,noreferrer');
-  };
-  
+// Free Entry Badge Component
+const FreeEntryBadge = () => {
   return (
-    <button
-      onClick={handleAddToCalendar}
-      className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-all duration-200 hover:scale-105"
-      aria-label="Add to calendar"
-      title="Add to Google Calendar"
-    >
-      <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-    </button>
+    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border border-green-200 dark:border-green-700">
+      FREE
+    </span>
   );
 };
 
@@ -203,8 +224,8 @@ const compareSessions = (
 
   // Sort by distance mode: pure distance sorting (no favorites priority)
   if (sortMode === "distance" && userLocation) {
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -217,8 +238,8 @@ const compareSessions = (
     if (!isFavA && isFavB) return 1;
 
     // Within favorites and non-favorites, sort by distance
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -231,8 +252,8 @@ const compareSessions = (
     if (!isFavA && isFavB) return 1;
 
     // Within favorites and non-favorites, sort by distance
-    const distA = a.distance;
-    const distB = b.distance;
+    const distA = facilityDistanceKm(a.facility, userLocation, a.distance);
+    const distB = facilityDistanceKm(b.facility, userLocation, b.distance);
     if (distA === undefined) return 1;
     if (distB === undefined) return -1;
     return distA - distB;
@@ -255,15 +276,17 @@ type AgeFilter = "all" | "infant" | "child" | "adult";
 
 export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
-  const [swimType, setSwimType] = useState<SwimType | "ALL">("LANE_SWIM");
+  const [swimType, setSwimType] = useSwimTypeFilter();
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
+  const [showFreeOnly, setShowFreeOnly] = useState(false);
+  const [poolType, setPoolType] = usePoolTypeFilter();
   // Time-of-day filter: default is full day [5am, 11pm]
   const TIME_MIN = 5 * 60;
   const TIME_MAX = 23 * 60;
   const [timeStart, setTimeStart] = useState<number>(TIME_MIN);
   const [timeEnd, setTimeEnd] = useState<number>(TIME_MAX);
   const isTimeDefault = timeStart === TIME_MIN && timeEnd === TIME_MAX;
-  const [showFilters, setShowFilters] = useState(false);
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   // Default to list view on mobile (< 768px), table view on desktop
   const [viewMode, setViewMode] = useState<ViewMode>(
     typeof window !== "undefined" && window.innerWidth < 768 ? "list" : "table"
@@ -346,18 +369,35 @@ export default function ScheduleView() {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Compute available swim types from fetched data
+  // Broaden swim-type default when user switches to outdoor pools
+  const handlePoolTypeChange = (next: typeof poolType) => {
+    setSwimType(swimTypeForPoolTypeChange(next, swimType));
+    setPoolType(next);
+  };
+
+  // Compute available swim types from fetched data (respecting pool-type filter)
   const availableSwimTypes = useMemo(() => {
     if (!allSessions?.length) return new Set<string>();
-    return new Set(allSessions.map((s) => s.swim_type));
-  }, [allSessions]);
+    const types = allSessions
+      .filter((s) => matchesPoolTypeFilter(s.facility, poolType))
+      .map((s) => s.swim_type);
+    return new Set(types);
+  }, [allSessions, poolType]);
 
-  // Filter sessions by swimType and selected time-of-day range (client-side)
+  // Filter sessions by swimType, free entry, and selected time-of-day range (client-side)
   const sessions = useMemo(() => {
     if (!allSessions) return undefined;
     let filtered = allSessions;
     if (swimType !== "ALL") {
-      filtered = filtered.filter((s) => s.swim_type === swimType);
+      filtered = filtered.filter((s) =>
+        matchesSwimTypeFilter(s.swim_type, swimType)
+      );
+    }
+    if (showFreeOnly) {
+      filtered = filtered.filter((s) => s.facility?.is_free_entry === true);
+    }
+    if (poolType !== "all") {
+      filtered = filtered.filter((s) => matchesPoolTypeFilter(s.facility, poolType));
     }
     if (!isTimeDefault) {
       filtered = filtered.filter((s) => {
@@ -370,7 +410,7 @@ export default function ScheduleView() {
       });
     }
     return filtered;
-  }, [allSessions, swimType, isTimeDefault, timeStart, timeEnd]);
+  }, [allSessions, swimType, showFreeOnly, poolType, isTimeDefault, timeStart, timeEnd]);
 
   // Handle toggling favorites
   const handleToggleFavorite = async (facilityId: string | undefined) => {
@@ -489,20 +529,10 @@ export default function ScheduleView() {
     // Check if session date string is in the visible dates (using pre-computed array)
     const isInRange = visibleDateStrings.includes(sessionDateString);
 
-    // If "happening now" filter is active, show today's sessions that haven't ended yet
-    // (yellow highlight for sessions literally happening now is handled in render)
+    // If "happening now" filter is active, only show sessions actually happening now
+    // (in the travel window: start - 30min ≤ now < end). Same logic as the yellow highlight.
     if (prioritizeHappeningNow) {
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0];
-      const isToday = session.date === todayStr;
-      
-      // Check if session has already ended
-      const [endHour, endMinute] = session.end_time.split(":").map(Number);
-      const sessionEnd = new Date(now);
-      sessionEnd.setHours(endHour, endMinute, 0, 0);
-      const hasEnded = now > sessionEnd;
-      
-      return isInRange && isToday && !hasEnded;
+      return isInRange && isHappeningNow(session);
     }
 
     return isInRange;
@@ -607,69 +637,20 @@ export default function ScheduleView() {
 
   // Sort facilities: by distance (if enabled) or favorites first then by location
   const sortedFacilityEntries = Object.entries(sessionsByFacilityAndDay || {});
-  sortedFacilityEntries.sort((a, b) => {
-    const facilityA = a[1].facility;
-    const facilityB = b[1].facility;
-    const isFavA = facilityA?.facility_id
-      ? isFavorite(facilityA.facility_id)
-      : false;
-    const isFavB = facilityB?.facility_id
-      ? isFavorite(facilityB.facility_id)
-      : false;
-    
-    // Prioritize facilities with sessions happening now
-    const allSessionsA = Object.values(a[1].sessions).flat();
-    const allSessionsB = Object.values(b[1].sessions).flat();
-    const hasHappeningNowA = allSessionsA.some(isHappeningNow);
-    const hasHappeningNowB = allSessionsB.some(isHappeningNow);
-    if (hasHappeningNowA && !hasHappeningNowB) return -1;
-    if (!hasHappeningNowA && hasHappeningNowB) return 1;
-
-    // Sort by distance mode: pure distance sorting (no favorites priority)
-    if (sortMode === "distance" && userLocation) {
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Favorites first mode: favorites first (sorted by location), then non-favorites (sorted by location)
-    if (sortMode === "favorites" && userLocation) {
-      // Favorites come first
-      if (isFavA && !isFavB) return -1;
-      if (!isFavA && isFavB) return 1;
-
-      // Within favorites and non-favorites, sort by distance
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Default when location is available: favorites first, then by distance
-    if (userLocation) {
-      // Favorites come first
-      if (isFavA && !isFavB) return -1;
-      if (!isFavA && isFavB) return 1;
-
-      // Within favorites and non-favorites, sort by distance
-      const distA = a[1].distance;
-      const distB = b[1].distance;
-      if (distA === undefined) return 1;
-      if (distB === undefined) return -1;
-      return distA - distB;
-    }
-
-    // Fallback when no location: favorites first, then alphabetical order
-    if (isFavA && !isFavB) return -1;
-    if (!isFavA && isFavB) return 1;
-
-    const nameA = facilityA?.name || "";
-    const nameB = facilityB?.name || "";
-    return nameA.localeCompare(nameB);
-  });
+  const facilitySortOptions = {
+    sortMode,
+    userLocation,
+    isFavorite,
+    prioritizeHappeningNow,
+    isHappeningNow,
+  };
+  sortedFacilityEntries.sort((a, b) =>
+    compareFacilityGroups(
+      { facility: a[1].facility, distance: a[1].distance, sessions: a[1].sessions },
+      { facility: b[1].facility, distance: b[1].distance, sessions: b[1].sessions },
+      facilitySortOptions
+    )
+  );
 
   const weekdays = [
     "Sunday",
@@ -879,36 +860,44 @@ export default function ScheduleView() {
         <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 mb-6 border border-gray-200/50 dark:border-gray-700/50">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4">
             <button
-              onClick={() => setShowFilters(!showFilters)}
+              onClick={() => setShowMoreFilters(!showMoreFilters)}
               className="min-h-[44px] flex items-center gap-2 text-gray-700 dark:text-gray-300 font-semibold md:hidden hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
             >
               <Filter className="w-5 h-5" />
-              Swim Types
+              More filters
             </button>
 
-            <div className="flex flex-col sm:flex-row gap-4 flex-1">
-              {/* Location loading indicator */}
+            <div className="flex flex-row flex-wrap items-center gap-2 sm:gap-4 flex-1">
+              {/* Sort + Show controls — labelled so the icons are self-explanatory */}
               {isLoadingLocation ? (
-                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
-                  <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
-                  <span className="text-green-800 dark:text-green-300 font-medium">
-                    Getting location...
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
                   </span>
+                  <div className="flex items-center gap-2 px-3 py-2 min-h-[44px] bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-xs">
+                    <Navigation className="w-4 h-4 text-green-600 dark:text-green-400 animate-pulse" />
+                    <span className="text-green-800 dark:text-green-300 font-medium">
+                      Getting location...
+                    </span>
+                  </div>
                 </div>
               ) : userLocation ? (
-                <>
-                  {/* Sort Mode Toggle: Location vs Favorites */}
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
+                  </span>
                   <div className="flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    {/* Location Button */}
+                    {/* Nearest: closest pools first */}
                     <button
                       type="button"
                       onClick={() => setSortMode("distance")}
+                      aria-pressed={sortMode === "distance"}
                       className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 ${
                         sortMode === "distance"
                           ? "bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300"
-                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
-                      title="Sort by distance"
+                      title="Nearest — closest pools to you first"
                     >
                       <Navigation
                         className={`w-4 h-4 transition-all duration-200 ${
@@ -917,19 +906,20 @@ export default function ScheduleView() {
                             : ""
                         }`}
                       />
-                      <span className="text-sm font-medium hidden sm:inline">Nearest</span>
+                      <span className="text-sm font-medium">Nearest</span>
                     </button>
-                    
-                    {/* Favorites Button */}
+
+                    {/* Favorites: starred pools first */}
                     <button
                       type="button"
                       onClick={() => setSortMode("favorites")}
+                      aria-pressed={sortMode === "favorites"}
                       className={`min-h-[44px] flex items-center gap-1.5 px-3 py-2 transition-all duration-200 border-l border-gray-200 dark:border-gray-700 ${
                         sortMode === "favorites"
                           ? "bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300"
-                          : "bg-gray-50 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+                          : "bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
                       }`}
-                      title="Favorites first, then by distance"
+                      title="Favorites — your starred pools first, then nearest"
                     >
                       <Star
                         className={`w-4 h-4 transition-all duration-200 ${
@@ -938,43 +928,85 @@ export default function ScheduleView() {
                             : ""
                         }`}
                       />
-                      <span className="text-sm font-medium hidden sm:inline">Favorites</span>
+                      <span className="text-sm font-medium">Favorites</span>
                     </button>
                   </div>
-                </>
+                </div>
               ) : (
-                <button
-                  onClick={handleGetLocation}
-                  className="min-h-[44px] flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  title="Enable location to sort by distance"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>Enable Location</span>
-                </button>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                    Sort by
+                  </span>
+                  <button
+                    onClick={handleGetLocation}
+                    className="min-h-[44px] flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    title="Turn on location to sort pools by distance"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Use my location</span>
+                  </button>
+                </div>
               )}
 
-              {/* Happening Now Filter Button (styled as legend) */}
-              <button
-                onClick={() =>
-                  setPrioritizeHappeningNow(!prioritizeHappeningNow)
-                }
-                className={`min-h-[44px] flex items-center justify-center px-3 py-2 rounded-md transition-all duration-300 cursor-pointer ${
-                  prioritizeHappeningNow
-                    ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
-                    : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
-                }`}
-              >
-                <Waves
-                  className={`w-5 h-5 transition-all duration-300 ${
-                    prioritizeHappeningNow
-                      ? "text-blue-600 dark:text-blue-400 animate-pulse"
-                      : "text-blue-500 dark:text-blue-500 opacity-70"
-                  }`}
-                />
-                <span className="text-blue-800 dark:text-blue-300 ml-2">
-                  Happening now
+              {/* Happening Now — filter to sessions on right now */}
+              <div className="flex flex-col gap-1.5">
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 px-1">
+                  Show
                 </span>
-              </button>
+                <button
+                  onClick={() =>
+                    setPrioritizeHappeningNow(!prioritizeHappeningNow)
+                  }
+                  aria-pressed={prioritizeHappeningNow}
+                  className={`min-h-[44px] flex items-center justify-center px-3 py-2 rounded-lg transition-all duration-300 cursor-pointer ${
+                    prioritizeHappeningNow
+                      ? "bg-blue-100 dark:bg-blue-900/40 border-2 border-blue-400 dark:border-blue-600 shadow-md shadow-blue-400/30"
+                      : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                  }`}
+                  title="Only show swim sessions happening right now"
+                >
+                  <Waves
+                    className={`w-5 h-5 transition-all duration-300 ${
+                      prioritizeHappeningNow
+                        ? "text-blue-600 dark:text-blue-400 animate-pulse"
+                        : "text-blue-500 dark:text-blue-500 opacity-70"
+                    }`}
+                  />
+                  <span className="text-blue-800 dark:text-blue-300 ml-2 text-sm sm:text-base whitespace-nowrap">
+                    Happening now
+                  </span>
+                </button>
+              </div>
+
+              {/* Plain-language hint explaining the active sort/filter */}
+              <p className="w-full basis-full text-xs text-gray-500 dark:text-gray-400 -mt-1">
+                {prioritizeHappeningNow
+                  ? "Showing only sessions happening right now"
+                  : sortMode === "favorites"
+                    ? "Your favourite pools appear first, then the nearest"
+                    : userLocation
+                      ? "Pools closest to you appear first"
+                      : "Tip: turn on location to sort pools by distance"}
+              </p>
+
+              {/* Pool + swim type filters — full width row */}
+              <div className="w-full basis-full flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
+                <PoolTypeFilterControl
+                  value={poolType}
+                  onChange={handlePoolTypeChange}
+                  testId="schedule-pool-type-filter"
+                  showHint={false}
+                  label="Pool type"
+                />
+                <SwimTypeFilterControl
+                  value={swimType}
+                  onChange={setSwimType}
+                  availableTypes={availableSwimTypes}
+                  testId="schedule-swim-type-filter"
+                  label="Swim type"
+                  className="flex-1 min-w-0"
+                />
+              </div>
 
               {/* View Mode Toggle - Hidden on mobile since list view is optimal */}
               <div className="hidden md:flex gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-0.5 ml-auto">
@@ -1012,7 +1044,8 @@ export default function ScheduleView() {
             </div>
           )}
 
-          {/* Age Filter Chips - Hidden for adult/senior-only swim types */}
+          {/* More filters — age, time, free entry (collapsible on mobile) */}
+          <div className={`${showMoreFilters ? "block" : "hidden"} md:block`}>
           {swimType !== "ADULT_SWIM" && swimType !== "SENIOR_SWIM" && (
             <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
               <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
@@ -1057,25 +1090,20 @@ export default function ScheduleView() {
             />
           </div>
 
-          <div className={`${showFilters ? "block" : "hidden"} md:block mt-2`}>
-            {/* Swim Type Filter Chips - Horizontal scrollable on mobile, wrapping on desktop */}
-            <div className="overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0 sm:overflow-visible scrollbar-hide">
-              <div className="flex gap-2 sm:flex-wrap min-w-max sm:min-w-0">
-                {["ALL", ...Array.from(availableSwimTypes)].map((type) => (
-                  <button
-                    key={type}
-                    onClick={() => setSwimType(type as SwimType | "ALL")}
-                    className={`min-h-[44px] whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 transform hover:scale-105 flex-shrink-0 ${
-                      swimType === type
-                        ? "bg-gradient-to-r from-primary-500 to-primary-600 text-white shadow-lg shadow-primary-500/30"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
-                  >
-                    {type === "ALL" ? "All Types" : getSwimTypeLabel(type)}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Free Entry Filter */}
+          <div className="mt-3 mb-1">
+            <label className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors min-h-[44px]">
+              <input
+                type="checkbox"
+                checked={showFreeOnly}
+                onChange={(e) => setShowFreeOnly(e.target.checked)}
+                className="w-5 h-5 rounded border-gray-300 dark:border-gray-600 text-green-500 focus:ring-green-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Show free pools only
+              </span>
+            </label>
+          </div>
           </div>
         </div>
 
@@ -1124,38 +1152,14 @@ export default function ScheduleView() {
               }, {} as Record<string, { facility: typeof dateSessions[0]["facility"]; sessions: typeof dateSessions; distance?: number }>);
 
               // Sort facilities by the same criteria
-              const sortedFacilities = Object.entries(sessionsByFacility).sort(([, a], [, b]) => {
-                const isFavA = a.facility?.facility_id ? isFavorite(a.facility.facility_id) : false;
-                const isFavB = b.facility?.facility_id ? isFavorite(b.facility.facility_id) : false;
-                
-                // Prioritize facilities with sessions happening now
-                const hasHappeningNowA = a.sessions.some(isHappeningNow);
-                const hasHappeningNowB = b.sessions.some(isHappeningNow);
-                if (hasHappeningNowA && !hasHappeningNowB) return -1;
-                if (!hasHappeningNowA && hasHappeningNowB) return 1;
-
-                if (sortMode === "distance" && userLocation) {
-                  const distA = a.distance;
-                  const distB = b.distance;
-                  if (distA === undefined) return 1;
-                  if (distB === undefined) return -1;
-                  return distA - distB;
-                }
-
-                if (sortMode === "favorites" && userLocation) {
-                  if (isFavA && !isFavB) return -1;
-                  if (!isFavA && isFavB) return 1;
-                  const distA = a.distance;
-                  const distB = b.distance;
-                  if (distA === undefined) return 1;
-                  if (distB === undefined) return -1;
-                  return distA - distB;
-                }
-
-                if (isFavA && !isFavB) return -1;
-                if (!isFavA && isFavB) return 1;
-                return (a.facility?.name || "").localeCompare(b.facility?.name || "");
-              });
+              const sortedFacilities = Object.entries(sessionsByFacility).sort(
+                ([, a], [, b]) =>
+                  compareFacilityGroups(
+                    { facility: a.facility, distance: a.distance, sessions: a.sessions },
+                    { facility: b.facility, distance: b.distance, sessions: b.sessions },
+                    facilitySortOptions
+                  )
+              );
 
               return (
                 <div
@@ -1170,16 +1174,19 @@ export default function ScheduleView() {
                     </p>
                   </div>
 
-                  {/* Sessions grouped by facility on mobile */}
-                  {isMobile ? (
-                    <div className="p-3 space-y-4">
-                      {sortedFacilities.map(([facilityId, data]) => (
+                  {/* Sessions grouped by facility */}
+                  <div className="p-3 md:p-4 space-y-4">
+                    {sortedFacilities.map(([facilityId, data]) => {
+                      const { hasOutdoor } = poolFlags(data.facility);
+                      const label = poolTypeLabel(data.facility);
+
+                      return (
                         <div
                           key={facilityId}
                           className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden"
                         >
                           {/* Facility Header */}
-                          <div className="p-3 bg-primary-50 dark:bg-gray-700 border-b border-primary-100 dark:border-gray-600">
+                          <div className="p-3 md:p-4 bg-primary-50 dark:bg-gray-700 border-b border-primary-100 dark:border-gray-600">
                             <div className="flex items-start gap-2">
                               <button
                                 onClick={() =>
@@ -1193,7 +1200,7 @@ export default function ScheduleView() {
                                 }
                               >
                                 <Star
-                                  className={`w-5 h-5 ${
+                                  className={`w-5 h-5 md:w-6 md:h-6 ${
                                     favorites.has(data.facility?.facility_id || "")
                                       ? "fill-yellow-400 text-yellow-400"
                                       : "text-gray-400 dark:text-gray-500 hover:text-yellow-400"
@@ -1201,27 +1208,42 @@ export default function ScheduleView() {
                                 />
                               </button>
                               <div className="flex-1 min-w-0">
-                                <h3 className="font-bold text-gray-900 dark:text-white text-sm leading-tight">
-                                  {data.facility?.website ? (
-                                    <a
-                                      href={data.facility.website}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                    >
-                                      {data.facility?.name}
-                                    </a>
-                                  ) : (
-                                    data.facility?.name
-                                  )}
-                                </h3>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h3 className="font-bold text-gray-900 dark:text-white text-sm md:text-base leading-tight">
+                                    {data.facility?.website ? (
+                                      <a
+                                        href={data.facility.website}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
+                                      >
+                                        {data.facility?.name}
+                                      </a>
+                                    ) : (
+                                      data.facility?.name
+                                    )}
+                                    {data.facility?.is_free_entry && (
+                                      <FreeEntryBadge />
+                                    )}
+                                  </h3>
+                                  <span
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      hasOutdoor
+                                        ? "bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300"
+                                        : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                                    }`}
+                                  >
+                                    {hasOutdoor && <Sun className="w-3 h-3" />}
+                                    {label}
+                                  </span>
+                                </div>
                                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                                   {data.distance !== undefined && (
                                     <button
                                       onClick={() =>
                                         setMapsModalAddress(data.facility?.address || "")
                                       }
-                                      className="inline-flex items-center gap-1 text-xs font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
+                                      className="inline-flex items-center gap-1 text-xs md:text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
                                     >
                                       <Navigation className="w-3 h-3" />
                                       {formatDistance(data.distance)}
@@ -1234,7 +1256,7 @@ export default function ScheduleView() {
                                       )}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="text-xs text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[200px]"
+                                      className="text-xs md:text-sm text-gray-600 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 truncate max-w-[200px] md:max-w-none"
                                     >
                                       {data.facility.address}
                                     </a>
@@ -1245,7 +1267,7 @@ export default function ScheduleView() {
                           </div>
 
                           {/* Time Slots Grid - sorted with happening now first */}
-                          <div className="p-2 grid grid-cols-2 gap-2">
+                          <div className="p-2 md:p-3 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                             {[...data.sessions].sort((a, b) => {
                               const aHappening = isHappeningNow(a);
                               const bHappening = isHappeningNow(b);
@@ -1257,13 +1279,15 @@ export default function ScheduleView() {
                               return (
                                 <div
                                   key={session.id}
-                                  className={`p-2.5 rounded-lg transition-all ${
+                                  className={`p-2.5 md:p-3 rounded-lg transition-all ${
                                     happeningNow
                                       ? "bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-900/40 dark:to-amber-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600"
+                                      : isTodayToronto(session.date) && isPastSession(session)
+                                      ? "bg-gray-100 dark:bg-gray-800/40 opacity-60"
                                       : "bg-gray-50 dark:bg-gray-700/50"
                                   }`}
                                 >
-                                  <div className={`text-sm font-bold mb-1 ${
+                                  <div className={`text-sm md:text-base font-bold mb-1 ${
                                     happeningNow
                                       ? "text-yellow-900 dark:text-yellow-100"
                                       : "text-primary-600 dark:text-primary-400"
@@ -1272,13 +1296,16 @@ export default function ScheduleView() {
                                   </div>
                                   <div className="flex items-center justify-between gap-1">
                                     <span
-                                      className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getSwimTypeColor(
+                                      className={`px-2 py-0.5 rounded-md text-[10px] md:text-xs font-bold ${getSwimTypeColor(
                                         session.swim_type
                                       )}`}
                                     >
                                       {getSwimTypeLabelAbbreviated(session.swim_type)}
                                     </span>
                                     <div className="flex items-center gap-0.5">
+                                      <div className="hidden md:block">
+                                        <ShareButton session={session} />
+                                      </div>
                                       <button
                                         onClick={() => {
                                           const url = generateCalendarUrl(session);
@@ -1292,7 +1319,7 @@ export default function ScheduleView() {
                                     </div>
                                   </div>
                                   {session.notes && (
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                                    <p className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1 md:line-clamp-2">
                                       {session.notes}
                                     </p>
                                   )}
@@ -1301,138 +1328,9 @@ export default function ScheduleView() {
                             })}
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    /* Desktop list view - original layout */
-                    <div className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {dateSessions.map((session) => {
-                        const happeningNow = isHappeningNow(session);
-
-                        return (
-                          <div
-                            key={session.id}
-                            className={`p-4 md:p-6 rounded-xl border-2 transition-all duration-200 ${
-                              happeningNow
-                                ? "bg-gradient-to-br from-yellow-50 to-amber-50 dark:from-yellow-900/30 dark:to-amber-900/30 border-yellow-400 dark:border-yellow-600 shadow-lg ring-2 ring-yellow-400/50"
-                                : "bg-white/80 dark:bg-gray-800/80 border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md"
-                            }`}
-                          >
-                            <div className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
-                              {/* Facility */}
-                              <div className="flex-1 flex items-start gap-2">
-                                <button
-                                  onClick={() =>
-                                    handleToggleFavorite(
-                                      session.facility?.facility_id
-                                    )
-                                  }
-                                  className="flex-shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center hover:scale-110 transition-transform duration-200"
-                                  aria-label={
-                                    favorites.has(
-                                      session.facility?.facility_id || ""
-                                    )
-                                      ? "Remove from favorites"
-                                      : "Add to favorites"
-                                  }
-                                  title={
-                                    favorites.has(
-                                      session.facility?.facility_id || ""
-                                    )
-                                      ? "Remove from favorites"
-                                      : "Add to favorites"
-                                  }
-                                >
-                                  <Star
-                                    className={`w-6 h-6 ${
-                                      favorites.has(
-                                        session.facility?.facility_id || ""
-                                      )
-                                        ? "fill-yellow-400 text-yellow-400"
-                                        : "text-gray-300 dark:text-gray-600 hover:text-yellow-400 dark:hover:text-yellow-400"
-                                    }`}
-                                  />
-                                </button>
-                                <div className="flex-1">
-                                  {/* Time - Most important info, shown prominently */}
-                                  <div className="text-xl font-bold text-primary-600 dark:text-primary-400 mb-2">
-                                    {formatTimeRange(session.start_time, session.end_time)}
-                                  </div>
-                                  <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1 text-base">
-                                    {session.facility?.website ? (
-                                      <a
-                                        href={session.facility.website}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                      >
-                                        {session.facility.name}
-                                      </a>
-                                    ) : (
-                                      session.facility?.name
-                                    )}
-                                    {session.distance !== undefined &&
-                                      session.facility?.address && (
-                                        <button
-                                          onClick={() =>
-                                            setMapsModalAddress(
-                                              session.facility!.address!
-                                            )
-                                          }
-                                          className="ml-2 text-sm font-semibold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline cursor-pointer transition-colors"
-                                          title="Open in maps"
-                                        >
-                                          ({formatDistance(session.distance)})
-                                        </button>
-                                      )}
-                                  </h3>
-                                  {session.facility?.address && (
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 flex items-start gap-1">
-                                      <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                                      <a
-                                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                                          session.facility.address
-                                        )}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="hover:text-primary-600 dark:hover:text-primary-400 hover:underline transition-colors"
-                                      >
-                                        {session.facility.address}
-                                      </a>
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              {/* Type + Actions */}
-                              <div className="flex-shrink-0 flex flex-col sm:flex-row items-end sm:items-center gap-2">
-                                <span
-                                  className={`px-4 py-2 rounded-xl text-xs font-bold ${getSwimTypeColor(
-                                    session.swim_type
-                                  )} shadow-sm`}
-                                >
-                                  {getSwimTypeLabel(session.swim_type)}
-                                </span>
-                                <div className="flex items-center gap-1">
-                                  <ShareButton session={session} />
-                                  <CalendarButton session={session} />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Notes */}
-                            {session.notes && (
-                              <div className="w-full mt-3 md:col-span-full">
-                                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
-                                  {session.notes}
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                      );
+                    })}
+                  </div>
                 </div>
               );
             })}
@@ -1593,6 +1491,9 @@ export default function ScheduleView() {
                               ) : (
                                 data.facility?.name || "Unknown"
                               )}
+                              {data.facility?.is_free_entry && (
+                                <span className="ml-2 inline-block"><FreeEntryBadge /></span>
+                              )}
                             </div>
                             {data.distance !== undefined &&
                               data.facility?.address && (
@@ -1719,7 +1620,9 @@ export default function ScheduleView() {
                                       className={`group relative p-2 sm:p-2 rounded-lg transition-all duration-200 hover:shadow-md ${
                                         happeningNow
                                           ? "bg-gradient-to-br from-yellow-100 to-yellow-50 dark:from-yellow-900/60 dark:to-yellow-900/40 ring-2 ring-yellow-400 dark:ring-yellow-600 shadow-lg shadow-yellow-400/20"
-                                          : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+                                          : isTodayToronto(session.date) && isPastSession(session)
+                                      ? "bg-gray-100 dark:bg-gray-800/40 opacity-60 border border-gray-200 dark:border-gray-700"
+                                      : "bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
                                       }`}
                                     >
                                       <div

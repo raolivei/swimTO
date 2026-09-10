@@ -38,11 +38,13 @@ Check API health and version.
 
 #### GET `/facilities`
 
-Get all indoor pool facilities.
+Get pool facilities with optional pool-type filtering.
 
 **Query Parameters:**
 - `district` (string, optional): Filter by district name
 - `has_lane_swim` (boolean, optional): Only facilities with lane swim sessions (default: false)
+- `pool_type` (string, optional): `all` (default), `indoor`, or `outdoor`. Facilities with both pool types match indoor and outdoor filters.
+- `include_outdoor` (boolean, optional, deprecated): Use `pool_type` instead. `false` → indoor, `true` → all.
 
 **Response:**
 ```json

@@ -32,11 +32,17 @@ class TorontoDropInAPI:
     LOCATIONS_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/datastore/dump/f23ac1ad-6f46-4b59-811f-eb34be9b1f7a"
     FACILITIES_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/datastore/dump/e16505dc-f106-4b58-a689-ed0a2b8b0b69"
     
-    # Swim activity keywords to filter drop-in programs
+    # Swim activity keywords to filter drop-in programs.
+    # NOTE: Toronto's actual Open Data CSV uses "Aquatic Fitness: ..." as the
+    # Course Title prefix (e.g. "Aquatic Fitness: Shallow", "Aquatic Fitness:
+    # Deep"). The colloquial "Aquafit"/"Aqua Fit" terms are kept for
+    # forward-compat in case Toronto changes the label, but "aquatic fitness"
+    # is what the live feed actually emits.
     SWIM_KEYWORDS = [
         'lane swim', 'lane swimming', 'lap swim', 'lap swimming',
         'leisure swim', 'recreational swim', 'family swim',
-        'adult swim', 'senior swim', 'aquafit', 'aqua fit',
+        'adult swim', 'senior swim',
+        'aquatic fitness', 'aquafit', 'aqua fit',
         'water fit', 'aquacise', 'aqua aerobics',
         'public swim', 'open swim', 'drop-in swim'
     ]
@@ -47,7 +53,13 @@ class TorontoDropInAPI:
             r'lane\s+swim', r'lap\s+swim', r'length\s+swim',
             r'adult\s+lane', r'senior\s+lane'
         ],
-        'AQUAFIT': [
+        # NOTE: keep this label aligned with the JSON parser
+        # (toronto_parks_json_api._classify_swim_type) and the frontend
+        # SwimType enum in apps/web/src/types/index.ts. Splitting "AQUAFIT"
+        # vs "AQUATIC_FITNESS" creates duplicate filter buttons in the UI
+        # and hides most pools' aquafit sessions from users.
+        'AQUATIC_FITNESS': [
+            r'aquatic\s+fitness',
             r'aqua\s*fit', r'water\s+fit', r'aqua\s*cise',
             r'aqua\s+aerobics', r'water\s+aerobics'
         ],
@@ -462,15 +474,43 @@ class TorontoDropInAPI:
     ) -> Optional[str]:
         """
         Match a location from the API to an existing facility in our database.
-        
+
+        Resolution order:
+        1. Exact match on ``Facility.toronto_location_id`` (authoritative;
+           populated by the curated facility ingest in ``daily_refresh``).
+        2. Exact case-insensitive name match.
+        3. Fuzzy name match.
+        4. Postal-code match via ``location_data``.
+
         Returns facility_id if match found, None otherwise.
         """
+        # 1. Primary key: toronto_location_id (integer match).
+        # Curated facilities (see toronto_pools_data.py) carry the same
+        # Location ID Toronto's Open Data uses, so this should be the common
+        # path. Legacy facilities without a toronto_location_id still fall
+        # through to the fuzzy name logic below.
+        if location_id:
+            try:
+                location_id_int = int(str(location_id).strip())
+            except (ValueError, TypeError):
+                location_id_int = None
+
+            if location_id_int is not None:
+                for facility in existing_facilities:
+                    facility_loc_id = getattr(facility, 'toronto_location_id', None)
+                    if facility_loc_id is not None and facility_loc_id == location_id_int:
+                        logger.info(
+                            f"Matched by toronto_location_id={location_id_int}: "
+                            f"'{location_name}' -> '{facility.name}'"
+                        )
+                        return facility.facility_id
+
         if not location_name:
             return None
-        
+
         location_name_lower = location_name.lower().strip()
-        
-        # Try exact match first
+
+        # 2. Exact case-insensitive name match
         for facility in existing_facilities:
             if facility.name.lower().strip() == location_name_lower:
                 return facility.facility_id
@@ -493,7 +533,6 @@ class TorontoDropInAPI:
         
         # Check if we have address info for better matching
         if location_data:
-            address = location_data.get('Address', '')
             postal_code = location_data.get('PostalCode', '')
             
             for facility in existing_facilities:
