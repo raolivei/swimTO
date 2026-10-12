@@ -15,5 +15,5 @@ mypy==1.13.0
 isort==5.13.2
 
 # Development
-ipython==8.29.0
+ipython==9.17.1
 
