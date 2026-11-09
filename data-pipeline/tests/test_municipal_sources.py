@@ -73,8 +73,14 @@ def test_activenet_explicit_dates_do_not_create_recurrences():
     source._centers = [{'center_id': 290, 'events': [
         {'title': 'Lane Swim', 'start_time': f'{today} 06:30:00', 'end_time': f'{today} 08:00:00'},
     ]}]
-    records = source.fetch_sessions('mississauga-290')
+    records = source.fetch_sessions('mississauga-burnhamthorpe-cmty-centre')
     assert len(records) == 1 and records[0].date == today
+
+
+def test_mississauga_keeps_production_pool_ids_when_switching_feeds():
+    assert MississaugaSource.facility_id(290) == 'mississauga-burnhamthorpe-cmty-centre'
+    assert MississaugaSource.facility_id(252) == 'mississauga-huron-park-rec-centre'
+    assert MississaugaSource.facility_id(261) == 'mississauga-261'
 
 
 @pytest.mark.parametrize('text,expected', [

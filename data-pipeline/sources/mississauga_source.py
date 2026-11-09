@@ -10,6 +10,22 @@ class MississaugaSource(BaseSwimSource):
     city = 'Mississauga'
     region = 'Peel'
     BASE_URL = 'https://anc.ca.apm.activecommunities.com/activemississauga'
+    # Preserve IDs already present on swimto.app when replacing its old feed.
+    LEGACY_IDS = {
+        82: 'mississauga-mississauga-valley-cmty-centre',
+        119: 'mississauga-meadowvale-cmty-centre',
+        125: 'mississauga-malton-cmty-centre',
+        240: 'mississauga-clarkson-cmty-centre',
+        243: 'mississauga-frank-mckechnie-cmty-centre',
+        248: 'mississauga-carmen-corbasson-cmty-centre',
+        252: 'mississauga-huron-park-rec-centre',
+        267: 'mississauga-erin-meadows-cmty-centre',
+        290: 'mississauga-burnhamthorpe-cmty-centre',
+    }
+
+    @classmethod
+    def facility_id(cls, center_id):
+        return cls.LEGACY_IDS.get(int(center_id), f'mississauga-{center_id}')
 
     def __init__(self):
         self.client = ActiveNetClient(self.BASE_URL)
@@ -28,7 +44,7 @@ class MississaugaSource(BaseSwimSource):
             detail = self.client.get_center(center['center_id'])
             coordinates = COORDINATES.get(f'mississauga-{center["center_id"]}', {})
             result.append(FacilityData(
-                facility_id=f'mississauga-{center["center_id"]}',
+                facility_id=self.facility_id(center['center_id']),
                 name=center['center_name'], city=self.city,
                 address=', '.join(filter(None, [detail['address1'], detail['city'], detail['zip_code']])),
                 postal_code=detail['zip_code'], phone=detail.get('phone'),
@@ -40,7 +56,7 @@ class MississaugaSource(BaseSwimSource):
         result = {}
         today = local_today()
         for center in self._load():
-            if facility_id != f'mississauga-{center["center_id"]}':
+            if facility_id != self.facility_id(center['center_id']):
                 continue
             for event in center['events']:
                 kind = swim_type(event['title'])
