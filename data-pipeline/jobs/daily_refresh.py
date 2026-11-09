@@ -43,6 +43,7 @@ def refresh_city_data(db_session):
     failed_sources = []
     for city, source_modules in CITY_SOURCES.items():
         logger.info(f"Refreshing data for city: {city}")
+        scheduled_facilities = set()
 
         for module_name in source_modules:
             try:
@@ -61,7 +62,9 @@ def refresh_city_data(db_session):
                 source = source_class()
 
                 # 1. Ingest/Update Facilities
-                facilities = source.fetch_facilities()
+                facilities = [facility for facility in source.fetch_facilities()
+                              if not (source.provides_sessions
+                                      and facility.facility_id in scheduled_facilities)]
                 for f_data in facilities:
                     if f_data.city != city:
                         raise ValueError(f"Source {module_name} returned a facility from {f_data.city}")
@@ -120,6 +123,9 @@ def refresh_city_data(db_session):
                             hash=session_hash
                         )
                         db_session.add(new_session)
+                    # Later fallback sources must not replace a complete feed
+                    # with a shorter schedule or less precise pool metadata.
+                    scheduled_facilities.add(facility.facility_id)
                 db_session.commit()
 
             except Exception as e:

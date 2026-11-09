@@ -231,3 +231,33 @@ def test_refresh_replaces_valid_schedule_and_deduplicates_records(db, monkeypatc
     assert (replacement.date, replacement.start_time, replacement.end_time) == (
         date(2026, 10, 30), time(12), time(13),
     )
+
+
+def test_fallback_source_cannot_overwrite_verified_primary_schedule_or_pool_flags(db, monkeypatch):
+    class PrimarySource:
+        provides_sessions = True
+
+        def fetch_facilities(self):
+            return [FacilityData('example', 'Example Pool', 'Toronto', has_indoor=True, has_outdoor=True)]
+
+        def fetch_sessions(self, facility_id, weeks=4):
+            return [SessionData(facility_id, 'LANE_SWIM', date(2026, 11, 9), time(12), time(13))]
+
+    class FallbackSource:
+        provides_sessions = True
+
+        def fetch_facilities(self):
+            return [FacilityData('example', 'Example Pool', 'Toronto', has_indoor=False, has_outdoor=True)]
+
+        def fetch_sessions(self, facility_id, weeks=4):
+            raise AssertionError('Fallback must not overwrite successful primary source')
+
+    modules = {
+        'sources.primary': SimpleNamespace(__name__=PrimarySource.__module__, PrimarySource=PrimarySource),
+        'sources.fallback': SimpleNamespace(__name__=FallbackSource.__module__, FallbackSource=FallbackSource),
+    }
+    monkeypatch.setattr(daily_refresh, 'CITY_SOURCES', {'Toronto': ['primary', 'fallback']})
+    monkeypatch.setattr(daily_refresh.importlib, 'import_module', lambda name: modules[name])
+    daily_refresh.refresh_city_data(db)
+    assert db.query(Facility).one().has_indoor is True
+    assert db.query(Session).one().start_time == time(12)
