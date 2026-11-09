@@ -66,7 +66,7 @@ export default function Layout() {
                   SwimTO
                 </span>
                 <p className="text-xs text-gray-500 dark:text-gray-400 font-medium hidden sm:block">
-                  Toronto's Pool Finder
+                  Your GTA Pool Finder
                 </p>
               </div>
             </NavLink>
@@ -217,7 +217,7 @@ export default function Layout() {
                 <span className="text-2xl font-bold text-white">SwimTO</span>
               </div>
               <p className="text-sm text-gray-400 leading-relaxed">
-                Toronto's premier pool schedule finder. Find indoor drop-in swim
+                Your GTA pool schedule finder. Find drop-in swim
                 times at community centers near you.
               </p>
               <div className="flex items-center gap-3 mt-4">
@@ -311,10 +311,10 @@ export default function Layout() {
             {/* Data Source */}
             <div>
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">
-                Data Source
+                Data Sources
               </h3>
               <p className="text-sm text-gray-400 leading-relaxed">
-                Schedule data from the{" "}
+                Official municipal calendars across six GTA cities. Toronto data from the{" "}
                 <a
                   href="https://open.toronto.ca"
                   target="_blank"
@@ -325,7 +325,7 @@ export default function Layout() {
                 </a>
               </p>
               <p className="text-xs text-gray-500 mt-2">
-                Licensed under the Open Government Licence – Toronto
+                Toronto data licensed under the Open Government Licence – Toronto. Other cities’ schedules link to their municipal recreation portals.
               </p>
             </div>
           </div>

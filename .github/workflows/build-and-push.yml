@@ -14,6 +14,7 @@ on:
     paths:
       - "apps/api/**"
       - "apps/web/**"
+      - "data-pipeline/**"
   workflow_dispatch:
 
 permissions:

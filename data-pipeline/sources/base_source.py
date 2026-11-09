@@ -16,6 +16,9 @@ class FacilityData:
     district: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    # Legacy compatibility flag used by the existing API and curated sources.
+    # ``has_indoor``/``has_outdoor`` are the canonical capability fields.
+    is_indoor: Optional[bool] = None
     has_indoor: bool = True
     has_outdoor: bool = False
     is_free_entry: bool = False
@@ -25,6 +28,10 @@ class FacilityData:
     # Toronto-specific; None for all other cities
     toronto_location_id: Optional[int] = None
     raw: Optional[dict] = field(default=None, repr=False)
+
+    def __post_init__(self) -> None:
+        if self.is_indoor is None:
+            self.is_indoor = self.has_indoor and not self.has_outdoor
 
 
 @dataclass
@@ -58,6 +65,10 @@ class BaseSwimSource(ABC):
 
     #: Region for grouping (e.g. "Peel", "York", "Toronto").
     region: str
+
+    #: Whether this source owns schedule data. Facility-only sources leave this
+    #: false so a refresh cannot erase sessions written by another source.
+    provides_sessions: bool = True
 
     @abstractmethod
     def fetch_facilities(self) -> list[FacilityData]:

@@ -35,19 +35,19 @@ settings = Settings()
 # Registry of city → source module names (relative to sources/).
 # Pipeline jobs iterate this dict so adding a new city requires only
 # a new entry here + the corresponding source module.
-# Phase 2 (ActiveNet) and Phase 3 (PerfectMind) will populate the non-Toronto entries.
+# Adapters use verified public municipal calendars and seasonal timetables.
 CITY_SOURCES: dict[str, list[str]] = {
     "Toronto": [
+        "toronto_pools_data",
+        "pools_xml_parser",
         "toronto_drop_in_api",
         "toronto_parks_json_api",
     ],
-    # Phase 2 — ActiveNet cities (Peel / York)
-    "Mississauga": ["mississauga_activenet"],
-    "Richmond Hill": ["richmond_hill_activenet"],
-    # Phase 3 — additional York/Peel municipalities
-    "Vaughan": ["vaughan_activenet"],
-    # "Brampton": ["brampton_activenet"],  # Phase 3 — PerfectMind
-    # "Markham":  ["markham_activenet"],   # Phase 3 — PerfectMind
+    "Mississauga": ["mississauga_source"],
+    "Richmond Hill": ["richmond_hill_source"],
+    "Brampton": ["brampton_source"],
+    "Vaughan": ["vaughan_source"],
+    "Markham": ["markham_source"],
 }
 
 

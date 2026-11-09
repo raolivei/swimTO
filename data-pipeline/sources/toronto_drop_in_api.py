@@ -10,22 +10,22 @@ import hashlib
 from datetime import datetime, date, time, timedelta
 from typing import List, Dict, Optional, Tuple
 from io import StringIO
+from dataclasses import replace
+from urllib.parse import urlparse, parse_qs
 
 import requests
 
 # Make loguru optional for standalone testing
-try:
-    from loguru import logger
-except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO)
-    # Add success method for compatibility
-    logger.success = logger.info
+from .base_source import BaseSwimSource, FacilityData, SessionData
+from loguru import logger
+from .toronto_pools_data import TorontoCuratedSource
 
 
-class TorontoDropInAPI:
+class TorontoDropInSource(BaseSwimSource):
     """Parser for Toronto's Drop-in Programs Open Data API."""
+
+    city = "Toronto"
+    region = "Toronto"
     
     # Official Toronto Open Data CKAN endpoints
     DROP_IN_PROGRAMS_URL = "https://ckan0.cf.opendata.inter.prod-toronto.ca/datastore/dump/c99ec04f-4540-482c-9ee4-efb38774eab4"
@@ -78,6 +78,11 @@ class TorontoDropInAPI:
     def __init__(self, timeout: int = 60):
         """Initialize the API client."""
         self.timeout = timeout
+        self._programs = None
+        self._locations = None
+        self._location_ids = {}
+        self._amenities = None
+        self._details = {}
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'SwimTO/2.0 (Toronto Pool Schedule Aggregator)'
@@ -96,12 +101,7 @@ class TorontoDropInAPI:
         """Fetch and parse CSV data from CKAN endpoint."""
         try:
             logger.info(f"Fetching data from {url}")
-            # Try with SSL verification first, fall back if needed
-            try:
-                response = self.session.get(url, timeout=self.timeout, verify=True)
-            except requests.exceptions.SSLError:
-                logger.warning("SSL verification failed, retrying without verification")
-                response = self.session.get(url, timeout=self.timeout, verify=False)
+            response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
             
             # Parse CSV
@@ -113,14 +113,18 @@ class TorontoDropInAPI:
             return data
         except Exception as e:
             logger.error(f"Error fetching CSV data: {e}")
-            return []
+            raise RuntimeError("Could not fetch official Toronto CSV feed") from e
     
     def fetch_drop_in_programs(self) -> List[Dict]:
         """Fetch all drop-in programs."""
-        return self.fetch_csv_data(self.DROP_IN_PROGRAMS_URL)
+        if self._programs is None:
+            self._programs = self.fetch_csv_data(self.DROP_IN_PROGRAMS_URL)
+        return self._programs
     
     def fetch_locations(self) -> Dict[str, Dict]:
         """Fetch locations and index by LocationID."""
+        if self._locations is not None:
+            return self._locations
         locations_list = self.fetch_csv_data(self.LOCATIONS_URL)
         
         # Index by LocationID for fast lookup
@@ -129,14 +133,152 @@ class TorontoDropInAPI:
         for location in locations_list:
             location_id = location.get('LocationID') or location.get('Location ID') or location.get('_id')
             if location_id:
-                locations_dict[location_id] = location
+                locations_dict[str(location_id).strip()] = location
         
         logger.info(f"Indexed {len(locations_dict)} locations")
+        self._locations = locations_dict
         return locations_dict
     
-    def fetch_facilities(self) -> List[Dict]:
-        """Fetch facilities data."""
-        return self.fetch_csv_data(self.FACILITIES_URL)
+    def fetch_facilities(self) -> List[FacilityData]:
+        """Resolve swim locations to existing Toronto pool IDs, not amenity IDs."""
+        curated = TorontoCuratedSource().fetch_facilities()
+        by_id = {facility.facility_id: facility for facility in curated}
+        locations = self.fetch_locations()
+        facilities = {}
+        seen_locations = set()
+        for program in self.filter_swim_activities(self.fetch_drop_in_programs()):
+            location_id = str(self.get_field(program, 'Location ID', 'LocationID', 'Location_ID')).strip()
+            if not location_id or location_id in seen_locations:
+                continue
+            seen_locations.add(location_id)
+            location = locations.get(location_id)
+            name = self.get_field(location or program, 'Location Name', 'LocationName', 'Location_Name')
+            # Do not use legacy first-word/fuzzy matching for ingestion: two
+            # unrelated Toronto centres can share a word or postal code.
+            normalized_name = self._normalized_facility_name(name)
+            matches = [facility for facility in curated if (
+                facility.toronto_location_id is not None
+                and str(facility.toronto_location_id) == location_id
+            )]
+            if not matches and normalized_name:
+                matches = [facility for facility in curated
+                           if self._normalized_facility_name(facility.name) == normalized_name]
+            if not matches:
+                # A few public names have changed. Preserve their existing URL
+                # by the official ID embedded in the catalog's municipal link.
+                # Also accept an explicitly related child venue (e.g. Leaside
+                # arena and pool); never guess from shared words in the name.
+                for facility in curated:
+                    site_id = self._municipal_link_id(facility.website)
+                    site_location = locations.get(site_id, {})
+                    if site_id == location_id or (
+                        site_id and site_location.get('Parent Location ID') == location_id
+                        and site_id != site_location.get('Parent Location ID')
+                    ):
+                        matches.append(facility)
+            if len(matches) > 1:
+                raise ValueError(f'Ambiguous Toronto pool identity: {location_id}')
+            if not matches:
+                # A swimming program alone does not establish pool metadata.
+                # Require an actual location record, a pool amenity, and the
+                # current official detail page before adding a new facility.
+                if not location or not location.get('Location ID'):
+                    logger.warning(f"Skipping unresolved swim location: {name} (ID: {location_id})")
+                    continue
+                facility = self._new_official_facility(location_id, location)
+                if facility is None:
+                    continue
+            else:
+                facility = replace(by_id[matches[0].facility_id], source='toronto_open_data',
+                                   toronto_location_id=int(location_id))
+                if not facility.latitude or not facility.longitude:
+                    metadata = self._new_official_facility(location_id, location or {})
+                    if metadata is not None:
+                        facility = replace(metadata, facility_id=facility.facility_id,
+                                           is_free_entry=facility.is_free_entry)
+            facility_id = facility.facility_id
+            self._location_ids.setdefault(facility_id, set()).add(location_id)
+            facilities[facility_id] = facility
+        return list(facilities.values())
+
+    @staticmethod
+    def _municipal_link_id(website: Optional[str]) -> str:
+        url = urlparse(website or '')
+        if url.hostname not in ('toronto.ca', 'www.toronto.ca'):
+            return ''
+        return parse_qs(url.query).get('id', [''])[0]
+
+    def _new_official_facility(self, location_id: str, location: Dict) -> Optional[FacilityData]:
+        if self._amenities is None:
+            self._amenities = self.fetch_csv_data(self.FACILITIES_URL)
+        pool_types = {row.get('Facility Type (Display Name)') for row in self._amenities
+                      if str(row.get('Location ID')) == location_id}
+        indoor, outdoor = 'Indoor Pool' in pool_types, 'Outdoor Pool' in pool_types
+        if not indoor and not outdoor:
+            logger.warning(f'Skipping Toronto swim location without pool amenity: {location_id}')
+            return None
+        if location_id not in self._details:
+            response = self.session.get(
+                f'https://www.toronto.ca/data/parks/live/locations/{location_id}/info.json',
+                timeout=self.timeout)
+            response.raise_for_status()
+            encoding = 'utf-16' if response.content.startswith(b'\xff\xfe') else 'utf-8-sig'
+            import json
+            self._details[location_id] = json.loads(response.content.decode(encoding))
+        detail = self._details[location_id]
+        if str(detail.get('id')) != location_id:
+            raise ValueError(f'Toronto detail returned the wrong location: {location_id}')
+        latitude, longitude = float(detail['lat']), float(detail['lng'])
+        if not (43 < latitude < 45 and -81 < longitude < -78):
+            raise ValueError(f'Invalid Toronto pool coordinates: {location_id}')
+        return FacilityData(
+            facility_id=f'toronto-{location_id}', name=detail['title'], city=self.city,
+            address=detail['address'].strip() + ', Toronto, ON',
+            postal_code=location.get('Postal Code') if location.get('Postal Code') != 'None' else None,
+            district=detail.get('district'), phone=detail.get('phone'),
+            latitude=latitude, longitude=longitude, has_indoor=indoor, has_outdoor=outdoor,
+            toronto_location_id=int(location_id), source='toronto_open_data',
+            website=f'https://www.toronto.ca/explore-enjoy/parks-recreation/places-spaces/parks-and-recreation-facilities/location/?id={location_id}',
+            raw=detail)
+
+    @staticmethod
+    def _normalized_facility_name(name: str) -> str:
+        name = name.casefold().replace('&', ' and ').replace('centre', 'center')
+        return ' '.join(re.findall(r'\w+', name))
+
+    def fetch_sessions(self, facility_id: str, weeks: int = 4) -> List[SessionData]:
+        """Fetch upcoming sessions for a facility."""
+        programs = self.fetch_drop_in_programs()
+        swim_programs = self.filter_swim_activities(programs)
+
+        if not self._location_ids:
+            self.fetch_facilities()
+        location_ids = self._location_ids.get(facility_id, set())
+
+        sessions_data = []
+        locations = self.fetch_locations()
+
+        for program in swim_programs:
+            location_id = self.get_field(program, 'Location ID', 'LocationID', 'Location_ID')
+            if str(location_id).strip() not in location_ids:
+                continue
+
+            location = locations.get(location_id)
+            program_sessions = self.parse_schedule_to_sessions(program, location, weeks_ahead=weeks)
+
+            for s in program_sessions:
+                sessions_data.append(SessionData(
+                    facility_id=facility_id,
+                    swim_type=s['swim_type'],
+                    date=s['date'],
+                    start_time=s['start_time'],
+                    end_time=s['end_time'],
+                    notes=s.get('notes'),
+                    age_min=s.get('age_min'),
+                    age_max=s.get('age_max'),
+                    source='toronto_open_data'
+                ))
+        return sessions_data
     
     def is_swim_activity(self, course_name: str, category: str = "") -> bool:
         """Determine if a program is swim-related."""
@@ -549,4 +691,8 @@ class TorontoDropInAPI:
         """Generate unique hash for session deduplication."""
         content = f"{facility_id}:{session_date}:{start_time}:{swim_type}"
         return hashlib.sha256(content.encode()).hexdigest()
+
+
+# Existing discovery and validation jobs use the original client name.
+TorontoDropInAPI = TorontoDropInSource
 

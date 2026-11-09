@@ -1,6 +1,7 @@
 """Facilities endpoints."""
 from typing import List, Literal, Optional
-from datetime import date as date_type
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from slowapi import Limiter
@@ -15,6 +16,11 @@ from app.schemas import FacilityResponse, FacilityWithSessions
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
+
+
+def _current_local_time() -> datetime:
+    """Municipal schedules use Toronto wall-clock dates and times."""
+    return datetime.now(ZoneInfo('America/Toronto'))
 
 
 @router.get("", response_model=List[FacilityWithSessions])
@@ -68,7 +74,8 @@ async def get_facilities(
         
         # Enrich with session data using optimized bulk queries (avoid N+1 problem)
         result = []
-        today = date_type.today()
+        now = _current_local_time()
+        today = now.date()
         facility_ids = [f.facility_id for f in facilities]
         
         if not facility_ids:
@@ -90,6 +97,8 @@ async def get_facilities(
             effective_swim_type = "LANE_SWIM"
 
         def session_matches_filter(session: SessionModel) -> bool:
+            if session.date == today and session.end_time <= now.time():
+                return False
             if effective_swim_type is None:
                 return True
             return session.swim_type == effective_swim_type

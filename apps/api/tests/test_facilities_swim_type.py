@@ -7,7 +7,7 @@ from app.models import Facility, Session
 
 def test_filter_facilities_by_swim_type_recreational(client, sample_facility, db):
     """Recreational filter returns only facilities with recreational sessions."""
-    today = date.today()
+    session_day = date.today() + timedelta(days=1)
     sample_facility.has_outdoor = True
     db.add(sample_facility)
 
@@ -29,7 +29,7 @@ def test_filter_facilities_by_swim_type_recreational(client, sample_facility, db
         Session(
             facility_id=sample_facility.facility_id,
             swim_type="LANE_SWIM",
-            date=today,
+            date=session_day,
             start_time=time(18, 0),
             end_time=time(19, 0),
             source="test",
@@ -40,7 +40,7 @@ def test_filter_facilities_by_swim_type_recreational(client, sample_facility, db
         Session(
             facility_id=outdoor.facility_id,
             swim_type="RECREATIONAL",
-            date=today,
+            date=session_day,
             start_time=time(14, 0),
             end_time=time(15, 0),
             source="test",

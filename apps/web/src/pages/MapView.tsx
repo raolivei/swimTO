@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, CircleMarker, useMap } from "react-lea
 import { DivIcon, LatLngBounds, Map as LeafletMap } from "leaflet";
 import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
 import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
+import { useCityFilter } from "@/hooks/useCityFilter";
 import { facilityApi, getApiErrorMessage } from "../lib/api";
 import { poolFlags } from "../lib/poolType";
 import { PoolTypeFilterControl } from "../components/PoolTypeFilterControl";
@@ -35,7 +36,25 @@ import {
 import { useDarkMode } from "../contexts/useDarkMode";
 import type { Facility } from "../types";
 
-const TORONTO_CENTER: [number, number] = [43.6532, -79.3832];
+/** GTA-wide default center (midpoint between Toronto and northern suburbs). */
+const GTA_CENTER: [number, number] = [43.75, -79.45];
+
+const CARTO_BASEMAP_API_KEY = (
+  import.meta.env.VITE_CARTO_API_KEY ?? import.meta.env.VITE_CARTO_BASEMAP_API_KEY
+)?.trim();
+const CARTO_KEY_QUERY = CARTO_BASEMAP_API_KEY
+  ? `?key=${encodeURIComponent(CARTO_BASEMAP_API_KEY)}`
+  : "";
+
+/** Colour palette per city — used for the city badge in the facility panel. */
+const CITY_COLORS: Record<string, { bg: string; text: string }> = {
+  Toronto:       { bg: "bg-blue-100 dark:bg-blue-900/40",   text: "text-blue-800 dark:text-blue-300" },
+  Mississauga:   { bg: "bg-purple-100 dark:bg-purple-900/40", text: "text-purple-800 dark:text-purple-300" },
+  Brampton:      { bg: "bg-rose-100 dark:bg-rose-900/40",   text: "text-rose-800 dark:text-rose-300" },
+  Vaughan:       { bg: "bg-orange-100 dark:bg-orange-900/40", text: "text-orange-800 dark:text-orange-300" },
+  "Richmond Hill": { bg: "bg-teal-100 dark:bg-teal-900/40", text: "text-teal-800 dark:text-teal-300" },
+  Markham:       { bg: "bg-emerald-100 dark:bg-emerald-900/40", text: "text-emerald-800 dark:text-emerald-300" },
+};
 
 const OUTDOOR_MARKER_STROKE = "#f59e0b";
 const PANEL_TOP_MARGIN = 64;
@@ -115,27 +134,33 @@ interface FacilityWithDistance extends Facility {
   distance?: number;
 }
 
-// Fits the map to nearby facilities (within 10km of the user) ONCE, the
-// first time both user location and a non-empty facility list are
-// available. After that, the user owns the viewport — filter changes,
-// search, favorites, re-renders never re-fit. The "Recenter" button
-// triggers an explicit re-fit via fitToUserAndFacilities (below).
+// Fit the full available region initially and when the city changes.
+// Other filters, search, and re-renders preserve the user's viewport.
 function InitialFit({
   userLocation,
   facilities,
+  city,
 }: {
   userLocation: UserLocation | null;
   facilities: FacilityWithDistance[];
+  city: string;
 }) {
   const map = useMap();
   const hasFittedRef = useRef(false);
+  const fittedCityRef = useRef(city);
 
   useEffect(() => {
-    if (hasFittedRef.current) return;
-    if (!userLocation || facilities.length === 0) return;
-    fitToUserAndFacilities(map, userLocation, facilities);
+    if (hasFittedRef.current && fittedCityRef.current === city) return;
+    if (facilities.length === 0) return;
+    {
+      const bounds = new LatLngBounds(
+        facilities.map((facility) => [facility.latitude!, facility.longitude!]),
+      );
+      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
+    }
     hasFittedRef.current = true;
-  }, [userLocation, facilities, map]);
+    fittedCityRef.current = city;
+  }, [userLocation, facilities, map, city]);
 
   return null;
 }
@@ -305,6 +330,17 @@ function FacilityPanel({
               {hasOutdoor && <Sun className="w-3 h-3" />}
               {poolTypeLabel}
             </span>
+            {facility.city && (
+              <span
+                className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                  (CITY_COLORS[facility.city] ?? CITY_COLORS.Toronto).bg
+                } ${
+                  (CITY_COLORS[facility.city] ?? CITY_COLORS.Toronto).text
+                }`}
+              >
+                {facility.city}
+              </span>
+            )}
           </div>
           {facility.district && (
             <p className="text-xs text-gray-500 dark:text-gray-400">{facility.district}</p>
@@ -444,6 +480,7 @@ export default function MapView() {
   const [showSearch, setShowSearch] = useState(false);
   const [poolType, setPoolTypeState] = usePoolTypeFilter();
   const [swimType, setSwimType] = useSwimTypeFilter();
+  const [cityFilter, setCityFilter] = useCityFilter();
 
   const setPoolType = (next: typeof poolType) => {
     setSwimType(swimTypeForPoolTypeChange(next, swimType));
@@ -471,6 +508,11 @@ export default function MapView() {
       ]),
     []
   );
+
+  const { data: cityFacilities } = useQuery({
+    queryKey: ["facilities", "city-options"],
+    queryFn: () => facilityApi.getAll("all", "ALL"),
+  });
 
   useEffect(() => {
     handleGetLocation();
@@ -557,18 +599,34 @@ export default function MapView() {
     [facilitiesWithDistance, favorites, sortByDistance, userLocation],
   );
 
+  const availableCities = useMemo(
+    () =>
+      Array.from(
+        new Set((cityFacilities ?? []).map((facility) => facility.city).filter(Boolean)),
+      ).sort(),
+    [cityFacilities],
+  );
+
+  useEffect(() => {
+    if (cityFacilities && cityFilter !== "All" && !availableCities.includes(cityFilter)) {
+      setCityFilter("All");
+    }
+  }, [availableCities, cityFilter, cityFacilities, setCityFilter]);
+
   const visibleFacilities = useMemo(
     () =>
       sortedFacilities.filter((f) => {
+        if (cityFilter !== "All" && f.city !== cityFilter) return false;
         if (!searchQuery.trim()) return true;
         const q = searchQuery.toLowerCase();
         return (
           f.name.toLowerCase().includes(q) ||
+          f.city.toLowerCase().includes(q) ||
           f.address?.toLowerCase().includes(q) ||
           f.district?.toLowerCase().includes(q)
         );
       }),
-    [sortedFacilities, searchQuery],
+    [sortedFacilities, searchQuery, cityFilter],
   );
 
   const validFacilities = useMemo(
@@ -691,26 +749,24 @@ export default function MapView() {
           </div>
         ) : (
           <MapContainer
-            center={TORONTO_CENTER}
-            zoom={11}
+            center={GTA_CENTER}
+            zoom={10}
             className="h-full w-full"
             zoomControl={false}
             scrollWheelZoom={true}
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-              url={(() => {
-                const key = import.meta.env.VITE_CARTO_API_KEY;
-                const q = key ? `?key=${key}` : "";
-                return isDarkMode
-                  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${q}`
-                  : `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${q}`;
-              })()}
+              url={
+                isDarkMode
+                  ? `https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png${CARTO_KEY_QUERY}`
+                  : `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png${CARTO_KEY_QUERY}`
+              }
               subdomains="abcd"
               maxZoom={20}
             />
 
-            <InitialFit userLocation={userLocation} facilities={validFacilities} />
+            <InitialFit userLocation={userLocation} facilities={validFacilities} city={cityFilter} />
             <MapRefSetter mapRef={mapRef} />
 
             {/* User location dot */}
@@ -809,8 +865,31 @@ export default function MapView() {
         </button>
       </div>
 
-      {/* ── Bottom-left: pool + swim type filters ───────────────────── */}
+      {/* ── Bottom-left: city + pool + swim type filters ────────────── */}
       <div className="absolute bottom-4 left-3 z-[1000] pointer-events-none max-w-[calc(100%-6rem)] flex flex-col gap-2">
+        {/* City filter pills */}
+        <div className="pointer-events-auto flex flex-wrap gap-1">
+          {["All", ...availableCities].map((city) => {
+            const isActive = cityFilter === city;
+            const colors = city === "All" ? null : (CITY_COLORS[city] ?? CITY_COLORS.Toronto);
+            return (
+              <button
+                key={city}
+                aria-pressed={isActive}
+                onClick={() => setCityFilter(city)}
+                className={`h-7 px-3 rounded-full text-xs font-semibold shadow-sm border transition-colors ${
+                  isActive
+                    ? city === "All"
+                      ? "bg-gray-800 dark:bg-gray-100 text-white dark:text-gray-900 border-gray-800 dark:border-gray-100"
+                      : `${colors!.bg} ${colors!.text} border-transparent`
+                    : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                }`}
+              >
+                {city}
+              </button>
+            );
+          })}
+        </div>
         <PoolTypeFilterControl
           value={poolType}
           onChange={setPoolType}

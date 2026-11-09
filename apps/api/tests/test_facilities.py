@@ -1,5 +1,11 @@
 """Test facility endpoints."""
 
+from datetime import date, datetime, time
+from zoneinfo import ZoneInfo
+
+from app.models import Session
+from app.routes import facilities
+
 
 def test_get_facilities(client, sample_facility):
     """Test getting all facilities."""
@@ -107,4 +113,34 @@ def test_include_outdoor_deprecated_alias(client, sample_facility, db):
     ids = {f["facility_id"] for f in response.json()}
     assert sample_facility.facility_id in ids
     assert "OUT002" not in ids
+
+
+def test_next_session_keeps_current_swim_and_excludes_ended_swims(client, sample_facility, db, monkeypatch):
+    monkeypatch.setattr(facilities, '_current_local_time', lambda: datetime(
+        2026, 10, 30, 16, tzinfo=ZoneInfo('America/Toronto')))
+    for index, (day, start, end) in enumerate([
+        (date(2026, 10, 30), time(14), time(15)),
+        (date(2026, 10, 30), time(15), time(16)),
+        (date(2026, 10, 30), time(15, 30), time(16, 30)),
+        (date(2026, 10, 30), time(17), time(18)),
+        (date(2026, 10, 31), time(9), time(10)),
+    ]):
+        db.add(Session(facility_id=sample_facility.facility_id, swim_type='LANE_SWIM',
+                       date=day, start_time=start, end_time=end, hash=f'next-{index}'))
+    db.commit()
+    response = client.get('/facilities', params={'swim_type': 'LANE_SWIM'})
+    assert response.status_code == 200
+    pool = response.json()[0]
+    assert pool['next_session']['start_time'] == '15:30:00'
+    assert pool['session_count'] == 3
+
+
+def test_next_session_uses_toronto_date_not_server_date(client, sample_facility, db, monkeypatch):
+    monkeypatch.setattr(facilities, '_current_local_time', lambda: datetime(
+        2026, 10, 30, 21, tzinfo=ZoneInfo('America/Toronto')))
+    db.add(Session(facility_id=sample_facility.facility_id, swim_type='LANE_SWIM',
+                   date=date(2026, 10, 30), start_time=time(21, 30), end_time=time(22, 30), hash='evening'))
+    db.commit()
+    pool = client.get('/facilities', params={'swim_type': 'LANE_SWIM'}).json()[0]
+    assert pool['next_session']['date'] == '2026-10-30'
 

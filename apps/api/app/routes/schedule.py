@@ -85,7 +85,7 @@ async def get_schedule(
         query = query.filter(and_(*filters))
     
     # Order by date and time
-    query = query.order_by(SessionModel.date, SessionModel.start_time)
+    query = query.order_by(SessionModel.date, SessionModel.start_time, SessionModel.id)
     
     # Pagination
     sessions = query.offset(offset).limit(limit).all()

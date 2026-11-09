@@ -7,19 +7,19 @@
 ![PR Checks](https://github.com/raolivei/swimTO/actions/workflows/pr.yml/badge.svg)
 ![Build](https://github.com/raolivei/swimTO/actions/workflows/build-and-push.yml/badge.svg)
 
-**SwimTO** aggregates and displays indoor community pool drop-in swim schedules for the City of Toronto.
+**SwimTO** aggregates municipal pool drop-in swim schedules across Toronto, Mississauga, Brampton, Vaughan, Richmond Hill, and Markham.
 
 > **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.
 
 ## 🎯 Overview
 
-SwimTO collects, normalizes, and presents lane swim schedules from Toronto's community pools, helping residents find convenient swimming times near them.
+SwimTO collects, normalizes, and presents official municipal swim schedules, helping GTA residents find convenient swimming times near them. See [local review](docs/LOCAL_REVIEW.md) for verified coverage and the preview workflow.
 
 ### Features
 
-- 🗺️ **Interactive Map View** - Toronto-focused map showing all community centers with lane swim sessions
+- 🗺️ **Interactive Map View** - GTA-wide pool map with city and swim-type filters
 - 📅 **Schedule View** - Calendar-style layout with weekday + time slots for lane swim programs
-- 🔄 **Auto-refresh** - Daily updates from City of Toronto Open Data sources
+- 🔄 **Auto-refresh** - Daily ingestion from official municipal recreation calendars and seasonal timetables
 - 📱 **Mobile-First Design** - Fully responsive with PWA support, tested on iOS and Android
 - 🧪 **Comprehensive Testing** - Automated mobile testing with Playwright across multiple devices
 - 🏗️ **Self-hosted** - Runs on Raspberry Pi k3s cluster

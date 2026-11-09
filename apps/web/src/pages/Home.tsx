@@ -5,6 +5,13 @@ import { facilityApi, scheduleApi } from "../lib/api";
 import { useState } from "react";
 
 export default function Home() {
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(startOfToday);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const localDate = (day: Date) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  const statsFrom = localDate(startOfToday);
+  const statsTo = localDate(weekEnd);
   // Fetch facilities data for stats
   const { data: facilities, isLoading: facilitiesLoading } = useQuery({
     queryKey: ["facilities", "lane-swim"],
@@ -14,21 +21,14 @@ export default function Home() {
 
   // Fetch schedule data for stats
   const { data: sessions, isLoading: sessionsLoading } = useQuery({
-    queryKey: ["schedule", "stats"],
-    queryFn: () => scheduleApi.getSchedule({ limit: 1000 }),
+    queryKey: ["schedule", "stats", statsFrom, statsTo],
+    queryFn: () => scheduleApi.getAllSchedule({ date_from: statsFrom, date_to: statsTo }),
     retry: 1,
   });
 
   // Calculate stats
   const facilityCount = facilities?.length || 0;
-  // Count unique sessions per week (approximate: sessions in next 7 days)
-  const now = new Date();
-  const weekFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const weeklySessions =
-    sessions?.filter((session) => {
-      const sessionDate = new Date(session.date);
-      return sessionDate >= now && sessionDate <= weekFromNow;
-    }).length || 0;
+  const weeklySessions = sessions?.length || 0;
 
   return (
     <div className="min-h-[calc(100dvh-8rem)]">
@@ -45,7 +45,7 @@ export default function Home() {
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-2 rounded-full mb-6 border border-white/20">
               <Sparkles className="w-4 h-4" />
               <span className="text-sm font-medium">
-                Toronto's Premier Pool Finder
+                Your GTA Pool Finder
               </span>
             </div>
             <h1 className="text-6xl md:text-7xl font-extrabold mb-6 leading-tight">
@@ -56,7 +56,7 @@ export default function Home() {
               </span>
             </h1>
             <p className="text-xl text-primary-100 mb-10 max-w-3xl mx-auto leading-relaxed">
-              Discover indoor pool drop-in swim schedules across Toronto.
+              Discover drop-in swims across Toronto, Mississauga, Brampton, Vaughan, Richmond Hill, and Markham.
               {facilityCount > 0 ? (
                 <>
                   {" "}
@@ -95,7 +95,7 @@ export default function Home() {
               Skip the runaround.
             </h2>
             <p className="mt-3 text-base md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              Every Toronto drop-in swim, on one screen — always current.
+              Six cities, one map, and official municipal swim schedules.
             </p>
           </div>
 
@@ -105,10 +105,10 @@ export default function Home() {
                 <Database className="w-6 h-6 text-blue-600 dark:text-blue-400" />
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">
-                All Toronto Pools, One Place
+                GTA Pools, One Place
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Every City of Toronto community pool with drop-in swim, aggregated into a single map and schedule. No more hopping between facility pages.
+                Community pools across Toronto, Mississauga, Brampton, Vaughan, Richmond Hill, and Markham on one map and schedule.
               </p>
             </div>
 
@@ -120,7 +120,7 @@ export default function Home() {
                 Always Fresh
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                Schedules sync automatically from the City of Toronto Open Data Portal, so you see the latest hours without lifting a finger.
+                Schedules sync automatically from official recreation data sources, so you see the latest available hours without lifting a finger.
               </p>
             </div>
 
@@ -207,7 +207,7 @@ export default function Home() {
                 Interactive Map
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Explore all Toronto community centers with lane swim sessions on
+                Explore community centres with lane swim sessions on
                 an interactive map with real-time availability.
               </p>
             </Link>
@@ -239,8 +239,8 @@ export default function Home() {
                 Real-Time Updates
               </h3>
               <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-                Automatically updated schedules from City of Toronto Open Data.
-                Always current, always accurate.
+                Automatically updated schedules from verified municipal recreation
+                data. Always current, always accurate.
               </p>
             </Link>
           </div>
@@ -367,7 +367,7 @@ export default function Home() {
           </h2>
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-10 max-w-2xl mx-auto">
             Find your nearest pool and start swimming today. Join thousands of
-            swimmers across Toronto.
+            swimmers across Toronto and the GTA.
           </p>
           <Link
             to="/map"
@@ -393,7 +393,7 @@ function FAQSection() {
     },
     {
       question: "How accurate is the schedule data?",
-      answer: "Our data comes directly from the City of Toronto Open Data Portal and is updated daily. However, we always recommend confirming with the facility for any last-minute changes."
+      answer: "Our data comes from verified official recreation sources and is updated daily. However, we always recommend confirming with the facility for any last-minute changes."
     },
     {
       question: "What types of swim sessions are available?",
@@ -409,7 +409,7 @@ function FAQSection() {
     },
     {
       question: "Why can't I find a specific pool?",
-      answer: "SwimTO currently shows City of Toronto community center pools that offer drop-in lane swim. Private pools and some specialized facilities may not be included."
+      answer: "SwimTO covers municipal drop-in swims in Toronto, Mississauga, Brampton, Vaughan, Richmond Hill, and Markham using official city schedules. Private pools and some specialized facilities may not be included."
     }
   ];
 
