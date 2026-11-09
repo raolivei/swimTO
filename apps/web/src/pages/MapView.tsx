@@ -39,7 +39,9 @@ import type { Facility } from "../types";
 /** GTA-wide default center (midpoint between Toronto and northern suburbs). */
 const GTA_CENTER: [number, number] = [43.75, -79.45];
 
-const CARTO_BASEMAP_API_KEY = import.meta.env.VITE_CARTO_BASEMAP_API_KEY?.trim();
+const CARTO_BASEMAP_API_KEY = (
+  import.meta.env.VITE_CARTO_API_KEY ?? import.meta.env.VITE_CARTO_BASEMAP_API_KEY
+)?.trim();
 const CARTO_KEY_QUERY = CARTO_BASEMAP_API_KEY
   ? `?key=${encodeURIComponent(CARTO_BASEMAP_API_KEY)}`
   : "";

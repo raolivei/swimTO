@@ -5,6 +5,32 @@ on:
     branches: [main]
 
 jobs:
+  version-check:
+    name: VERSION Check
+    uses: raolivei/github-workflows/.github/workflows/version-check.yml@main
+
+  api-tests:
+    name: API regression tests
+    uses: raolivei/github-workflows/.github/workflows/python-ci.yml@main
+    with:
+      working-directory: apps/api
+      package-manager: pip
+      runs-on: ubuntu-latest
+      run-ruff: false
+      run-mypy: false
+      pytest-args: "-q -o addopts=''"
+
+  pipeline-tests:
+    name: Municipal ingestion regression tests
+    uses: raolivei/github-workflows/.github/workflows/python-ci.yml@main
+    with:
+      working-directory: data-pipeline
+      package-manager: pip
+      runs-on: ubuntu-latest
+      run-ruff: false
+      run-mypy: false
+      pytest-args: "-q tests"
+  
   web-e2e:
     name: Web E2E (Playwright)
     runs-on: ubuntu-latest
@@ -28,6 +54,8 @@ jobs:
 
       - name: Run core Playwright tests
         run: npx playwright test src/tests/map-panel.spec.ts --config=playwright.ci.config.ts
+        env:
+          VITE_CARTO_API_KEY: ${{ vars.CARTO_API_KEY }}
 
       - name: Upload Playwright report on failure
         if: failure()

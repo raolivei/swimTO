@@ -21,16 +21,15 @@ Deployment is owned by Flux in `pi-fleet/clusters/eldertree/swimto/` and
 to reconcile. Secrets come from Vault through External Secrets Operator.
 Routine releases do not use manual image imports or deployment restarts.
 
-The dev image policy currently expects `dev-<timestamp>-<sha>` tags, but the
-local swimTO caller workflow only lists `main` for push builds. Confirm and
-resolve that discrepancy in the existing workflow before relying on automatic
-dev deployment. Production selects semver tags in `>=0.5.0 <1.0.0`.
+The existing caller builds `main` and `dev` pushes, including changes under
+`data-pipeline/`. Dev image automation selects `dev-<timestamp>-<sha>` tags;
+production selects semver tags in `>=0.5.0 <1.0.0`.
 
 ## Frontend and map
 
 From `apps/web`, create a gitignored `.env.local` using `.env.example` as a template.
 Set `VITE_API_URL` to the local API URL, normally `http://localhost:8000`, and set
-`VITE_CARTO_BASEMAP_API_KEY` to the project's CARTO Basemaps browser key retrieved
+`VITE_CARTO_API_KEY` to the project's CARTO Basemaps browser key retrieved
 from Vault. Then run `npm run dev -- --host 127.0.0.1` and open
 `http://127.0.0.1:5173`. Restart Vite after changing environment variables.
 
@@ -39,10 +38,10 @@ visible to the browser in tile requests and should be restricted to the intended
 swimTO origins. Never put a Vault token or server credential in a `VITE_` variable.
 Never commit actual keys or `.env.local` files.
 
-Vault is the source of truth. The existing `swimto-dev` ExternalSecret maps
-`secret/swimto-dev/app` into database, Redis, and application credentials. It does
-not yet include a CARTO key mapping. Adding that mapping and loading the browser
-key for deployment remains a separate infrastructure step; setting a pod
+Vault and ESO supply database, Redis, and application credentials. The existing
+production web build passes the public browser basemap key using
+`VITE_CARTO_API_KEY=${{ vars.CARTO_API_KEY }}` through the shared build workflow.
+Keep this existing build argument and repository-variable wiring. Setting a pod
 environment variable alone does not change an already built Vite bundle.
 
 ## Data and verification
@@ -75,9 +74,10 @@ This is verified coverage, not a guarantee that every GTA pool is included.
 Upcoming availability uses America/Toronto wall-clock time. Ended swims no
 longer appear as the next session; swims still in progress remain visible.
 
-The current isolated preview uses Vite on 127.0.0.1:5173 and the real FastAPI
+The October isolated preview used Vite on 127.0.0.1:5173 and the real FastAPI
 application on 127.0.0.1:8012 with an isolated SQLite database in /private/tmp.
-It contains municipal schedules, not generated example times. Docker/PostgreSQL
+It contained municipal schedules, not generated example times. Temporary preview
+files may be removed between sessions. Docker/PostgreSQL
 remains the documented normal local setup; this preview does not change deployment.
 
 Useful checks:

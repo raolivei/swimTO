@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Production integration** — preserve the existing CARTO build argument and GitHub repository variable, restored database defaults, and disabled styling for past sessions when releasing the combined GTA adapters. Include pipeline changes in PR build checks.
 - **Toronto pool coverage** — resolve all 51 swimming locations in the current municipal Open Data feed. Preserve existing pool slugs using municipal location links and explicit venue relationships, and add missing pools only after verifying pool amenities and live location metadata. Use stable official-ID-based URLs for newly discovered pools.
 - **Upcoming swim accuracy** — exclude ended sessions from map availability and upcoming counts using Toronto local time, while retaining swims already in progress.
 - **Multi-city ingestion compatibility** — preserve Toronto public pool IDs and curated coordinates across Open Data, XML, and JSON sources. Cache shared Open Data feeds per refresh, retain existing schedules on empty or invalid responses, deduplicate incoming sessions, and report failed refresh sources. Preserve the original parser imports used by discovery and validation jobs.

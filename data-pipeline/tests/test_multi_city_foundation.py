@@ -97,4 +97,3 @@ def test_facility_only_source_does_not_touch_sessions(monkeypatch) -> None:
     daily_refresh.refresh_city_data(FakeSession())
 
     assert existing.city == "Toronto"
-
