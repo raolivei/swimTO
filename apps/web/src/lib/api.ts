@@ -104,6 +104,17 @@ export const facilityApi = {
 };
 
 export const scheduleApi = {
+  getAllSchedule: async (filters: ScheduleFilters = {}): Promise<SessionWithFacility[]> => {
+    const result: SessionWithFacility[] = [];
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data } = await api.get<SessionWithFacility[]>("/schedule", {
+        params: { ...filters, limit: pageSize, offset },
+      });
+      result.push(...data);
+      if (data.length < pageSize) return result;
+    }
+  },
   getSchedule: async (
     filters?: ScheduleFilters
   ): Promise<SessionWithFacility[]> => {

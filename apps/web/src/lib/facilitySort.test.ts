@@ -17,6 +17,7 @@ const nearFacility = {
   is_indoor: true,
   phone: null,
   source: null,
+  city: "Toronto",
   created_at: "",
   updated_at: "",
 } satisfies Facility;
@@ -34,6 +35,7 @@ const farFacility = {
   is_indoor: true,
   phone: null,
   source: null,
+  city: "Toronto",
   created_at: "",
   updated_at: "",
 } satisfies Facility;

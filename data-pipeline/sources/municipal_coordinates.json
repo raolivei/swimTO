@@ -1,0 +1,57 @@
+{
+  "mississauga-82": {
+    "latitude": 43.596844,
+    "longitude": -79.6237036,
+    "source": "https://www.openstreetmap.org/way/28232216"
+  },
+  "mississauga-119": {
+    "latitude": 43.5853167,
+    "longitude": -79.7571131,
+    "source": "https://www.openstreetmap.org/node/807609952"
+  },
+  "mississauga-125": {
+    "latitude": 43.7232925,
+    "longitude": -79.6387,
+    "source": "https://www.openstreetmap.org/node/3720192600"
+  },
+  "mississauga-240": {
+    "latitude": 43.5115923,
+    "longitude": -79.650285,
+    "source": "https://www.openstreetmap.org/way/33576013"
+  },
+  "mississauga-243": {
+    "latitude": 43.6151643,
+    "longitude": -79.6548135,
+    "source": "https://www.openstreetmap.org/way/198341579"
+  },
+  "mississauga-248": {
+    "latitude": 43.5782652,
+    "longitude": -79.5766348,
+    "source": "https://www.openstreetmap.org/way/33797558"
+  },
+  "mississauga-252": {
+    "latitude": 43.5596433,
+    "longitude": -79.6311324,
+    "source": "https://www.openstreetmap.org/node/1125798433"
+  },
+  "mississauga-261": {
+    "latitude": 43.5415797,
+    "longitude": -79.7435975,
+    "source": "https://www.openstreetmap.org/way/984967134"
+  },
+  "mississauga-267": {
+    "latitude": 43.5556064,
+    "longitude": -79.7175384,
+    "source": "https://www.openstreetmap.org/way/87685688"
+  },
+  "mississauga-290": {
+    "latitude": 43.6227813,
+    "longitude": -79.5985087,
+    "source": "https://www.openstreetmap.org/way/33280766"
+  },
+  "vaughan-woodbridge-pool-memorial-arena": {
+    "latitude": 43.7802455,
+    "longitude": -79.5916837,
+    "source": "https://www.openstreetmap.org/node/1089911099"
+  }
+}

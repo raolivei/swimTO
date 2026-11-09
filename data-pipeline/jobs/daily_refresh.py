@@ -2,24 +2,19 @@
 """Daily refresh job to update pool schedules."""
 import sys
 from pathlib import Path
+import importlib
 
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from datetime import date, datetime, timedelta
+from datetime import date, timedelta
 from loguru import logger
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
-from config import settings
+from config import settings, CITY_SOURCES
 from models import Base, Facility, Session
-from sources.pools_xml_parser import PoolsXMLParser
-from sources.facility_scraper import FacilityScraper
-from sources.toronto_pools_data import get_all_swim_pools, resolve_pool_type_flags
-from sources.toronto_drop_in_api import TorontoDropInAPI
-from sources.toronto_parks_json_api import TorontoParksJSONAPI
-from sources.curated_json_facilities import get_json_api_facilities
-
+from sources.facility_store import upsert_facility
 
 def setup_logging():
     """Configure logging."""
@@ -36,7 +31,6 @@ def setup_logging():
         level="DEBUG"
     )
 
-
 def setup_database():
     """Set up database connection."""
     engine = create_engine(settings.database_url)
@@ -44,488 +38,108 @@ def setup_database():
     SessionLocal = sessionmaker(bind=engine)
     return SessionLocal()
 
+def refresh_city_data(db_session):
+    """Refresh all city data from registered sources."""
+    failed_sources = []
+    for city, source_modules in CITY_SOURCES.items():
+        logger.info(f"Refreshing data for city: {city}")
 
-def ingest_curated_facilities(db_session):
-    """Ingest curated facility data from toronto_pools_data."""
-    logger.info("Ingesting curated facility data")
-    
-    facilities = get_all_swim_pools()
-    
-    ingested = 0
-    updated = 0
-    for facility_data in facilities:
-        # Generate facility_id from name (normalized)
-        facility_id = facility_data['name'].lower().replace(' ', '-').replace("'", '')
-        
-        # Check if exists
-        existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
-        
-        has_indoor, has_outdoor = resolve_pool_type_flags(facility_data)
-        is_indoor = facility_data.get('is_indoor', has_indoor and not has_outdoor)
-        # All City of Toronto outdoor pools are free drop-in during operating season.
-        # Allow per-facility override via curated 'is_free_entry' field.
-        is_free_entry = facility_data.get('is_free_entry', has_outdoor and not has_indoor)
-        toronto_location_id = facility_data.get('toronto_location_id')
-
-        if existing:
-            # Update
-            existing.name = facility_data.get('name', existing.name)
-            existing.address = facility_data.get('address', existing.address)
-            existing.postal_code = facility_data.get('postal_code', existing.postal_code)
-            existing.district = facility_data.get('district', existing.district)
-            existing.latitude = facility_data.get('latitude', existing.latitude)
-            existing.longitude = facility_data.get('longitude', existing.longitude)
-            existing.is_indoor = is_indoor
-            existing.has_indoor = has_indoor
-            existing.has_outdoor = has_outdoor
-            existing.is_free_entry = is_free_entry
-            if toronto_location_id is not None:
-                existing.toronto_location_id = toronto_location_id
-            existing.phone = facility_data.get('phone', existing.phone)
-            existing.website = facility_data.get('website', existing.website)
-            existing.updated_at = datetime.utcnow()
-            updated += 1
-        else:
-            # Insert
-            facility = Facility(
-                facility_id=facility_id,
-                name=facility_data.get('name', ''),
-                address=facility_data.get('address'),
-                postal_code=facility_data.get('postal_code'),
-                district=facility_data.get('district'),
-                latitude=facility_data.get('latitude'),
-                longitude=facility_data.get('longitude'),
-                is_indoor=is_indoor,
-                has_indoor=has_indoor,
-                has_outdoor=has_outdoor,
-                is_free_entry=is_free_entry,
-                toronto_location_id=toronto_location_id,
-                phone=facility_data.get('phone'),
-                website=facility_data.get('website'),
-                source='curated',
-                raw=facility_data
-            )
-            db_session.add(facility)
-            ingested += 1
-    
-    db_session.commit()
-    logger.info(f"Ingested {ingested} new facilities, updated {updated} existing facilities")
-
-
-def ingest_facilities(db_session):
-    """Ingest facility metadata from XML parser."""
-    logger.info("Ingesting facility metadata from pools.xml")
-    
-    parser = PoolsXMLParser()
-    facilities = parser.fetch_and_parse()
-    
-    ingested = 0
-    for facility_data in facilities:
-        facility_id = facility_data.get('facility_id')
-        if not facility_id:
-            continue
-        
-        # Check if exists
-        existing = db_session.query(Facility).filter_by(facility_id=facility_id).first()
-        
-        if existing:
-            # Update only if not from curated source
-            if existing.source != 'curated':
-                for key, value in facility_data.items():
-                    if hasattr(existing, key) and value is not None:
-                        setattr(existing, key, value)
-                existing.updated_at = datetime.utcnow()
-        else:
-            # Insert
-            facility = Facility(
-                facility_id=facility_id,
-                name=facility_data.get('name', ''),
-                address=facility_data.get('address'),
-                postal_code=facility_data.get('postal_code'),
-                district=facility_data.get('district'),
-                latitude=facility_data.get('latitude'),
-                longitude=facility_data.get('longitude'),
-                is_indoor=facility_data.get('is_indoor', True),
-                phone=facility_data.get('phone'),
-                website=facility_data.get('website'),
-                source='pools_xml',
-                raw=facility_data
-            )
-            db_session.add(facility)
-        
-        ingested += 1
-    
-    db_session.commit()
-    logger.info(f"Processed {ingested} facilities from XML")
-
-
-def ingest_official_schedules(db_session):
-    """Ingest schedules from Toronto Open Data API (official source)."""
-    logger.info("=" * 60)
-    logger.info("Ingesting swim schedules from Toronto Open Data API")
-    logger.info("=" * 60)
-    
-    api = TorontoDropInAPI()
-    
-    # Fetch data from API
-    logger.info("Fetching drop-in programs...")
-    programs = api.fetch_drop_in_programs()
-    
-    logger.info("Fetching locations...")
-    locations = api.fetch_locations()
-    
-    if not programs:
-        logger.error("No programs fetched from API")
-        return
-    
-    # Filter for swim activities
-    swim_programs = api.filter_swim_activities(programs)
-    
-    if not swim_programs:
-        logger.warning("No swim programs found in drop-in data")
-        return
-    
-    # Get all existing facilities for matching
-    existing_facilities = db_session.query(Facility).all()
-    
-    total_sessions = 0
-    total_inserted = 0
-    total_skipped = 0
-    facilities_processed = set()
-    unmatched_locations = set()
-    
-    for program in swim_programs:
-        location_id = api.get_field(program, 'Location ID', 'LocationID', 'Location_ID')
-        location = locations.get(location_id)
-        
-        # Parse program into sessions
-        sessions = api.parse_schedule_to_sessions(
-            program,
-            location,
-            weeks_ahead=4
-        )
-        
-        if not sessions:
-            continue
-        
-        # Try to match facility
-        facility_name = sessions[0]['facility_name']
-        facility_id = api.match_facility(
-            facility_name,
-            location_id,
-            location,
-            existing_facilities
-        )
-        
-        if not facility_id:
-            unmatched_locations.add(f"{facility_name} (ID: {location_id})")
-            total_skipped += len(sessions)
-            continue
-        
-        facilities_processed.add(facility_id)
-        
-        # Insert sessions
-        for session_data in sessions:
+        for module_name in source_modules:
             try:
-                # Generate hash for deduplication
-                session_hash = api.generate_session_hash(
-                    facility_id,
-                    session_data['date'],
-                    session_data['start_time'],
-                    session_data['swim_type']
-                )
-                
-                # Check if exists
-                existing = db_session.query(Session).filter_by(hash=session_hash).first()
-                
-                if not existing:
-                    # Insert new session
-                    new_session = Session(
-                        facility_id=facility_id,
-                        swim_type=session_data['swim_type'],
-                        date=session_data['date'],
-                        start_time=session_data['start_time'],
-                        end_time=session_data['end_time'],
-                        notes=session_data.get('notes'),
-                        age_min=session_data.get('age_min'),
-                        age_max=session_data.get('age_max'),
-                        source='toronto_open_data',
-                        hash=session_hash
-                    )
-                    db_session.add(new_session)
-                    total_inserted += 1
-                    
-                    logger.debug(
-                        f"Inserted: {facility_name} - {session_data['swim_type']} "
-                        f"on {session_data['date']} at {session_data['start_time']}"
-                    )
-                
-                total_sessions += 1
-                
-            except Exception as e:
-                logger.error(f"Error inserting session: {e}")
-                db_session.rollback()
-                continue
-        
-        # Commit after each program to avoid losing progress
-        db_session.commit()
-    
-    logger.info("=" * 60)
-    logger.success(f"✓ Processed {len(swim_programs)} swim programs")
-    logger.success(f"✓ Matched {len(facilities_processed)} facilities")
-    logger.success(f"✓ Processed {total_sessions} sessions")
-    logger.success(f"✓ Inserted {total_inserted} new sessions")
-    
-    if total_skipped > 0:
-        logger.warning(f"⚠ Skipped {total_skipped} sessions from {len(unmatched_locations)} unmatched locations")
-        
-        if unmatched_locations:
-            logger.warning("Unmatched locations:")
-            for loc in sorted(unmatched_locations):
-                logger.warning(f"  - {loc}")
-    
-    logger.info("=" * 60)
+                module = importlib.import_module(f"sources.{module_name}")
+                source_class = None
+                for attr_name in dir(module):
+                    attr = getattr(module, attr_name)
+                    if isinstance(attr, type) and attr.__name__.endswith('Source') and attr.__module__ == module.__name__ and attr.__name__ != 'BaseSwimSource':
+                        source_class = attr
+                        break
 
+                if not source_class:
+                    logger.warning(f"No source class found in {module_name}")
+                    continue
 
-def ingest_json_api_schedules(db_session):
-    """
-    Ingest schedules from Toronto Parks JSON API.
-    
-    This handles facilities that are NOT in the Toronto Open Data API,
-    but have schedules available via the JSON API at:
-    https://www.toronto.ca/data/parks/live/locations/{location_id}/swim/
-    """
-    logger.info("=" * 60)
-    logger.info("Ingesting swim schedules from Toronto Parks JSON API")
-    logger.info("=" * 60)
-    
-    api = TorontoParksJSONAPI()
-    json_facilities = get_json_api_facilities()
-    
-    if not json_facilities:
-        logger.info("No facilities configured for JSON API scraping")
-        return
-    
-    logger.info(f"Found {len(json_facilities)} facilities to scrape via JSON API")
-    
-    total_sessions = 0
-    total_inserted = 0
-    total_skipped = 0
-    
-    for facility_id, facility_info in json_facilities.items():
-        location_id = facility_info.get('location_id')
-        facility_name = facility_info.get('name')
-        
-        if not location_id:
-            logger.warning(f"No location_id for facility: {facility_id}")
-            continue
-        
-        logger.info(f"Processing {facility_name} (location_id={location_id})")
-        
-        # Check if facility exists in database
-        existing_facility = db_session.query(Facility).filter_by(facility_id=facility_id).first()
-        if not existing_facility:
-            logger.warning(f"Facility not found in database: {facility_id}")
-            logger.warning("Please add it to toronto_pools_data.py first")
-            continue
-        
-        try:
-            # Fetch schedule data
-            sessions = api.fetch_facility_schedule(location_id, weeks_ahead=4)
-            
-            if not sessions:
-                logger.warning(f"No sessions found for {facility_name}")
-                continue
-            
-            # Delete all existing sessions for this facility to ensure 100% accuracy
-            # This prevents stale data and ensures we match the official source exactly
-            deleted_count = db_session.query(Session).filter_by(facility_id=facility_id).delete()
-            if deleted_count > 0:
-                logger.info(f"  Deleted {deleted_count} existing sessions for {facility_name}")
+                source = source_class()
+
+                # 1. Ingest/Update Facilities
+                facilities = source.fetch_facilities()
+                for f_data in facilities:
+                    if f_data.city != city:
+                        raise ValueError(f"Source {module_name} returned a facility from {f_data.city}")
+                    upsert_facility(db_session, f_data)
                 db_session.commit()
-            
-            # Insert sessions
-            for session_data in sessions:
-                try:
-                    # Generate hash for deduplication
-                    import hashlib
-                    hash_content = f"{facility_id}:{session_data['date']}:{session_data['start_time']}:{session_data['swim_type']}"
-                    session_hash = hashlib.sha256(hash_content.encode()).hexdigest()
-                    
-                    # Check if exists
-                    existing = db_session.query(Session).filter_by(hash=session_hash).first()
-                    
-                    if not existing:
-                        # Insert new session
+
+                # 2. Ingest sessions only for facilities owned by this source.
+                # Facility-only sources must never erase schedules populated by
+                # another source for the same city.
+                if not source.provides_sessions:
+                    continue
+
+                facility_ids = [facility.facility_id for facility in facilities]
+                if not facility_ids:
+                    logger.warning(
+                        f"Skipping session refresh for {module_name}: no facilities returned"
+                    )
+                    continue
+
+                source_facilities = (
+                    db_session.query(Facility)
+                    .filter(Facility.facility_id.in_(facility_ids))
+                    .all()
+                )
+                for facility in source_facilities:
+                    sessions = source.fetch_sessions(
+                        facility.facility_id, weeks=max(1, (settings.ingest_window_days + 6) // 7))
+                    if not sessions:
+                        logger.warning(f"No sessions returned for {facility.facility_id}; retaining existing schedules")
+                        continue
+                    # Validate before deleting, so bad upstream data cannot
+                    # replace a facility's valid schedule.
+                    for session in sessions:
+                        if session.facility_id != facility.facility_id or session.end_time <= session.start_time:
+                            raise ValueError(f"Invalid session for {facility.facility_id}")
+                    db_session.query(Session).filter_by(facility_id=facility.facility_id).delete()
+                    seen_hashes = set()
+                    for s_data in sessions:
+                        import hashlib
+                        hash_content = f"{facility.facility_id}:{s_data.date}:{s_data.start_time}:{s_data.swim_type}"
+                        session_hash = hashlib.sha256(hash_content.encode()).hexdigest()
+                        if session_hash in seen_hashes:
+                            continue
+                        seen_hashes.add(session_hash)
+
                         new_session = Session(
-                            facility_id=facility_id,
-                            swim_type=session_data['swim_type'],
-                            date=session_data['date'],
-                            start_time=session_data['start_time'],
-                            end_time=session_data['end_time'],
-                            notes=session_data.get('notes'),
-                            age_min=session_data.get('age_min'),
-                            age_max=session_data.get('age_max'),
-                            source='toronto_parks_json_api',
+                            facility_id=facility.facility_id,
+                            swim_type=s_data.swim_type,
+                            date=s_data.date,
+                            start_time=s_data.start_time,
+                            end_time=s_data.end_time,
+                            notes=s_data.notes,
+                            age_min=s_data.age_min,
+                            age_max=s_data.age_max,
+                            source=s_data.source,
                             hash=session_hash
                         )
                         db_session.add(new_session)
-                        total_inserted += 1
-                        
-                        logger.debug(
-                            f"Inserted: {facility_name} - {session_data['swim_type']} "
-                            f"on {session_data['date']} at {session_data['start_time']}"
-                        )
-                    
-                    total_sessions += 1
-                    
-                except Exception as e:
-                    logger.error(f"Error inserting session: {e}")
-                    db_session.rollback()
-                    continue
-            
-            # Commit after each facility
-            db_session.commit()
-            logger.success(f"✓ Processed {len(sessions)} sessions for {facility_name}")
-            
-        except Exception as e:
-            logger.error(f"Error processing {facility_name}: {e}")
-            db_session.rollback()
-            continue
-    
-    logger.info("=" * 60)
-    logger.success(f"✓ Processed {total_sessions} sessions from JSON API")
-    logger.success(f"✓ Inserted {total_inserted} new sessions")
-    
-    if total_skipped > 0:
-        logger.warning(f"⚠ Skipped {total_skipped} sessions")
-    
-    logger.info("=" * 60)
+                db_session.commit()
 
+            except Exception as e:
+                logger.exception(f"Error refreshing source {module_name}: {e}")
+                db_session.rollback()
+                failed_sources.append(module_name)
 
-def ingest_schedules_legacy(db_session):
-    """
-    Legacy web scraper (DEPRECATED - use ingest_official_schedules instead).
-    
-    This scraper is kept as a fallback but should not be used in production.
-    The official Toronto Open Data API provides more accurate and complete data.
-    """
-    logger.warning("Using legacy web scraper (DEPRECATED)")
-    logger.info("Ingesting swim schedules via web scraping")
-    
-    # Get all facilities with websites
-    facilities = db_session.query(Facility).filter(
-        Facility.website.isnot(None),
-        Facility.is_indoor.is_(True)
-    ).all()
-    
-    scraper = FacilityScraper()
-    total_sessions = 0
-    total_inserted = 0
-    
-    for facility in facilities:
-        logger.info(f"Processing {facility.name}")
-        
-        try:
-            facility_data = scraper.scrape_facility_page(facility.website)
-            if facility_data and facility_data.get('sessions'):
-                sessions = facility_data['sessions']
-                
-                for session_data in sessions:
-                    # Parse time text into start/end times
-                    time_text = session_data.get('time_text', '')
-                    times = FacilityScraper.parse_time_text(time_text)
-                    
-                    if not times:
-                        logger.debug(f"Could not parse time text: {time_text}")
-                        continue
-                    
-                    start_time, end_time = times
-                    
-                    # Get the session date
-                    # New format: session_data has 'date' field with actual date object
-                    # Old format: session_data has 'day' field with day name that needs conversion
-                    session_date = session_data.get('date')
-                    
-                    if session_date:
-                        # New format: we have the exact date
-                        # Project this schedule forward for the next week only
-                        # This ensures "Next Week" navigation works even if the source
-                        # page only shows the current week
-                        dates = []
-                        for week_offset in range(2):  # Current week + next week
-                            future_date = session_date + timedelta(weeks=week_offset)
-                            dates.append(future_date)
-                    else:
-                        # Old format: convert day name to dates for the next 2 weeks
-                        day_name = session_data.get('day', '')
-                        dates = FacilityScraper.day_name_to_dates(day_name, weeks_ahead=2)
-                        
-                        if not dates:
-                            logger.debug(f"Could not parse day name: {day_name}")
-                            continue
-                    
-                    swim_type = session_data.get('swim_type', 'OTHER')
-                    
-                    # Create a session for each date
-                    for session_date in dates:
-                        # Create session hash for deduplication
-                        session_hash = FacilityScraper.generate_session_hash(
-                            facility.facility_id,
-                            str(session_date),
-                            str(start_time),
-                            swim_type
-                        )
-                        
-                        # Check if exists
-                        existing = db_session.query(Session).filter_by(hash=session_hash).first()
-                        if not existing:
-                            # Insert new session
-                            new_session = Session(
-                                facility_id=facility.facility_id,
-                                swim_type=swim_type,
-                                date=session_date,
-                                start_time=start_time,
-                                end_time=end_time,
-                                source='web_scraper',
-                                hash=session_hash
-                            )
-                            db_session.add(new_session)
-                            total_inserted += 1
-                            logger.debug(
-                                f"Inserted session: {facility.name} - {swim_type} on {session_date} "
-                                f"from {start_time} to {end_time}"
-                            )
-                        
-                        total_sessions += 1
-            
-            # Commit after each facility to avoid losing all progress on error
-            db_session.commit()
-        
-        except Exception as e:
-            logger.error(f"Error processing {facility.name}: {e}")
-            db_session.rollback()
-    
-    logger.info(f"Processed {total_sessions} sessions, inserted {total_inserted} new sessions")
-
+    if failed_sources:
+        raise RuntimeError(f"Refresh failed for sources: {', '.join(failed_sources)}")
 
 def log_coverage_summary(db_session):
-    """Log a one-line summary of data coverage after refresh.
-
-    Emits a grep-friendly block (look for ``COVERAGE SUMMARY``) so we can
-    confirm at a glance that the refresh produced healthy data:
-    facility totals by source, pool type breakdown, sessions in the next
-    7 days, facilities with zero upcoming sessions (red flag), and the
-    three-layer counts referenced in issue #178 (curated entries vs
-    facilities-in-DB vs Open-Data swim locations).
-    """
+    """Log a one-line summary of data coverage after refresh."""
     today = date.today()
     week_end = today + timedelta(days=7)
 
     # Layer 1: curated entries (in-code source of truth)
     try:
-        curated_entries = len(get_all_swim_pools())
-    except Exception as exc:  # pragma: no cover - defensive
+        from sources.toronto_pools_data import TORONTO_INDOOR_POOLS
+        curated_entries = len(TORONTO_INDOOR_POOLS)
+    except Exception as exc:
         logger.warning(f"Could not count curated entries: {exc}")
         curated_entries = -1
 
@@ -538,7 +152,7 @@ def log_coverage_summary(db_session):
     )
     by_source = {(src or "unknown"): count for src, count in by_source_rows}
 
-    # Pool type breakdown (uses has_indoor / has_outdoor — both can be true)
+    # Pool type breakdown
     indoor_only = (
         db_session.query(func.count(Facility.facility_id))
         .filter(Facility.has_indoor.is_(True), Facility.has_outdoor.is_(False))
@@ -567,7 +181,7 @@ def log_coverage_summary(db_session):
         or 0
     )
 
-    # Facilities with zero sessions in the next 7 days (red flag)
+    # Facilities with zero sessions in the next 7 days
     facilities_with_sessions = (
         db_session.query(Session.facility_id)
         .filter(Session.date >= today, Session.date < week_end)
@@ -576,8 +190,7 @@ def log_coverage_summary(db_session):
     )
     facilities_zero_sessions = total_facilities - facilities_with_sessions
 
-    # Layer 3: Open-Data swim locations (distinct facilities sourced from
-    # toronto_open_data ingest — proxy for "matched in Open Data API")
+    # Layer 3: Open-Data swim locations
     open_data_locations = (
         db_session.query(Session.facility_id)
         .filter(Session.source == "toronto_open_data")
@@ -585,7 +198,6 @@ def log_coverage_summary(db_session):
         .count()
     )
 
-    # Render the summary block
     rule = "=" * 70
     logger.success(rule)
     logger.success("COVERAGE SUMMARY (post-refresh)")
@@ -620,7 +232,6 @@ def log_coverage_summary(db_session):
     )
     logger.success(rule)
 
-
 def main():
     """Main entry point."""
     setup_logging()
@@ -631,19 +242,9 @@ def main():
     db_session = setup_database()
 
     try:
-        # Step 1: Ingest curated facility data
-        ingest_curated_facilities(db_session)
+        refresh_city_data(db_session)
 
-        # Step 2: Update facility metadata from XML
-        ingest_facilities(db_session)
-
-        # Step 3: Update schedules from official Toronto Open Data API
-        ingest_official_schedules(db_session)
-
-        # Step 4: Update schedules from Toronto Parks JSON API (for facilities not in Open Data)
-        ingest_json_api_schedules(db_session)
-
-        # Step 5: Emit a coverage summary so we can confirm data health at a glance
+        # Emit a coverage summary
         try:
             log_coverage_summary(db_session)
         except Exception as exc:
@@ -658,7 +259,5 @@ def main():
     finally:
         db_session.close()
 
-
 if __name__ == "__main__":
     main()
-

@@ -1,6 +1,7 @@
 export interface Facility {
   facility_id: string
   name: string
+  city: string
   address: string | null
   postal_code: string | null
   district: string | null
@@ -41,6 +42,7 @@ export interface SessionWithFacility extends Session {
 export type SwimType = 'LANE_SWIM' | 'RECREATIONAL' | 'ADULT_SWIM' | 'SENIOR_SWIM' | 'AQUATIC_FITNESS' | 'OTHER'
 
 export interface ScheduleFilters {
+  city?: string
   facility_id?: string
   district?: string
   swim_type?: SwimType

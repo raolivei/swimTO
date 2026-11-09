@@ -5,23 +5,75 @@ This handles facilities that are NOT in the Toronto Open Data drop-in programs A
 These facilities have their schedules available at:
 https://www.toronto.ca/data/parks/live/locations/{location_id}/swim/week{1-4}.json
 """
+from .base_source import BaseSwimSource, FacilityData, SessionData
+from .curated_json_facilities import JSON_API_FACILITIES
+from loguru import logger
 import requests
 from typing import List, Dict, Optional, Tuple
 from datetime import datetime, date, time, timedelta
-from loguru import logger
+from dataclasses import replace
+from .toronto_pools_data import TorontoCuratedSource
 
 
-class TorontoParksJSONAPI:
+class TorontoParksJSONSource(BaseSwimSource):
     """Parser for Toronto Parks JSON API schedules."""
-    
+
+    city = "Toronto"
+    region = "Toronto"
+
     BASE_URL = "https://www.toronto.ca/data/parks/live/locations"
-    
+
     def __init__(self):
+        self._location_ids = {}
         self.session = requests.Session()
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (compatible; SwimTO/2.0; +https://github.com/raolivei/swimTO)"
         })
-    
+
+    def fetch_facilities(self) -> List[FacilityData]:
+        """Fetch facilities that use JSON API as normalized FacilityData."""
+        facilities = []
+        curated = TorontoCuratedSource().fetch_facilities()
+        by_name = {facility.name.casefold(): facility for facility in curated}
+        by_id = {facility.facility_id: facility for facility in curated}
+        for facility_id, info in JSON_API_FACILITIES.items():
+            facility = by_id.get(facility_id) or by_name.get(info['name'].casefold())
+            if facility is None:
+                logger.warning(f"Skipping unregistered Toronto JSON facility: {facility_id}")
+                continue
+            self._location_ids[facility.facility_id] = info['location_id']
+            facilities.append(replace(
+                facility,
+                website=info.get('url') or facility.website,
+                toronto_location_id=info['location_id'],
+                source='toronto_parks_json_api',
+            ))
+        return facilities
+
+    def fetch_sessions(self, facility_id: str, weeks: int = 4) -> List[SessionData]:
+        """Fetch upcoming sessions for a facility from Toronto Parks JSON API."""
+        if not self._location_ids:
+            self.fetch_facilities()
+        location_id = self._location_ids.get(facility_id)
+        if not location_id:
+            logger.warning(f"No location_id found for facility: {facility_id}")
+            return []
+
+        raw_sessions = self.fetch_facility_schedule(location_id, weeks_ahead=weeks)
+
+        sessions_data = []
+        for s in raw_sessions:
+            sessions_data.append(SessionData(
+                facility_id=facility_id,
+                swim_type=s['swim_type'],
+                date=s['date'],
+                start_time=s['start_time'],
+                end_time=s['end_time'],
+                notes=s.get('notes'),
+                source='toronto_parks_json_api'
+            ))
+        return sessions_data
+
     def fetch_facility_schedule(
         self,
         location_id: int,
@@ -267,4 +319,8 @@ class TorontoParksJSONAPI:
             return 'AQUATIC_FITNESS'
         else:
             return 'OTHER'
+
+
+# Existing discovery and validation jobs use the original client name.
+TorontoParksJSONAPI = TorontoParksJSONSource
 

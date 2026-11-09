@@ -1,9 +1,63 @@
 """Parser for Toronto pools.xml file."""
-import xml.etree.ElementTree as ET
+from .base_source import BaseSwimSource, FacilityData, SessionData
 from typing import List, Dict, Optional
+from dataclasses import replace
+from .toronto_pools_data import TorontoCuratedSource
 import requests
 from loguru import logger
+import xml.etree.ElementTree as ET
 
+
+class TorontoXMLSource(BaseSwimSource):
+    """Source for facility metadata from pools.xml."""
+
+    city = "Toronto"
+    region = "Toronto"
+    provides_sessions = False
+
+    def __init__(self):
+        self.parser = PoolsXMLParser()
+
+    def fetch_facilities(self) -> List[FacilityData]:
+        """Fetch and parse facilities from pools.xml."""
+        raw_facilities = self.parser.fetch_and_parse()
+        facilities = []
+        by_name = {facility.name.casefold(): facility for facility in TorontoCuratedSource().fetch_facilities()}
+        for f in raw_facilities:
+            name = f.get('name', '')
+            curated = by_name.get(name.casefold())
+            if curated:
+                # Keep stable public IDs and authoritative curated pool flags.
+                updates = {key: f[key] for key in (
+                    'address', 'postal_code', 'district', 'latitude', 'longitude', 'phone', 'website'
+                ) if f.get(key) is not None and f.get(key) != ''}
+                facilities.append(replace(curated, **updates, source='pools_xml'))
+                continue
+            if not name:
+                continue
+            is_indoor = f.get('is_indoor', True)
+            facilities.append(FacilityData(
+                facility_id=name.lower().replace(' ', '-').replace("'", '').replace('.', ''),
+                name=f.get('name', ''),
+                city=self.city,
+                address=f.get('address'),
+                postal_code=f.get('postal_code'),
+                district=f.get('district'),
+                latitude=f.get('latitude'),
+                longitude=f.get('longitude'),
+                is_indoor=is_indoor,
+                has_indoor=is_indoor,
+                has_outdoor=not is_indoor,
+                phone=f.get('phone'),
+                website=f.get('website'),
+                source='pools_xml',
+                raw=f
+            ))
+        return facilities
+
+    def fetch_sessions(self, facility_id: str, weeks: int = 4) -> List[SessionData]:
+        """XML source does not provide schedules."""
+        return []
 
 class PoolsXMLParser:
     """Parser for pools.xml facility metadata."""

@@ -2,6 +2,8 @@
 Comprehensive list of Toronto community centers with indoor swimming pools.
 This data is compiled from Toronto Parks, Forestry & Recreation facilities.
 """
+from .base_source import BaseSwimSource, FacilityData, SessionData
+from typing import List
 
 TORONTO_INDOOR_POOLS = [
     # Downtown Core
@@ -1296,3 +1298,60 @@ def get_pool_count():
     """Return count of pools."""
     return len(TORONTO_INDOOR_POOLS)
 
+
+class TorontoCuratedSource(BaseSwimSource):
+    """Curated source for Toronto pool facilities."""
+
+    city = "Toronto"
+    region = "Toronto"
+    provides_sessions = False
+
+    def fetch_facilities(self) -> List[FacilityData]:
+        """Return the curated list of swim pools."""
+        facilities = []
+        for p in TORONTO_INDOOR_POOLS:
+            if not p.get("has_lane_swim", False):
+                continue
+
+            # Generate facility_id from name
+            facility_id = p['name'].lower().replace(' ', '-').replace("'", '').replace('.', '')
+
+            # Resolve flags
+            has_indoor = p.get("has_indoor")
+            has_outdoor = p.get("has_outdoor")
+            if has_indoor is None and has_outdoor is None:
+                is_indoor = p.get("is_indoor", True)
+                has_indoor, has_outdoor = is_indoor, not is_indoor
+            elif has_indoor is None:
+                has_indoor, has_outdoor = not has_outdoor, has_outdoor
+            elif has_outdoor is None:
+                has_indoor, has_outdoor = has_indoor, not has_indoor
+            else:
+                is_indoor = p.get("is_indoor", True)
+
+            is_free_entry = p.get('is_free_entry', has_outdoor and not has_indoor)
+
+            facilities.append(FacilityData(
+                facility_id=facility_id,
+                name=p['name'],
+                city=self.city,
+                address=p.get('address'),
+                postal_code=p.get('postal_code'),
+                district=p.get('district'),
+                latitude=p.get('latitude'),
+                longitude=p.get('longitude'),
+                has_indoor=has_indoor,
+                has_outdoor=has_outdoor,
+                is_indoor=p.get("is_indoor", True),
+                is_free_entry=is_free_entry,
+                phone=p.get('phone'),
+                website=p.get('website'),
+                toronto_location_id=p.get('toronto_location_id'),
+                source='curated',
+                raw=p
+            ))
+        return facilities
+
+    def fetch_sessions(self, facility_id: str, weeks: int = 4) -> List[SessionData]:
+        """Curated source does not provide schedules."""
+        return []

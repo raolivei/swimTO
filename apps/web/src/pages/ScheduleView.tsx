@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { usePoolTypeFilter } from "@/hooks/usePoolTypeFilter";
 import { useSwimTypeFilter } from "@/hooks/useSwimTypeFilter";
-import { scheduleApi, getApiErrorMessage } from "../lib/api";
+import { useCityFilter } from "@/hooks/useCityFilter";
+import { facilityApi, scheduleApi, getApiErrorMessage } from "../lib/api";
 import { matchesPoolTypeFilter, poolFlags, poolTypeLabel } from "../lib/poolType";
 import { compareFacilityGroups, facilityDistanceKm } from "../lib/facilitySort";
 import { matchesSwimTypeFilter, swimTypeForPoolTypeChange } from "../lib/swimTypeFilter";
@@ -255,6 +256,12 @@ export default function ScheduleView() {
   const { favorites, isFavorite, toggleFavorite } = useFavorites();
   const [swimType, setSwimType] = useSwimTypeFilter();
   const [ageFilter, setAgeFilter] = useState<AgeFilter>("all");
+  const [cityFilter, setCityFilter] = useCityFilter();
+  const { data: cityFacilities } = useQuery({
+    queryKey: ["facilities", "city-options"],
+    queryFn: () => facilityApi.getAll("all", "ALL"),
+  });
+  const availableCities = [...new Set((cityFacilities ?? []).map((facility) => facility.city))].sort();
   const [showFreeOnly, setShowFreeOnly] = useState(false);
   const [poolType, setPoolType] = usePoolTypeFilter();
   // Time-of-day filter: default is full day [5am, 11pm]
@@ -310,8 +317,12 @@ export default function ScheduleView() {
   today.setHours(0, 0, 0, 0);
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const weekAhead = new Date(today);
-  weekAhead.setDate(today.getDate() + 7);
+  yesterday.setDate(yesterday.getDate() + (isMobile ? dayOffset : weekOffset * 6));
+  const weekAhead = new Date(yesterday);
+  weekAhead.setDate(yesterday.getDate() + 7);
+  const localDate = (day: Date) => `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  const requestFrom = localDate(yesterday);
+  const requestTo = localDate(weekAhead);
 
   // Convert age filter to age_max parameter for API
   const getAgeMaxFromFilter = (filter: AgeFilter): number | undefined => {
@@ -334,13 +345,13 @@ export default function ScheduleView() {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ["schedule", ageFilter],
+    queryKey: ["schedule", ageFilter, cityFilter, requestFrom, requestTo],
     queryFn: () =>
-      scheduleApi.getSchedule({
-        date_from: yesterday.toISOString().split("T")[0], // Request from yesterday
-        date_to: weekAhead.toISOString().split("T")[0], // Request up to a week ahead
+      scheduleApi.getAllSchedule({
+        date_from: requestFrom,
+        date_to: requestTo,
+        city: cityFilter === "All" ? undefined : cityFilter,
         age_max: getAgeMaxFromFilter(ageFilter),
-        limit: 1000, // Fetch enough sessions to cover multiple weeks
       }),
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
@@ -659,7 +670,7 @@ export default function ScheduleView() {
             Swim Schedule
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-lg mb-4">
-            Find drop-in swim times at Toronto's community pools
+            Find drop-in swim times at community pools across the GTA
           </p>
 
           {/* Session Summary Stats */}
@@ -968,6 +979,18 @@ export default function ScheduleView() {
 
               {/* Pool + swim type filters — full width row */}
               <div className="w-full basis-full flex flex-col gap-2 sm:flex-row sm:items-end sm:gap-4">
+                <label className="flex flex-col gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  City
+                  <select
+                    aria-label="City"
+                    value={cityFilter}
+                    onChange={(event) => setCityFilter(event.target.value)}
+                    className="min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 text-sm text-gray-900 dark:text-gray-100"
+                  >
+                    <option value="All">All GTA cities</option>
+                    {availableCities.map((city) => <option key={city} value={city}>{city}</option>)}
+                  </select>
+                </label>
                 <PoolTypeFilterControl
                   value={poolType}
                   onChange={handlePoolTypeChange}

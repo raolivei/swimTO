@@ -16,9 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Toronto pool coverage** — resolve all 51 swimming locations in the current municipal Open Data feed. Preserve existing pool slugs using municipal location links and explicit venue relationships, and add missing pools only after verifying pool amenities and live location metadata. Use stable official-ID-based URLs for newly discovered pools.
+- **Upcoming swim accuracy** — exclude ended sessions from map availability and upcoming counts using Toronto local time, while retaining swims already in progress.
+- **Multi-city ingestion compatibility** — preserve Toronto public pool IDs and curated coordinates across Open Data, XML, and JSON sources. Cache shared Open Data feeds per refresh, retain existing schedules on empty or invalid responses, deduplicate incoming sessions, and report failed refresh sources. Preserve the original parser imports used by discovery and validation jobs.
+- **Local map review** — load the CARTO Basemaps browser key from `VITE_CARTO_BASEMAP_API_KEY`, fit the full available region without requiring geolocation, and fit the selected city when it changes. See `docs/LOCAL_REVIEW.md` for the review workflow and remaining Vault deployment wiring.
+- **GTA schedule navigation** — paginate past 1,000 sessions, request the visible date range when moving between weeks, and preserve city selection between map and schedule.
+
 ### Added
 
-- **Multi-city GTA foundation** ([#263]): Phase 1 of the GTA expansion. New `city` column on `facilities` (migration 005, `DEFAULT 'Toronto'` backfills all existing rows + index). `BaseSwimSource` ABC in `data-pipeline/sources/base_source.py` defines the `FacilityData`/`SessionData` dataclasses and the `fetch_facilities`/`fetch_sessions` contract that all city-specific sources must implement. `CITY_SOURCES` registry added to `data-pipeline/config.py` — adding a new city requires only a new entry and source module. Optional `?city=` query param added to `GET /facilities` and `GET /schedule` (omit = all cities, unified view). North York and Scarborough are already covered (City of Toronto since 1998). Upcoming phases: Phase 2 ActiveNet client (Mississauga + Richmond Hill); Phase 3 PerfectMind/XplorRecreation client (Brampton + Vaughan + Markham).
+- **GTA municipal schedules** ([#263]) — enable Mississauga's ActiveNet calendar; Vaughan, Brampton, and Markham's PerfectMind swimming calendars; Markham's separate aquafit calendar; and Richmond Hill's published seasonal timetable with maintenance and holiday closures. Add 45 pools outside Toronto, verified map coordinates, city filters, and strict date/time parsing. Municipal failures raise errors rather than fabricating dates or times.
+- **Multi-city data model** — add a `city` column (migration 005, existing rows default to Toronto), normalized facility/session source contracts, a source registry, and optional `?city=` filters on facilities and schedules. Preserve Toronto's existing public facility IDs.
 
 [#263]: https://github.com/raolivei/swimTO/issues/263
 
