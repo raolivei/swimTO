@@ -22,7 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Toronto pool coverage** — resolve all 51 swimming locations in the current municipal Open Data feed. Preserve existing pool slugs using municipal location links and explicit venue relationships, and add missing pools only after verifying pool amenities and live location metadata. Use stable official-ID-based URLs for newly discovered pools.
 - **Upcoming swim accuracy** — exclude ended sessions from map availability and upcoming counts using Toronto local time, while retaining swims already in progress.
 - **Multi-city ingestion compatibility** — preserve Toronto public pool IDs and curated coordinates across Open Data, XML, and JSON sources. Cache shared Open Data feeds per refresh, retain existing schedules on empty or invalid responses, deduplicate incoming sessions, and report failed refresh sources. Preserve the original parser imports used by discovery and validation jobs.
-- **Local map review** — load the CARTO Basemaps browser key from `VITE_CARTO_BASEMAP_API_KEY`, fit the full available region without requiring geolocation, and fit the selected city when it changes. See `docs/LOCAL_REVIEW.md` for the review workflow and remaining Vault deployment wiring.
+- **Map review and deployment** — use the existing `VITE_CARTO_API_KEY` production build argument, fit the full available region without requiring geolocation, and fit the selected city when it changes. See `docs/LOCAL_REVIEW.md` for the review and release workflow.
 - **GTA schedule navigation** — paginate past 1,000 sessions, request the visible date range when moving between weeks, and preserve city selection between map and schedule.
 
 ### Added
