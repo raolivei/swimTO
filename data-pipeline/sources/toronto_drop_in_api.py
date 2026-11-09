@@ -191,6 +191,11 @@ class TorontoDropInSource(BaseSwimSource):
             else:
                 facility = replace(by_id[matches[0].facility_id], source='toronto_open_data',
                                    toronto_location_id=int(location_id))
+                if not facility.latitude or not facility.longitude:
+                    metadata = self._new_official_facility(location_id, location or {})
+                    if metadata is not None:
+                        facility = replace(metadata, facility_id=facility.facility_id,
+                                           is_free_entry=facility.is_free_entry)
             facility_id = facility.facility_id
             self._location_ids.setdefault(facility_id, set()).add(location_id)
             facilities[facility_id] = facility

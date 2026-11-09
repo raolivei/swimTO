@@ -137,6 +137,21 @@ def test_missing_toronto_pool_requires_pool_amenity_not_just_program_title():
     source.session.get.assert_not_called()
 
 
+def test_existing_toronto_pool_recovers_missing_coordinates_without_changing_id(monkeypatch):
+    import sources.toronto_drop_in_api as module
+    original = FacilityData('existing-pool', 'Existing Pool', 'Toronto', toronto_location_id=523)
+    monkeypatch.setattr(module.TorontoCuratedSource, 'fetch_facilities', lambda self: [original])
+    source = TorontoDropInSource()
+    source._locations = {'523': {'Location ID': '523', 'Location Name': 'Existing Pool'}}
+    source._programs = [{'Location ID': '523', 'Course Title': 'Lane Swim'}]
+    source._amenities = [{'Location ID': '523', 'Facility Type (Display Name)': 'Indoor Pool'}]
+    source._details = {'523': {'id': 523, 'title': 'Existing Pool', 'address': '31 Glen Watford Dr',
+                              'lat': '43.7885003853', 'lng': '-79.2757520123'}}
+    pool = source.fetch_facilities()[0]
+    assert pool.facility_id == original.facility_id
+    assert pool.latitude == 43.7885003853 and pool.longitude == -79.2757520123
+
+
 def test_toronto_explicit_related_venue_preserves_existing_pool_identity():
     source = TorontoDropInSource()
     source._locations = {
