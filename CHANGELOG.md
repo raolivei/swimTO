@@ -16,6 +16,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Repository audit (#321, #322)** — complete the authorized MIT conversion; align contributor, npm package metadata, and licensing guidance; archive four obsolete root status/prompt documents; record existing aggregate usage metrics and the intentional pi-fleet IP ingress fallback.
+- **CI runtime policy (#321)** — keep Dependabot Python image updates on the supported 3.11 minor until native dependencies are upgraded together. Document the Python 3.15 wheel failure, the Playwright/Ubuntu fix shipped in #323, and green build/test evidence.
+
 ### Fixed
 
 - **Production integration** — preserve the existing CARTO build argument and GitHub repository variable, restored database defaults, and disabled styling for past sessions when releasing the combined GTA adapters. Include pipeline changes in PR build checks.

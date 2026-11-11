@@ -1,3 +1,7 @@
+> Historical snapshot, archived 2026-11-10. This is not current operating guidance.
+> Deployment, licensing, and roadmap claims below describe the original document.
+> Use [the current README](../../../README.md) and [release workflow](../../LOCAL_REVIEW.md).
+
 # 🏊‍♂️ SwimTO — MASTER PROMPT (V4.0 for Raspberry Pi k3s)
 
 You are an expert full-stack engineer + open-data integrator building a **commercial product**.

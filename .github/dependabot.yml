@@ -21,6 +21,11 @@ updates:
   # Docker - API
   - package-ecosystem: "docker"
     directory: "/apps/api"
+    # Keep the supported minor until pinned native dependencies have ARM64 wheels.
+    # Review runtime upgrades as a tested batch, rather than a base-image-only PR.
+    ignore:
+      - dependency-name: "python"
+        versions: [">=3.12"]
     schedule:
       interval: "weekly"
       day: "saturday"

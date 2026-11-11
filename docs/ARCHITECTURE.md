@@ -1,6 +1,6 @@
 # 🏗️ SwimTO - System Architecture
 
-> **Proprietary & Confidential** - SwimTO Commercial Project
+Software is licensed under [MIT](../LICENSE); municipal data has separate source terms.
 
 This document describes the overall architecture of the SwimTO application.
 
