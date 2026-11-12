@@ -1,3 +1,7 @@
+> Historical snapshot, archived 2026-11-10. This is not current operating guidance.
+> Deployment, licensing, and roadmap claims below describe the original document.
+> Use [the current README](../../../README.md) and [release workflow](../../LOCAL_REVIEW.md).
+
 # SwimTO Deployment to Eldertree - SUCCESS ✅
 
 **Date**: November 16, 2025  

@@ -9,7 +9,7 @@
 
 **SwimTO** aggregates municipal pool drop-in swim schedules across Toronto, Mississauga, Brampton, Vaughan, Richmond Hill, and Markham.
 
-> **⚠️ COMMERCIAL PROJECT:** This is proprietary software. All rights reserved. See [LICENSE](LICENSE) and [PROJECT_STRATEGY.md](PROJECT_STRATEGY.md) for details.
+**Open source under the [MIT License](LICENSE).** Municipal data has its own terms; see [COPYRIGHT](COPYRIGHT) for attribution.
 
 ## 🎯 Overview
 
@@ -43,13 +43,13 @@ swimto/
 
 ### Local Development
 
-**Note:** This is a private repository. Access is restricted to authorized developers only.
+The repository is public. Contributions are welcome; see [Contributing](docs/CONTRIBUTING.md).
 
 #### Recommended: Docker Compose (Primary Method)
 
 ```bash
-# If you have access, clone the repository
-git clone git@github.com:raolivei/swimTO.git
+# Clone the repository
+git clone https://github.com/raolivei/swimTO.git
 cd swimTO
 
 # Load port assignments from workspace-config
@@ -104,9 +104,9 @@ curl -X POST http://localhost:8000/update \
 
 ## 📚 Documentation
 
-- [Quickstart](docs/QUICKSTART.md) - Get running in 5 minutes
-- [Mobile Testing Quick Start](MOBILE_TESTING_QUICK_START.md) - Test on mobile devices 📱
-- [Troubleshooting](TROUBLESHOOTING.md) - Fix common issues
+- [Quickstart](docs/LOCAL_DEVELOPMENT.md) - Get running in 5 minutes
+- [Mobile Testing Quick Start](docs/MOBILE_TESTING.md) - Test on mobile devices 📱
+- [Troubleshooting](docs/TROUBLESHOOTING.md) - Fix common issues
 - [Local Development](docs/LOCAL_DEVELOPMENT.md) - Development setup
 - [Mobile Testing Guide](docs/MOBILE_TESTING.md) - Comprehensive mobile testing
 - [Deployment](docs/DEPLOYMENT_PI.md) - Raspberry Pi k3s guide
@@ -149,31 +149,17 @@ curl -X POST http://localhost:8000/update \
 
 ## 📊 Data Sources
 
-This project uses **official data** from the [City of Toronto Open Data Portal](https://open.toronto.ca/):
+Official sources include Toronto Open Data and the Parks JSON API, Mississauga's ActiveNet calendar, Brampton/Vaughan/Markham's PerfectMind calendars, and Richmond Hill's published seasonal timetable. The existing daily CronJob refreshes these sources. Check the municipal booking portal before travelling: closures and source changes can affect availability.
 
-- **Primary Source:** [Registered Programs and Drop-in Courses](https://open.toronto.ca/dataset/registered-programs-and-drop-in-courses-offering/)
-  - Official API updated daily at 8:00 AM
-  - Same data powering toronto.ca website
-  - 100% accurate swim schedules
-- **Secondary Sources:**
-  - Recreation facilities metadata (facility locations, addresses)
-  - Curated facility list (toronto_pools_data.py)
-
-**Data Update Frequency:** Daily at 3:00 AM via automated CronJob
-
-**License:** Open Government Licence – Toronto
+Coverage is verified for six cities, not every GTA municipality or pool. The current Toronto Open Data feed includes 51 scheduled swimming locations; the integrated feeds add 45 pools outside Toronto. The catalog also retains outdoor and older facilities that may have no upcoming sessions. See [local review and coverage](docs/LOCAL_REVIEW.md) and [Toronto discovery](docs/JSON_API_FACILITIES.md).
 
 ## 🤝 Contributing
 
-This is a private commercial project. Contributions are not currently accepted from external developers.
-
-For authorized developers, see [CONTRIBUTING.md](docs/CONTRIBUTING.md) for development workflow and branching strategy.
+See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for the development workflow, tests, and local review requirements. Use issues to report incorrect schedules with a municipal source link.
 
 ## 📄 License
 
-**Proprietary License** - All rights reserved. See [LICENSE](LICENSE) and [COPYRIGHT](COPYRIGHT) files for full details.
-
-This software is commercial and may not be copied, modified, or distributed without explicit written permission from Rafael Oliveira.
+Software: [MIT License](LICENSE). Municipal schedules and location data retain their source terms; see [COPYRIGHT](COPYRIGHT).
 
 ## 🙏 Acknowledgments
 

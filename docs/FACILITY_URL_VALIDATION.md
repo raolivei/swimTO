@@ -151,5 +151,5 @@ Invalid URLs create a poor user experience and reduce trust in the app.
 
 - [Facility URL Fix Script](../data-pipeline/jobs/fix_all_facility_urls.py)
 - [Google Auth Integration](GOOGLE_AUTH_INTEGRATION.md)
-- [Deployment Summary](DEPLOYMENT_SUMMARY.md)
+- [Current release workflow](LOCAL_REVIEW.md)
 
